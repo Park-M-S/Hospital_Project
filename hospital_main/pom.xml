@@ -4,10 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 
-
-
-
-    <groupId>com.hospital</groupId>
+	<groupId>com.hospital</groupId>
 	<artifactId>hospital_main</artifactId>
 	<version>1.0-SNAPSHOT</version>
 	<packaging>war</packaging>
@@ -78,6 +75,46 @@
 			<version>2.13.1</version>
 		</dependency>
 
+		<!-- Jakarta Persistence API -->
+		<dependency>
+			<groupId>jakarta.persistence</groupId>
+			<artifactId>jakarta.persistence-api</artifactId>
+			<version>3.1.0</version>  <!-- 최신 버전 확인 -->
+		</dependency>
+
+		<!-- JPA 구현체 (예: Hibernate) -->
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>6.2.7.Final</version> <!-- Hibernate 최신 버전 -->
+		</dependency>
+
+
+		<!-- SLF4J API -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.13</version>
+		</dependency>
+
+		<!-- Logback Classic (실제 구현체) -->
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.4.14</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjrt</artifactId>
+			<version>1.9.9.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjweaver</artifactId>
+			<version>1.9.19</version>
+		</dependency>
 
 	</dependencies>
 
