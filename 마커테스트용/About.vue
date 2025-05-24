@@ -164,10 +164,9 @@ export default {
         // 병원 전용 커스텀 마커 이미지
         const imageSrc = 'data:image/svg+xml;base64,' + btoa(`
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-            <circle cx="20" cy="20" r="18" fill="#FF4444" stroke="#FFFFFF" stroke-width="2"/>
-            <rect x="16" y="12" width="8" height="3" fill="white"/>
-            <rect x="18.5" y="9" width="3" height="8" fill="white"/>
-            <text x="20" y="30" text-anchor="middle" fill="white" font-size="8" font-weight="bold">H</text>
+          <circle cx="20" cy="20" r="18" fill="#FF4444" stroke="#FFFFFF" stroke-width="2"/>
+          <rect x="17" y="10" width="6" height="20" fill="white"/>
+          <rect x="10" y="17" width="20" height="6" fill="white"/>
           </svg>
         `);
         
@@ -312,7 +311,7 @@ export default {
             road_details: false
           },
           headers: {
-            'Authorization': 'KakaoAK RESTAPI 키',
+            'Authorization': 'KakaoAK REST API키',
             'Content-Type': 'application/json'
           }
         });
