@@ -15,7 +15,10 @@
         정보가 없습니다.
       </div>
       <div v-else>
-        <div class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
+        <router-link :to="{
+          path: `/about/${hospitals.hospitalName}/directions`,
+          query: { x: hospitals.coordinateX, y: hospitals.coordinateY }
+        }" class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
           <div class="hospital_flex" @click="showRoute(hospitals)">
             <div class="hospital_container">
               <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
@@ -26,7 +29,7 @@
             <img class="hospital_img" :src="hospitalimg">
           </div>
           <div class="hr"></div>
-        </div>
+        </router-link>
       </div>
     </div>
 
@@ -118,7 +121,7 @@ export default {
     // api 불러오기 - 경로 서비스도 함께 로드
     loadScript() {
       const script = document.createElement("script");
-      script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=JS 앱키&autoload=false&libraries=services";
+      script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=JS 앱키키&autoload=false&libraries=services";
       script.onload = () => window.kakao.maps.load(this.loadMap);
 
       document.head.appendChild(script);
@@ -140,8 +143,8 @@ export default {
 
     // 사용자 마커 불러오기 - 커스텀 마커로 변경
     loadUserMaker() {
-      const imageSrc = 'https://park-m-s.github.io/Spring-study/hospital_marker.png';
-      const imageSize = new window.kakao.maps.Size(32, 32);
+      const imageSrc = 'https://park-m-s.github.io/Spring-study/test3.png';
+      const imageSize = new window.kakao.maps.Size(34, 47);
       const imageOption = { offset: new window.kakao.maps.Point(16, 32) };
       const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
       const markerPosition = new window.kakao.maps.LatLng(this.$store.getters.userLat, this.$store.getters.userLng);
@@ -162,15 +165,8 @@ export default {
 
       this.hospitalList.forEach(hospital => {
         // 병원 전용 커스텀 마커 이미지
-        const imageSrc = 'data:image/svg+xml;base64,' + btoa(`
-          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-          <circle cx="20" cy="20" r="18" fill="#FF4444" stroke="#FFFFFF" stroke-width="2"/>
-          <rect x="17" y="10" width="6" height="20" fill="white"/>
-          <rect x="10" y="17" width="20" height="6" fill="white"/>
-          </svg>
-        `);
-        
-        const imageSize = new window.kakao.maps.Size(40, 40);
+        const imageSrc = 'https://park-m-s.github.io/Spring-study/test.png';
+        const imageSize = new window.kakao.maps.Size(34, 47);
         const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
         const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
         const markerPosition = new window.kakao.maps.LatLng(hospital.coordinateY, hospital.coordinateX);
@@ -268,12 +264,21 @@ export default {
           this.routePolyline = new window.kakao.maps.Polyline({
             path: path,
             strokeWeight: 6,
-            strokeColor: '#FF4081',
-            strokeOpacity: 0.8,
+            strokeColor: '#3396ff',
+            strokeOpacity: 1,
             strokeStyle: 'solid'
           });
 
+          this.dashedLine = new window.kakao.maps.Polyline({
+            path: path,
+            strokeWeight: 2,
+            strokeColor: '#ffffff',
+            strokeOpacity: 1,
+            strokeStyle: 'dash'
+          });
+
           this.routePolyline.setMap(this.map);
+          this.dashedLine.setMap(this.map);
 
           // 지도 범위 조정
           const bounds = new window.kakao.maps.LatLngBounds();
@@ -311,7 +316,7 @@ export default {
             road_details: false
           },
           headers: {
-            'Authorization': 'KakaoAK REST API키',
+            'Authorization': 'KakaoAK RESTAPI 키',
             'Content-Type': 'application/json'
           }
         });
@@ -410,7 +415,7 @@ export default {
 }
 
 #map {
-  height: 40vh;
+  height: 90vh;
 }
 
 .tag_container {
