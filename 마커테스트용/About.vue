@@ -15,24 +15,33 @@
         정보가 없습니다.
       </div>
       <div v-else>
-        <router-link :to="{
-          path: `/about/${hospitals.hospitalName}/directions`,
-          query: { x: hospitals.coordinateX, y: hospitals.coordinateY }
-        }" class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
-          <div class="hospital_flex" @click="showRoute(hospitals)">
-            <div class="hospital_container">
-              <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
-              <div class="hospital_department"> {{ hospitals.subject }} </div>
-              <div class="hospital_address"> {{ hospitals.hospitalAddress }} </div>
-              <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
-            </div>
-            <img class="hospital_img" :src="hospitalimg">
-          </div>
-          <div class="hr"></div>
-        </router-link>
+        <router-link
+  :to="{
+    path: `/about/${hospitals.hospitalName}/directions`,
+    query: { x: hospitals.coordinateX, y: hospitals.coordinateY }
+  }"
+  class="hospital_info"
+  v-for="(hospitals, i) in hospitalList"
+  :key="i"
+>
+  <div class="hospital_flex" @click="showRoute(hospitals)">
+    <div class="hospital_container">
+      <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
+      <div class="hospital_department"> {{ hospitals.subject }} </div>
+      <div class="hospital_address"> {{ hospitals.hospitalAddress }} </div>
+      <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
+    </div>
+    <img class="hospital_img" :src="hospitalimg" />
+  </div>
+
+  <!---tts 영역-->
+  <button class="read-btn" 
+  @click.stop.prevent="speakText(`현재 선택하신 병원은 ${hospitals.hospitalName} 입니다. 해당 병원에서는 ${hospitals.subject}과목을 진료하고 있습니다. 병원의 주소는 ${hospitals.hospitalAddress}에 위치하고 있습니다.`)">병원 정보 읽어주기</button>
+
+  <div class="hr"></div>
+</router-link>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -121,7 +130,7 @@ export default {
     // api 불러오기 - 경로 서비스도 함께 로드
     loadScript() {
       const script = document.createElement("script");
-      script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=JS 앱키키&autoload=false&libraries=services";
+      script.src = "//dapi.kakao.com/v2/maps/sdk.js?appkey=***&autoload=false&libraries=services";
       script.onload = () => window.kakao.maps.load(this.loadMap);
 
       document.head.appendChild(script);
@@ -316,7 +325,7 @@ export default {
             road_details: false
           },
           headers: {
-            'Authorization': 'KakaoAK RESTAPI 키',
+            'Authorization': 'KakaoAK ***',
             'Content-Type': 'application/json'
           }
         });
@@ -357,6 +366,20 @@ export default {
       );
 
       alert(`${hospital.hospitalName}까지의 직선거리: ${distance.toFixed(2)}km\n(실제 경로를 찾을 수 없어 직선거리로 표시)`);
+    },
+
+    speakText(text) {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ko-KR';
+        utterance.rate = 1;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        window.speechSynthesis.cancel(); // 이전 음성 중단
+        window.speechSynthesis.speak(utterance);
+      } else {
+        console.warn('이 브라우저는 TTS를 지원하지 않습니다.');
+      }
     },
 
     // 두 지점 간의 거리 계산 (하버사인 공식)
@@ -415,7 +438,7 @@ export default {
 }
 
 #map {
-  height: 90vh;
+  height: 35vh;
 }
 
 .tag_container {
@@ -445,6 +468,24 @@ export default {
 .tag:hover {
   color: white;
   background: #11BF7F;
+}
+
+.read-btn {
+  margin-left: 8px;
+  background: #F5F6F7;
+  padding: 2px 10px;
+  border-radius: 25px;
+  cursor: pointer;
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 6px 12px -2px, rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
+  border: none;
+  font-size: 14px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  user-select: none;
+}
+
+.read-btn:hover {
+  background: #11BF7F;
+  color: white;
 }
 
 .keyword_container {
