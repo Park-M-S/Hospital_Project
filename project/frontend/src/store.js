@@ -2,25 +2,30 @@ import Vuex from 'vuex';
 
 export default new Vuex.Store({
     state: {
-      userLat: null,
-      userLng: null,
-      department: null,
+      userLat: localStorage.getItem('userLat') || null,
+      userLng: localStorage.getItem('userLng') || null,  
+      department: localStorage.getItem('department') || null,
     },
     mutations: {
       setLocation(state, { userLat, userLng }) {
-        state.userLat = userLat
-        state.userLng = userLng
+        state.userLat = userLat;
+        state.userLng = userLng;
+
+        localStorage.setItem('userLat', userLat);
+        localStorage.setItem('userLng', userLng);
       },
       setDepartment(state, { department }) {
-        state.department = department
+        state.department = department;
+
+        localStorage.setItem('department', department);
       }
     },
     actions: {
       updateLocation({ commit }, location) {
-        commit('setLocation', location)
+        commit('setLocation', location);
       },
       updateDepartment({ commit }, department) {
-        commit('setDepartment', department)
+        commit('setDepartment', department);
       }
     },
     getters: {

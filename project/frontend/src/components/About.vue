@@ -1,249 +1,187 @@
 <template>
-  <div class="root_container">
-    <div class="search_container">
-      <div class="search_input">
-        <input class="search"></input>
-        <div class="search_tag"> {{ $store.getters.department }} </div>
-      </div>
-      
+  <div class="container">
+    <div class="header">
+      <vue3-tags-input :tags="tags" placeholder="진료과를 검색 하세요." @on-tags-changed="handleChangeTag" />
     </div>
-
-    <div id="map"></div>
-
-    <div class="tag_container">
-        <div class="tag" v-for="(tagItem, i) in tagList" :key="i"> {{ tagItem }}</div>
-    </div>
-
-    <div class="keyword_container">
-      <div class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
-        <div class="hospital_flex" @click="link">
-          <div class="hospital_container">
-            <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
-            <div class="hospital_department"> {{ hospitals.subject }} </div>
-            <div class="hospital_address"> {{ hospitals.hospitalAddress }} </div>
-            <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
-          </div>
-          <img class="hospital_img" :src="hospitals.img">
+    <div class="sidebar">
+      <div class="sidebar_container">
+        <div class="hospital_visible" v-if="!hospitalList || hospitalList.length === 0">
+          정보가 없습니다.
         </div>
-        <div class="hr"></div>
+        <div v-else>
+          <div class="test_flex">
+            <ul class="test">
+              <li> <button>구현예정</button> </li>
+              <li> <button>구현예정</button> </li>
+              <li> <button>구현예정</button> </li>
+            </ul>
+            <div class="custom-select">
+              <select id="custom-select">
+                <option value="">정렬</option>
+                <option value="kr">옵션1</option>
+                <option value="us">옵션2</option>
+                <option value="jp">옵션3</option>
+                <option value="cn">옵션4</option>
+                <option value="uk">옵션5</option>
+              </select>
+            </div>
+          </div>
+          <router-link :to="{
+            path: `/about/${hospitals.hospitalName}/directions`,
+            query: { x: hospitals.coordinateX, y: hospitals.coordinateY }
+          }" class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i"
+            @mouseenter="speakText(`${hospitals.hospitalName}, 진료과목: ${hospitals.subject}, 주소: ${hospitals.hospitalAddress}, 운영시간: 09시부터 16시까지`)"  @mouseleave="stopSpeech">
+            <div class="hr"></div>
+            <div class="hospital_flex">
+              <div class="hospital_container">
+                <div class="hospital_name">{{ hospitals.hospitalName }}</div>
+                <div class="hospital_department">{{ hospitals.subject }}</div>
+                <div class="hospital_address">09 : 00 ~ 16 : 00</div>
+                <div class="hospital_content">{{ hospitals.hospitalAddress }}</div>
+              </div>
+              <img class="hospital_img" :src="hospitalimg" />
+            </div>
+          </router-link>
+        </div>
+      </div>
+      <div class="tag_container">
+        <div class="tag" v-for="(tagItem, i) in tagButton" :key="i" @click="handleAddTag(tagItem.title), speakText(tagItem.title + '을 클릭하셨습니다.')">
+          <i :class="tagItem.image"></i>
+          <span> {{ tagItem.title }} </span>
+        </div>
+      </div>
+      <button class="sidebar_button" @click="toggle_Sidebar">
+        <div v-if="isSideBar">
+          <i class="fa-solid fa-arrow-left"></i>
+        </div>
+        <div v-else>
+          <i class="fa-solid fa-arrow-right"></i>
+        </div>
+      </button>
+    </div>
+    <div class="content">
+      <div id="map">
       </div>
     </div>
   </div>
 </template>
 
 <script>
+// css
+import '@/styles/header.css';
+import '@/styles/sidebar.css';
+import '@/styles/content.css';
 
-import axios from 'axios';
+// package
+import Vue3TagsInput from 'vue3-tags-input';
+
+// assets
 import hospitalList from '@/assets/hospitalData.js';
+import tagButton from '@/assets/tagButton';
+import hospitalimg from '@/assets/hospital.png';
+
+// api
+import getMap from '@/services/api/map/getMap.js'
+import dataSource from '@/services/api/data/dataSource.js'
+import { speakText, stopSpeech, loadVoices } from '@/services/api/tts/tts.js';
+
+
+// utils
+import toggleSidebar from '@/services/utils/toggleSidebar.js';
+import tag from '@/services/utils/tags.js';
+
 
 export default {
-  name : 'About',
+  name: 'About',
+  components: {
+    Vue3TagsInput
+  },
   data() {
     return {
       map: null,
-      tagList: ['응급실', '전문의', '24시간', '야간진료', '주차 가능', '응급실', '전문의', '24시간', '야간진료', '전문의', '전문의', '전문의', '24시간', '야간진료',],
+      tagList: ['응급실', '전문의', '주차가능'],
       hospitalList: hospitalList,
-      hospitalId: this.$route.params.title,
+      hospitalimg: hospitalimg,
       radius: 1.0,
+      tags: [this.$store.getters.department],
+      markers: [],
+      isSideBar: true,
+      tagButton: tagButton,
+
+    }
+  },
+    async mounted() {
+    await loadVoices();  // 음성 목록 미리 로드
+
+    this.fetch();
+
+    const sidebarWidth = this.isSideBar ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
+    document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
+
+    if (window.kakao && window.kakao.maps) {
+      this.loadMap();
+    } else {
+      this.loadScript();
     }
   },
   mounted() {
     this.fetch();
 
-    if(window.kakao && window.kakao.maps) {
+    const sidebarWidth = this.isSideBar ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
+    document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
+
+    if (window.kakao && window.kakao.maps) {
       this.loadMap();
-    }else {
+    } else {
       this.loadScript();
     }
   },
-  // watch : {
-  //   $route() {
-  //     this.fetch();
-
-  //     if(window.kakao && window.kakao.maps) {
-  //       this.loadMap();
-  //     }else {
-  //       this.loadScript();
-  //     }
-  //   }
-  // },
-  methods : {
-    async fetch() {
-      try{
-        const res = await axios.get(`http://localhost:8080/hospital_main/mapData?sub=${this.hospitalId}&userLat=${this.$store.getters.userLat}&userLng=${this.$store.getters.userLng}&radius=${this.radius}`);
-        this.hospitalList = res.data;
-        if (this.map) {
-          this.loadMaker();
+  watch: {
+    tags: {
+      handler(tags) {
+        // 태그 유효성 검사
+        if (this.tagList.includes(tags[0])) {
+          alert(`진료과를 먼저 선택해주세요.`);
+          this.tags.splice(0, 1); // 0 번째 값 제거
+          return;
         }
-      }catch(err) {
-        console.error('에러 발생 : ', err);
-      }
+
+        this.fetch();
+      },
+      deep: true
     },
-
-    // api 불러오기
-    loadScript() {
-      const script = document.createElement("script");
-      script.src = "";
-      script.onload = () => window.kakao.maps.load(this.loadMap);
-
-      document.head.appendChild(script);
+    isSideBar(newVal) {
+      const sidebarWidth = newVal ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
+      document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
     },
-
-    // 맵 출력
-    loadMap() {
-      const container = document.getElementById("map");
-      const options = {
-        center: new window.kakao.maps.LatLng(this.$store.getters.userLat, this.$store.getters.userLng),
-        level: 4
-      }
-
-      this.map = new window.kakao.maps.Map(container, options);
-      this.loadMaker();
+  },
+  
+  methods: {
+    ...dataSource,
+    ...getMap,
+    ...toggleSidebar,
+    ...tag,
+    handleHover(hospital) {
+      const text = `${hospital.hospitalName}, 진료과목: ${hospital.subject}, 주소: ${hospital.hospitalAddress}, 운영시간: 09시부터 16시까지`;
+      speakText(text);
     },
-
-    // 마커 불러오기
-    loadMaker() {
-      this.hospitalList.forEach(hospital => {
-        const markerPosition = new window.kakao.maps.LatLng(hospital.coordinateY, hospital.coordinateX);
-
-        const marker = new window.kakao.maps.Marker({
-          position: markerPosition,
-          title: hospital.hospitalName,
-        });
-
-        marker.setMap(this.map);
-      });
+    stopSpeech() {
+      stopSpeech();
     },
-
-    link() {
-      window.location.href = 'http://www.kidshealth.co.kr/';
-    },
+    // link() {
+    //   window.location.href = 'http://www.kidshealth.co.kr/';
+    // },
   },
 }
 </script>
 
-<style scoped>
-.search_container{
-  padding: 30px 60px;
-}
-
-.search_input {
-  position: relative;
-}
-
-/* .search {
-  width: 100%;
-} */
-
-.search_tag {
-  position: absolute;
-  border-radius: 25px;
-  padding: 5px 30px;
-  cursor: pointer;
-  background-color: #11BF7F;
-  color: white;
-  top: 50%;
-  transform: translateY(-50%);
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 6px 12px -2px, rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
-}
-
-.search_tag:hover {
-  color: white;
-  background: #11BF7F;
-}
-
-#map {
-  height: 40vh;
-}
-
-.tag_container {
-  padding: 15px 0;
-  margin: 0 10px;
-  display: flex;
-  gap: 15px;
-  overflow-x: auto;
-  white-space: nowrap;
-  /* justify-content: center; */
-}
-
-.tag {
-  margin-left: 4px;
-  display: flex;
-  flex: 0 0 auto;
-  background: #F5F6F7;
-  /* color: white; */
-  padding: 10px 20px;
-  border-radius: 25px;
-  cursor: pointer;
-  box-shadow: rgba(50, 50, 93, 0.25) 0px 6px 12px -2px, rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
-  /* box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px; */
-  /* box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px; */
-}
-
-.tag:hover {
-  color: white;
-  background: #11BF7F;
-}
-
-.keyword_container {
-  padding: 0 10px;
-  padding-bottom: 15px;
+<style>
+/* 루트 컨테이너 */
+.container {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  grid-auto-rows: 160px;
-  gap: 15px;
-  background: white;
+  grid-template-rows: 100px 1fr;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  height: 100vh;
+  transition: grid-template-columns 0.4s ease;
 }
-
-.hospital_info {
-  display: flex;
-  flex-direction: column;
-}
-
-.hospital_container {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.hospital_name {
-  /* color: #298A08; */
-  font-size: 20px;
-  /* background-color: aqua; */
-}
-
-.hospital_department {
-  color: gray;
-  /* background-color: beige; */
-}
-
-.hospital_address {
-  color: gray;
-  /* background-color: tomato; */
-}
-
-/* .hospital_content {
-  color: #298A08;
-  background-color: yellow;
-} */
-
-.hospital_flex {
-  display: flex;
-  justify-content: space-between;
-  cursor: pointer;
-}
-
-.hospital_img {
-  width: 200px;
-  height: 100%;
-  border-radius: 10px;
-}
-
-.hr {
-  width: 100%;
-  height: 1px;
-  margin-top: auto;
-  background-color: #E6E6E6;
-}
-
 </style>
