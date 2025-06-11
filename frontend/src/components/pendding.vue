@@ -1,49 +1,25 @@
 <template>
 
-  <div class="container">
+  <div class="container" :class="{ 'blurred': isBlurred }">
     <div class="header">
       <vue3-tags-input :tags="tags" placeholder="진료과를 검색 하세요." @on-tags-changed="handleChangeTag" />
     </div>
     <div class="sidebar">
       <div class="sidebar_container">
-        <div class="hospital_visible" v-if="!hospitalList || hospitalList.length === 0">
-          정보가 없습니다.
-        </div>
-        <div v-else>
-          <!-- <div class="test_flex">
-            <ul class="test">
-              <li> <button>구현예정</button> </li>
-              <li> <button>구현예정</button> </li>
-              <li> <button>구현예정</button> </li>
-            </ul>
-            <div class="custom-select">
-              <select id="custom-select">
-                <option value="">정렬</option>
-                <option value="kr">옵션1</option>
-                <option value="us">옵션2</option>
-                <option value="jp">옵션3</option>
-                <option value="cn">옵션4</option>
-                <option value="uk">옵션5</option>
-              </select>
-            </div>
-          </div> -->
-
-
-          <router-link :to="{
-            path: `/about/${hospitals.hospitalName}/directions`,
-            query: { x: hospitals.coordinateX, y: hospitals.coordinateY }
-          }" class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
+        <div>
+          <div v-for="(nameItem, i) in name" :key="i" class="hospital_info"
+            @click="currentDepartment(nameItem.title)">
             <div class="hr"></div>
             <div class="hospital_flex">
               <div class="hospital_container">
-                <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
-                <div class="hospital_department"> {{ hospitals.subject }} </div>
+                <div class="hospital_name"> {{ nameItem.title }} </div>
+                <div class="hospital_department"> {{ nameItem.content }} </div>
                 <div class="hospital_address"> 09 : 00 ~ 16 : 00 </div>
-                <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
+                <div class="hospital_content"></div>
               </div>
-              <img class="hospital_img" :src="hospitalimg">
+              <img class="hospital_img" :src="nameItem.image">
             </div>
-          </router-link>
+          </div>
         </div>
       </div>
       <div class="tag_container">
@@ -106,6 +82,7 @@ import hospitalList from '@/assets/hospitalData.js';
 import tagButton from '@/assets/tagButton';
 import hospitalimg from '@/assets/hospital.png';
 import diagnosis from '@/assets/diagnosis.js';
+import data from '@/assets/departmentData.js';
 
 // api
 import getMap from '@/services/api/map/getMap.js'
@@ -125,22 +102,22 @@ export default {
   },
   data() {
     return {
+      name: data,
       map: null,
       tagList: ['응급실', '전문의', '주차가능', '약국'],
       hospitalList: hospitalList,
 
       hospitalimg: hospitalimg,
       radius: 1.0,
-      tags: [this.$store.getters.department],
+      tags: [],
       markers: [],
-      isSideBar: true,
-      isBottomBar: false,
+      isSideBar: false,
+      isBottomBar: true,
       tagButton: tagButton,
 
       diagnosis: diagnosis,
       selectedSymptoms: [],
-
-
+      isBlurred: true,
     }
   },
   mounted() {
@@ -150,7 +127,7 @@ export default {
     }
     // this.fetch();
 
-    const sidebarWidth = this.isSideBar ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
+    const sidebarWidth = this.isSideBar ? 'calc(100vw - 60vw)' : 'calc(100vw - 100vw)';
     document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
 
     if (window.kakao && window.kakao.maps) {
@@ -173,11 +150,14 @@ export default {
       deep: true
     },
     isSideBar(newVal) {
-      const sidebarWidth = newVal ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
+      const sidebarWidth = newVal ? 'calc(100vw - 60vw)' : 'calc(100vw - 100vw)';
       document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
     },
   },
   methods: {
+    currentDepartment(department) {
+      this.$store.dispatch('updateDepartment', { department: department });
+    },
     ...dataSource,
     ...getMap,
     ...toggleSidebar,
@@ -208,6 +188,6 @@ export default {
 .container.blurred {
   filter: blur(5px);
   /* 포인터 이벤트를 비활성화하여 블러 상태일 때 하위 요소 클릭 방지 (선택 사항) */
-  pointer-events: none;
+  pointer-events: none; 
 }
 </style> -->

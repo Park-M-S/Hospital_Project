@@ -13,7 +13,7 @@
 /* 검색 창 */
 .v3ti {
   box-sizing: border-box;
-  width: 90%;
+  width: 100%;
   align-items: center;
   height: 50px;
   padding: 35px 30px;

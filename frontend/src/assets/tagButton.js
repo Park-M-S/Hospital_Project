@@ -13,5 +13,10 @@ export default [
     id: 2,
     title: "주차가능",
     image: "fa-solid fa-car-side",
+  },
+  {
+    id: 3,
+    title: "약국",
+    image: "fa-solid fa-capsules",
   }
 ];

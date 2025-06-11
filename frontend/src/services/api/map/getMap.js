@@ -1,11 +1,12 @@
 import axios from 'axios';
 
+const KAKAO_MAP_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
+const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
+
 export default {
   // api 불러오기
   loadScript() {
     const script = document.createElement("script");
-    const KAKAO_MAP_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
-    const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_MAP_KEY}&autoload=false`;
     script.onload = () => window.kakao.maps.load(this.loadMap);
 
@@ -28,7 +29,7 @@ export default {
 
   // 사용자 마커 불러오기 - 커스텀 마커로 변경
   loadUserMaker() {
-    const imageSrc = 'https://park-m-s.github.io/Spring-study/test3.png';
+    const imageSrc = 'https://park-m-s.github.io/Spring-study/사용자위치.png';
     const imageSize = new window.kakao.maps.Size(34, 47);
     const imageOption = { offset: new window.kakao.maps.Point(16, 32) };
     const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
@@ -48,37 +49,62 @@ export default {
     this.markers.forEach(marker => marker.setMap(null));
     this.markers = [];
 
-    this.hospitalList.forEach(hospital => {
-      // 병원 전용 커스텀 마커 이미지
-      const imageSrc = 'https://i.imgur.com/OZSpHH2.png';
-      const imageSize = new window.kakao.maps.Size(51, 51);
-      const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
-      const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
-      const markerPosition = new window.kakao.maps.LatLng(hospital.coordinateY, hospital.coordinateX);
+    // 1단계: 일반 병원과 응급실 병원을 분리
+    const regularHospitals = this.hospitalList.filter(hospital => hospital.emergency_available !== 'Y');
+    const emergencyHospitals = this.hospitalList.filter(hospital => hospital.emergency_available === 'Y');
 
-      const marker = new window.kakao.maps.Marker({
-        position: markerPosition,
-        title: hospital.hospitalName,
-        image: markerImage,
-      });
-
-      marker.setMap(this.map);
-      const customOverlay = this.loadCustomOverlay(hospital.coordinateY, hospital.coordinateX, hospital.hospitalName, hospital.hospitalAddress, hospital.pro_doc, hospital.emergency_available, hospital.park_available);
-
-      window.kakao.maps.event.addListener(marker, 'click', () => {
-        if (this.activeOverlay) {
-          this.activeOverlay.setMap(null);
-        }
-
-        const newOverlay = this.loadCustomOverlay(hospital.coordinateY, hospital.coordinateX, hospital.hospitalName, hospital.hospitalAddress, hospital.pro_doc, hospital.emergency_available, hospital.park_available);
-        newOverlay.setMap(this.map);
-        this.activeOverlay = newOverlay;
-
-        this.showRoute(hospital);
-      });
-
-      this.markers.push(marker);
+    // 2단계: 일반 병원 마커들을 먼저 추가 (아래쪽에 표시됨)
+    regularHospitals.forEach(hospital => {
+      this.createHospitalMarker(hospital, false);
     });
+
+    // 3단계: 응급실 병원 마커를 나중에 추가 (위쪽에 표시됨)
+    emergencyHospitals.forEach(hospital => {
+      this.createHospitalMarker(hospital, true);
+    });
+  },
+
+  // 마커 생성 로직을 별도 함수로 분리
+  createHospitalMarker(hospital, isEmergency) {
+    let imageSrc, imageSize, imageOption;
+    
+    if (isEmergency) {
+      // 응급실 가능한 병원 - 빨간색 십자가 마커
+      imageSrc = 'https://park-m-s.github.io/Spring-study/응급실.png';
+      imageSize = new window.kakao.maps.Size(34, 47);
+      imageOption = { offset: new window.kakao.maps.Point(25, 51) };
+    } else {
+      // 일반 병원 마커
+      imageSrc = 'https://park-m-s.github.io/Spring-study/병원.png';
+      imageSize = new window.kakao.maps.Size(34, 47);
+      imageOption = { offset: new window.kakao.maps.Point(20, 40) };
+    }
+
+    const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
+    const markerPosition = new window.kakao.maps.LatLng(hospital.coordinateY, hospital.coordinateX);
+
+    const marker = new window.kakao.maps.Marker({
+      position: markerPosition,
+      title: hospital.hospitalName,
+      image: markerImage,
+    });
+
+    marker.setMap(this.map);
+
+    // 클릭 이벤트 추가
+    window.kakao.maps.event.addListener(marker, 'click', () => {
+      if (this.activeOverlay) {
+        this.activeOverlay.setMap(null);
+      }
+
+      const newOverlay = this.loadCustomOverlay(hospital.coordinateY, hospital.coordinateX, hospital.hospitalName, hospital.hospitalAddress, hospital.pro_doc, hospital.emergency_available, hospital.park_available);
+      newOverlay.setMap(this.map);
+      this.activeOverlay = newOverlay;
+
+      this.showRoute(hospital);
+    });
+
+    this.markers.push(marker);
   },
 
   // 커스텀 오버레이
@@ -86,6 +112,11 @@ export default {
     // 1. div 요소 생성
     const wrapper = document.createElement('div');
     wrapper.className = 'wrap';
+
+    // 응급실 상태에 따른 스타일 및 텍스트 (추후에 응급실 실시간 여부시 수정필요)
+    const emergencyStatus = emergency === 'Y' 
+      ? `<div class="emergency-available">🚨 응급실 운영중</div>` 
+      : `<div class="emergency-unavailable">응급실 정보 없음</div>`;
 
     // 2. innerHTML로 내부 HTML 구조 추가
     wrapper.innerHTML = `
@@ -102,7 +133,7 @@ export default {
           <div class="ellipsis">${address}</div>
           <div class="jibun ellipsis">(우) 63309 (지번) 영평동 2181</div> 
           <div> ${prodoc} </div>
-          <div> ${emergency} </div>
+          ${emergencyStatus}
           <div> ${parking} </div>
         </div>
       </div>
@@ -125,7 +156,6 @@ export default {
 
     return customOverlay;
   },
-
 
   // 닫기 버튼을 눌렀을 때 오버레이 닫기
   closeOverlay() {
@@ -283,21 +313,6 @@ export default {
 
     // alert(`${hospital.hospitalName}까지의 직선거리: ${distance.toFixed(2)}km\n(실제 경로를 찾을 수 없어 직선거리로 표시)`);
   },
-
-  speakText(text) {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ko-KR';
-      utterance.rate = 1;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      window.speechSynthesis.cancel(); // 이전 음성 중단
-      window.speechSynthesis.speak(utterance);
-    } else {
-      console.warn('이 브라우저는 TTS를 지원하지 않습니다.');
-    }
-  },
-
   // 두 지점 간의 거리 계산 (하버사인 공식)
   calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371; // 지구의 반지름 (km)

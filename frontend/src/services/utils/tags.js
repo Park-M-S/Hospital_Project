@@ -9,6 +9,11 @@ export default {
 		if (this.tags == null || this.tags.length === 0) {
 			this.$store.dispatch('updateDepartment', { department: tags });
 		}
-		this.tags.push(tags);
+		if (this.tags.includes(tags)) {
+			this.fetch();
+		} else {
+			this.tags.push(tags);
+		}
+
 	},
 }
