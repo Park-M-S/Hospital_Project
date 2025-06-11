@@ -5,9 +5,9 @@ services:
     container_name: hospital-mariadb
     environment:
       MYSQL_ROOT_PASSWORD: 1234
-      MYSQL_DATABASE: hospital
-      MYSQL_USER: hospitaluser
-      MYSQL_PASSWORD: hospitalpass
+      MYSQL_DATABASE: hospital_api_db  
+      MYSQL_USER: user
+      MYSQL_PASSWORD: 1234
     ports:
       - "3500:3306"
     volumes:
