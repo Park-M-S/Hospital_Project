@@ -4,7 +4,7 @@ services:
     image: mariadb:10.6
     container_name: hospital-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-1234}
       MYSQL_DATABASE: hospital
       MYSQL_USER: hospitaluser
       MYSQL_PASSWORD: ${DB_PASSWORD:-hospitalpass}
