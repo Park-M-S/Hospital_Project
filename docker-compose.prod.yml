@@ -1,0 +1,52 @@
+version: '3.8'
+services:
+  mariadb:
+    image: mariadb:10.6
+    container_name: hospital-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: hospital
+      MYSQL_USER: hospitaluser
+      MYSQL_PASSWORD: ${DB_PASSWORD:-hospitalpass}
+    ports:
+      - "3500:3306"
+    volumes:
+      - /opt/hospital/data:/var/lib/mysql
+    command: --port=3500
+    restart: unless-stopped
+    networks:
+      - hospital-network
+
+  backend:
+    image: hospital-backend:latest
+    container_name: hospital-backend
+    ports:
+      - "8888:8888"
+    environment:
+      - DB_URL=jdbc:mariadb://mariadb:3500/hospital
+      - DB_USERNAME=hospitaluser
+      - DB_PASSWORD=${DB_PASSWORD:-hospitalpass}
+      - SPRING_PROFILES_ACTIVE=production
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+    networks:
+      - hospital-network
+
+  frontend:
+    image: hospital-frontend:latest
+    container_name: hospital-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - hospital-network
+    volumes:
+      - /opt/hospital/ssl:/etc/nginx/ssl:ro
+
+networks:
+  hospital-network:
+    driver: bridge
