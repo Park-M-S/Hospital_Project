@@ -1,5 +1,5 @@
 # 빌드 스테이지
-FROM openjdk:17-jdk-slim as builder
+FROM openjdk:21-jdk-slim as builder
 
 WORKDIR /app
 COPY pom.xml .
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y maven
 RUN mvn clean package -DskipTests
 
 # 실행 스테이지 - Tomcat 10.1
-FROM tomcat:10.1-jdk17-openjdk-slim
+FROM tomcat:10.1-jdk21-openjdk-slim
 
 # 기본 webapps 정리
 RUN rm -rf /usr/local/tomcat/webapps/*
