@@ -1,16 +1,60 @@
-name: Deploy Hospital Project to EC2
+name: Deploy Hospital Project (S3 + EC2)
 
 on:
   push:
     branches: [ main ]
 
 env:
+  AWS_REGION: ap-northeast-2
   EC2_HOST: ${{ secrets.EC2_HOST }}
   EC2_USER: ${{ secrets.EC2_USER }}
   EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
 
 jobs:
-  build-and-deploy:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Build and Deploy Frontend to S3
+      run: |
+        cd frontend
+        
+        # 환경변수 파일 생성
+        echo "VITE_API_BASE_URL=http://${{ secrets.EC2_HOST }}:8888" > .env.production
+        echo "VITE_GOOGLE_TTS_API_KEY=${{ secrets.VITE_GOOGLE_TTS_API_KEY }}" >> .env.production
+        echo "VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }}" >> .env.production
+        echo "VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}" >> .env.production
+        
+        # 의존성 설치 및 빌드
+        npm ci
+        npm run build
+        
+        # S3에 업로드
+        aws s3 sync dist/ s3://${{ env.S3_BUCKET }}/ --delete
+        
+        # CloudFront 캐시 무효화
+        aws cloudfront create-invalidation --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+
+  deploy-backend:
     runs-on: ubuntu-latest
     
     steps:
@@ -26,21 +70,9 @@ jobs:
         docker build -t hospital-backend:${{ github.sha }} .
         docker tag hospital-backend:${{ github.sha }} hospital-backend:latest
 
-    - name: Build Frontend Image
-      run: |
-        cd frontend
-        # GitHub Secrets를 .env.production으로 생성
-        echo "VITE_API_BASE_URL=http://${{ secrets.EC2_HOST }}:8888" > .env.production
-        echo "VITE_GOOGLE_TTS_API_KEY=${{ secrets.VITE_GOOGLE_TTS_API_KEY }}" >> .env.production
-        echo "VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }}" >> .env.production
-        echo "VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}" >> .env.production
-        docker build -t hospital-frontend:${{ github.sha }} .
-        docker tag hospital-frontend:${{ github.sha }} hospital-frontend:latest
-
-    - name: Save Docker Images
+    - name: Save Backend Docker Image
       run: |
         docker save hospital-backend:latest | gzip > backend.tar.gz
-        docker save hospital-frontend:latest | gzip > frontend.tar.gz
 
     - name: Copy files to EC2
       uses: appleboy/scp-action@v0.1.4
@@ -48,10 +80,10 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
-        source: "backend.tar.gz,frontend.tar.gz,docker-compose.prod.yml,deploy.sh"
+        source: "backend.tar.gz,docker-compose.backend.yml,deploy-backend.sh"
         target: "/home/ec2-user/"
 
-    - name: Deploy to EC2
+    - name: Deploy Backend to EC2
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -60,16 +92,15 @@ jobs:
         script: |
           # Docker 이미지 로드
           docker load < /home/ec2-user/backend.tar.gz
-          docker load < /home/ec2-user/frontend.tar.gz
           
           # 환경 변수 설정
           export IMAGE_TAG=latest
           export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
           export DB_ROOT_PASSWORD="${{ secrets.DB_ROOT_PASSWORD }}"
           
-          # 배포 스크립트 실행
-          chmod +x /home/ec2-user/deploy.sh
-          /home/ec2-user/deploy.sh
+          # 백엔드 배포 스크립트 실행
+          chmod +x /home/ec2-user/deploy-backend.sh
+          /home/ec2-user/deploy-backend.sh
           
           # 파일 정리
-          rm -f /home/ec2-user/*.tar.gz
+          rm -f /home/ec2-user/backend.tar.gz
