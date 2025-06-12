@@ -23,7 +23,7 @@ jobs:
     - name: 백엔드 이미지 생성
       run: |
         cd hospital_main
-        docker build -t hospital-backend:${{ github.sha }} .
+        docker build --no-cache -t hospital-backend:${{ github.sha }} .
         docker tag hospital-backend:${{ github.sha }} hospital-backend:latest
 
     - name: 프론트엔드 이미지 생성
