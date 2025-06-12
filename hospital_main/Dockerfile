@@ -18,7 +18,7 @@ RUN rm -rf /usr/local/tomcat/webapps/*
 # WAR 파일을 Tomcat webapps에 복사
 COPY --from=builder /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
-# 포트 8888로 변경
+# 포트 8888로 변경 
 RUN sed -i 's/port="8080"/port="8888"/g' /usr/local/tomcat/conf/server.xml
 
 EXPOSE 8888
