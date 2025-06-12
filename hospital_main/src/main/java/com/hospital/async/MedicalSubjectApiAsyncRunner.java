@@ -1,7 +1,7 @@
 package com.hospital.async;
 
 import com.google.common.util.concurrent.RateLimiter;
-import com.hospital.client.MedicalSubjectApiCaller;
+import com.hospital.caller.MedicalSubjectApiCaller;
 import com.hospital.dto.api.MedicalSubjectApiResponse;
 import com.hospital.entity.MedicalSubject;
 import com.hospital.parser.MedicalSubjectApiParser;
@@ -60,7 +60,7 @@ public class MedicalSubjectApiAsyncRunner {
         return failedCount.get();
     }
 
-    @Async("proDocExecutor") // ✅ 병렬 실행을 위한 스레드 풀 사용
+    @Async("apiExecutor") // ✅ 병렬 실행을 위한 스레드 풀 사용
     public void runAsync(String hospitalCode) {
     	rateLimiter.acquire();;
         try {

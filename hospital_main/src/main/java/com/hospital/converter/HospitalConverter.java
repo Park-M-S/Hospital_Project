@@ -17,28 +17,27 @@ public class HospitalConverter {
     /**
      * Hospital 엔티티를 HospitalResponseDto로 변환
      */
-    public HospitalResponseDTO convertToDTO(HospitalMain hospital) {
-        if (hospital == null) {
+    public HospitalResponseDTO convertToDTO(HospitalMain hospitalMain) {
+        if (hospitalMain == null) {
             return null;
         }
         
-        HospitalDetail detail = hospital.getHospitalDetail();
-        List<MedicalSubject> subject = hospital.getMedicalSubjects();
+        HospitalDetail detail = hospitalMain.getHospitalDetail();
+       
         
         return HospitalResponseDTO.builder()
             // 기본 정보
-            .hospitalCode(hospital.getHospitalCode())
-            .hospitalName(hospital.getHospitalName())
-            .hospitalAddress(hospital.getHospitalAddress())
-            .provinceName(hospital.getProvinceName())
-            .districtName(hospital.getDistrictName())
-            .hospitalTel(hospital.getHospitalTel())
-            .hospitalHomepage(hospital.getHospitalHomepage())
-            .doctorNum(hospital.getDoctorNum())
+            .hospitalName(hospitalMain.getHospitalName())
+            .hospitalAddress(hospitalMain.getHospitalAddress())
+            .provinceName(hospitalMain.getProvinceName())
+            .districtName(hospitalMain.getDistrictName())
+            .hospitalTel(hospitalMain.getHospitalTel())
+            .hospitalHomepage(hospitalMain.getHospitalHomepage())
+            .doctorNum(hospitalMain.getDoctorNum())
             
             // 좌표 정보
-            .coordinateX(hospital.getCoordinateX())
-            .coordinateY(hospital.getCoordinateY())
+            .coordinateX(hospitalMain.getCoordinateX())
+            .coordinateY(hospitalMain.getCoordinateY())
             
             // 운영 정보 (detail이 있을 때만)
             .emergencyDayAvailable(detail != null ? detail.getEmyDayYn() : null)
@@ -46,8 +45,7 @@ public class HospitalConverter {
             .weekdayLunch(detail != null ? detail.getLunchWeek() : null)
             .parkingCapacity(detail != null ? detail.getParkQty() : null)
             .parkingFee(detail != null ? detail.getParkXpnsYn() : null)
-            .weekdayReception(detail != null ? detail.getRcvWeek() : null)
-            .saturdayReception(detail != null ? detail.getRcvSat() : null)
+            
             
             // 요일별 운영시간
             .mondayOpen(detail != null ? detail.getTrmtMonStart() : null)
@@ -65,11 +63,11 @@ public class HospitalConverter {
             .sundayOpen(detail != null ? detail.getTrmtSunStart() : null)
             .sundayClose(detail != null ? detail.getTrmtSunEnd() : null)
             
-            .medicalSubject(convertMedicalSubjectsToString(hospital.getMedicalSubjects()))
+            .medicalSubject(convertMedicalSubjectsToString(hospitalMain.getMedicalSubjects()))
             
          
             // 전문의 정보를 문자열로 변환
-            .professionalDoctors(convertProDocsToString(hospital.getProDocs()))
+            .professionalDoctors(convertProDocsToString(hospitalMain.getProDocs()))
             .build();
     }
     

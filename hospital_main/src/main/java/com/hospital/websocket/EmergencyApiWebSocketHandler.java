@@ -12,6 +12,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.hospital.emergency.service.EmergencyApiService;
 
 @Component
@@ -28,9 +29,9 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
         
         // 연결 시 초기 데이터 전송
         try {
-            String initialData = emergencyApiService.getEmergencyRoomData();
-            if (initialData != null && !initialData.trim().isEmpty()) {
-                session.sendMessage(new TextMessage(initialData));
+            JsonNode initialData = emergencyApiService.getEmergencyRoomData();
+            if (initialData != null && !initialData.isEmpty()) {
+                session.sendMessage(new TextMessage(initialData.toString()));
             }
         } catch (Exception e) {
             System.err.println("초기 데이터 전송 실패: " + e.getMessage());

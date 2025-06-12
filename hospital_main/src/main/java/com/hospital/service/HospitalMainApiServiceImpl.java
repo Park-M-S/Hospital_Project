@@ -4,7 +4,7 @@ package com.hospital.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hospital.entity.HospitalMain;
 import com.hospital.repository.HospitalMainApiRepository;
-import com.hospital.client.HospitalMainInfoApiCaller;
+import com.hospital.caller.HospitalMainInfoApiCaller;
 import com.hospital.dto.api.HospitalMainApiResponse;
 
 import org.springframework.stereotype.Service;

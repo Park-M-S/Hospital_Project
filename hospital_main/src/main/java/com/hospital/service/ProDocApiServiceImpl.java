@@ -4,6 +4,7 @@ import com.hospital.async.ProDocAsyncRunner;
 import com.hospital.repository.ProDocApiRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -32,6 +33,7 @@ public class ProDocApiServiceImpl implements ProDocApiService {
 	 * @return 처리 대상 병원 수
 	 */
 	@Override
+	@Transactional
 	public int fetchParseAndSaveProDocs() {
 		// 기존 데이터 전체 삭제
 		proDocRepository.deleteAllProDocs();

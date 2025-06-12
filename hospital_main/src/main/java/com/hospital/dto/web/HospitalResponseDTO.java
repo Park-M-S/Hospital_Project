@@ -15,7 +15,7 @@ import lombok.Setter;
 @Builder
 public class HospitalResponseDTO {
     // 기본 정보
-    private String hospitalCode;
+    
     private String hospitalName;
     private String hospitalAddress;
     private String provinceName;
@@ -34,9 +34,7 @@ public class HospitalResponseDTO {
     private String weekdayLunch;
     private Integer parkingCapacity;
     private String parkingFee;
-    private String weekdayReception;
-    private String saturdayReception;
-    
+   
     // 요일별 운영시간
     private String mondayOpen;
     private String mondayClose;

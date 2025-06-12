@@ -25,10 +25,10 @@ public class PharmacyApiItem {
     private String telno;
 
     @XmlElement(name = "XPos")
-    private String xPos;
+    private Double xPos;
 
     @XmlElement(name = "YPos")
-    private String yPos;
+    private Double yPos;
 
     @XmlElement(name = "sgguCd")
     private String sgguCd;

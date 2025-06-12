@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -27,16 +28,16 @@ public class EmergencyApiController {
 		
 	}
 
-	@GetMapping(value = "/info", produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/start", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<Map<String, Object>> getEmergencyInfo() {
+		
+	    emergencyApiService.startScheduler();
+	    
 		Map<String, Object> response = new HashMap<>();
 
 		try {
 			// 서비스에서 JSON 문자열을 받아옴
-			String jsonString = emergencyApiService.callEmergencyApi();
-
-			// JSON 문자열을 JsonNode로 파싱
-			JsonNode jsonNode = objectMapper.readTree(jsonString);
+			JsonNode jsonNode = emergencyApiService.getEmergencyRoomData();
 
 			response.put("success", true);
 			response.put("message", "응급실 정보 조회 성공");
@@ -56,5 +57,13 @@ public class EmergencyApiController {
 
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
+		
 	}
+	
+
+    @GetMapping("/stop")
+    public ResponseEntity<String> stopScheduler() {
+        emergencyApiService.stopScheduler();
+        return ResponseEntity.ok("스케줄러 중지됨");
+    }
 }

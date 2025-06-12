@@ -2,7 +2,7 @@
 package com.hospital.async;
 
 import com.google.common.util.concurrent.RateLimiter;
-import com.hospital.client.ProDocApiCaller;
+import com.hospital.caller.ProDocApiCaller;
 import com.hospital.dto.api.ProDocApiResponse;
 import com.hospital.entity.ProDoc;
 import com.hospital.parser.ProDocApiParser;
@@ -63,7 +63,7 @@ public class ProDocAsyncRunner {
     }
 
     // ✅ 병원코드 단위 비동기 처리
-    @Async("proDocExecutor") // 동일한 ThreadPoolTaskExecutor 사용
+    @Async("apiExecutor") // 동일한 ThreadPoolTaskExecutor 사용
     public void runAsync(String hospitalCode) {
     	rateLimiter.acquire(); // 🔒 이 한 줄로 초당 호출 제한 적용됨
     	

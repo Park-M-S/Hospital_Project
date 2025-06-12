@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.hospital.client.HospitalDetailApiCaller;
+import com.hospital.caller.HospitalDetailApiCaller;
 import com.hospital.entity.HospitalMain;
 import com.hospital.service.HospitalDetailApiService;
 import com.hospital.service.HospitalMainApiService;
@@ -144,7 +144,7 @@ public class HospitalApiController {
         return String.format("현재 진행상황: 완료 %d건, 실패 %d건\n", done, fail);
     }
     
-    @PostMapping(value = "/save", produces = "text/plain;charset=UTF-8")
+    @PostMapping(value = "/pharmacy/save", produces = "text/plain;charset=UTF-8")
     public String savePharmacyData() {
         String[] sgguCodes = {"310401", "310402", "310403"};
         int totalSaved = 0;

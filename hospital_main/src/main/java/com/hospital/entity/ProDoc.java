@@ -1,11 +1,27 @@
 package com.hospital.entity;
 
-import java.util.List;
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 
 @Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Table(name = "pro_doc")
 public class ProDoc {
 
@@ -35,22 +51,4 @@ public class ProDoc {
         return this.proDocCount != null && this.proDocCount > 0;
     }
 
-    // 기본 생성자
-    public ProDoc() {}
-
-    // Getter & Setter
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getHospitalCode() { return hospitalCode; }
-    public void setHospitalCode(String hospitalCode) { this.hospitalCode = hospitalCode; }
-
-    public String getSubjectName() { return subjectName; }
-    public void setSubjectName(String subjectName) { this.subjectName = subjectName; }
-
-    public Integer getProDocCount() { return proDocCount; }
-    public void setProDocCount(Integer proDocCount) { this.proDocCount = proDocCount; }
-
-    public HospitalMain getHospital() { return hospital; }
-    public void setHospital(HospitalMain hospital) { this.hospital = hospital; }
 }

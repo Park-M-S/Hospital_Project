@@ -1,7 +1,7 @@
 package com.hospital.async;
 
 import com.google.common.util.concurrent.RateLimiter;
-import com.hospital.client.HospitalDetailApiCaller;
+import com.hospital.caller.HospitalDetailApiCaller;
 import com.hospital.dto.api.HospitalDetailApiResponse;
 import com.hospital.entity.HospitalDetail;
 import com.hospital.parser.HospitalDetailApiParser;
@@ -62,7 +62,7 @@ public class HospitalDetailAsyncRunner {
     }
 
     // ✅ 병원코드 단위 비동기 처리
-    @Async("hospitalDetailExecutor") // 별도의 실행자 풀 사용
+    @Async("apiExecutor") // 별도의 실행자 풀 사용
     public void runAsync(String hospitalCode) {
         rateLimiter.acquire(); // 🔒 이 한 줄로 초당 호출 제한 적용됨
 
