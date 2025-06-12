@@ -1,21 +1,19 @@
 version: '3.8'
 services:
   mariadb:
-    image: mariadb:10.6
+    image: mariadb:10.11
     container_name: hospital-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-1234}
-      MYSQL_DATABASE: hospital
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: hospital_api_db
       MYSQL_USER: hospitaluser
-      MYSQL_PASSWORD: ${DB_PASSWORD:-hospitalpass}
+      MYSQL_PASSWORD: hospitalpass
     ports:
       - "3500:3306"
     volumes:
       - /opt/hospital/data:/var/lib/mysql
     command: --port=3500
     restart: unless-stopped
-    networks:
-      - hospital-network
 
   backend:
     image: hospital-backend:latest
@@ -23,30 +21,12 @@ services:
     ports:
       - "8888:8888"
     environment:
-      - DB_URL=jdbc:mariadb://mariadb:3500/hospital
-      - DB_USERNAME=hospitaluser
-      - DB_PASSWORD=${DB_PASSWORD:-hospitalpass}
+      - DB_URL=jdbc:mariadb://mariadb:3500/hospital_api_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=1234
       - SPRING_PROFILES_ACTIVE=production
     depends_on:
       - mariadb
     restart: unless-stopped
-    networks:
-      - hospital-network
 
-  frontend:
-    image: hospital-frontend:latest
-    container_name: hospital-frontend
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - hospital-network
-    volumes:
-      - /opt/hospital/ssl:/etc/nginx/ssl:ro
-
-networks:
-  hospital-network:
-    driver: bridge
+# frontend 섹션 제거
