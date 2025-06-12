@@ -1,14 +1,18 @@
-FROM node:18-alpine as builder
+FROM node:22-alpine as builder
 
 WORKDIR /app
+
+# 환경 변수 설정 (빌드 안정성)
+ENV NODE_ENV=production
+ENV CI=false
+ENV NODE_OPTIONS="--max-old-space-size=2048"
+
+# 패키지 설치
 COPY package*.json ./
 RUN npm install
 
+# 소스 복사 및 빌드
 COPY . .
-
-# 간단한 확인들
-RUN ls -la
-RUN npx vite --version
 RUN npm run build
 
 FROM nginx:alpine
