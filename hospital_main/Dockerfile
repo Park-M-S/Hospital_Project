@@ -4,9 +4,10 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
-# AppConfig.java에서 중복된 validate 설정 제거 및 db.properties 수정
+# AppConfig.java 수정: validate 설정 제거, db.properties 수정, @Primary 어노테이션 추가
 RUN sed -i 's/jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate");/\/\/ jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate"); \/\/ 중복 제거/g' src/main/java/com/hospital/config/AppConfig.java && \
-    sed -i 's/localhost:3500/mariadb:3500/g' src/main/resources/db.properties
+    sed -i 's/localhost:3500/mariadb:3500/g' src/main/resources/db.properties && \
+    sed -i 's/@Bean$/&\n    @Primary/g' src/main/java/com/hospital/config/AppConfig.java
 
 # Maven 빌드 (WAR 파일 생성)
 RUN apt-get update && apt-get install -y maven
