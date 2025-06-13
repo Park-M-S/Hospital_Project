@@ -1,4 +1,4 @@
-# 빌드 스테이지
+# 빌드 스테이지 
 FROM openjdk:21-jdk-slim as builder
 
 WORKDIR /app
