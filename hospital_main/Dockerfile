@@ -4,6 +4,10 @@ WORKDIR /app
 COPY pom.xml .
 COPY src ./src
 
+# AppConfig.java에서 중복된 validate 설정 제거 및 db.properties 수정
+RUN sed -i 's/jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate");/\/\/ jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate"); \/\/ 중복 제거/g' src/main/java/com/hospital/config/AppConfig.java && \
+    sed -i 's/localhost:3500/mariadb:3500/g' src/main/resources/db.properties
+
 # Maven 빌드 (WAR 파일 생성)
 RUN apt-get update && apt-get install -y maven
 RUN mvn clean package -DskipTests
@@ -14,34 +18,14 @@ FROM tomcat:10.1-jdk21-openjdk-slim
 # 기본 webapps 정리
 RUN rm -rf /usr/local/tomcat/webapps/*
 
-# unzip 설치
-RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
-
 # WAR 파일을 Tomcat webapps에 복사
 COPY --from=builder /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
-# WAR 파일 압축 해제하여 설정 파일들 수정
-RUN cd /usr/local/tomcat/webapps && \
-    unzip ROOT.war -d ROOT && \
-    rm ROOT.war && \
-    sed -i 's/localhost:3500/mariadb:3500/g' /usr/local/tomcat/webapps/ROOT/WEB-INF/classes/db.properties
-
-# JPA/Hibernate 설정 수정 (테이블 자동 생성)
-
-# Spring XML 설정 파일에서 JPA 설정 수정 (root-context.xml 등)
-RUN find /usr/local/tomcat/webapps/ROOT/WEB-INF -name "*.xml" -exec grep -l "hibernate.hbm2ddl.auto" {} \; | while read file; do \
-        sed -i 's/hibernate.hbm2ddl.auto.*value="validate"/hibernate.hbm2ddl.auto" value="update"/g' "$file" || \
-        sed -i 's/hibernate.hbm2ddl.auto.*value="none"/hibernate.hbm2ddl.auto" value="update"/g' "$file"; \
-    done
-
-# 추가: JPA 관련 다른 설정들도 최적화
-RUN if [ -f /usr/local/tomcat/webapps/ROOT/WEB-INF/classes/META-INF/persistence.xml ]; then \
-        sed -i 's/<property name="hibernate.show_sql" value="false"\/>/<property name="hibernate.show_sql" value="true"\/>/g' /usr/local/tomcat/webapps/ROOT/WEB-INF/classes/META-INF/persistence.xml || \
-        echo "show_sql 설정 추가 실패 (정상)"; \
-    fi
-
 # 포트 8888로 변경 
 RUN sed -i 's/port="8080"/port="8888"/g' /usr/local/tomcat/conf/server.xml
+
+# JPA DDL 설정을 확실히 하기 위한 환경변수
+ENV JAVA_OPTS="-Dhibernate.hbm2ddl.auto=update"
 
 EXPOSE 8888
 CMD ["catalina.sh", "run"]
