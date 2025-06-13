@@ -146,13 +146,8 @@ public class HospitalApiController {
     
     @PostMapping(value = "/pharmacy/save", produces = "text/plain;charset=UTF-8")
     public String savePharmacyData() {
-        String[] sgguCodes = {"310401", "310402", "310403"};
-        int totalSaved = 0;
-
-        for (String sgguCd : sgguCodes) {
-            totalSaved += pharmacyApiService.fetchAndSaveByDistrict(sgguCd);
-        }
-
+        int totalSaved = pharmacyApiService.fetchAndSaveSeongnamPharmacies();
+        
         return String.format("✅ 약국 데이터 저장 완료! 총 %d건 저장됨 (성남시 전체)", totalSaved);
     }
 }

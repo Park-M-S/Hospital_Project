@@ -7,5 +7,5 @@ public interface PharmacyApiService {
      * @param district 예: "성남시 분당구"
      * @return 저장된 약국 수
      */
-    int fetchAndSaveByDistrict(String district);
+	 int fetchAndSaveSeongnamPharmacies();
 }

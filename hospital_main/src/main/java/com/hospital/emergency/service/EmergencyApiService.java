@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.hospital.dto.web.EmergencyResponse;
-import com.hospital.emergency.parser.EmergencyApiParser;
+import com.hospital.emergency.caller.EmergencyApiCaller;
 import com.hospital.entity.HospitalMain;
 import com.hospital.repository.HospitalMainApiRepository;
 import com.hospital.websocket.EmergencyApiWebSocketHandler;
@@ -23,14 +23,14 @@ public class EmergencyApiService {
 
 	private final AtomicBoolean schedulerRunning = new AtomicBoolean(false);
 	private final ObjectMapper jsonMapper;
-	private final EmergencyApiParser apiParser;
+	private final EmergencyApiCaller apiCaller;
 	private final HospitalMainApiRepository hospitalMainApiRepository;
 
 	@Autowired
 	private EmergencyApiWebSocketHandler webSocketHandler;
 
-	public EmergencyApiService(EmergencyApiParser apiParser, HospitalMainApiRepository hospitalMainApiRepository) {
-		this.apiParser = apiParser;
+	public EmergencyApiService(EmergencyApiCaller apiCaller, HospitalMainApiRepository hospitalMainApiRepository) {
+		this.apiCaller = apiCaller;
 		this.jsonMapper = new ObjectMapper();
 		this.hospitalMainApiRepository = hospitalMainApiRepository;
 	}
@@ -58,7 +58,7 @@ public class EmergencyApiService {
 	}
 
 	public List<EmergencyResponse> getEmergencyRoomDataAsDto() {
-		JsonNode data = apiParser.callEmergencyApiAsJsonNode("성남시", 1, 10);
+		JsonNode data = apiCaller.callEmergencyApiAsJsonNode("성남시", 1, 10);
 
 		System.out.println("=== 디버깅 시작 ===");
 		System.out.println("1. 전체 응답: " + data);
@@ -132,6 +132,6 @@ public class EmergencyApiService {
 	}
 
 	public JsonNode getEmergencyRoomData() {
-		return apiParser.callEmergencyApiAsJsonNode("성남시", 1, 10);
+		return apiCaller.callEmergencyApiAsJsonNode("성남시", 1, 10);
 	}
 }

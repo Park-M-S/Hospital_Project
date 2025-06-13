@@ -46,4 +46,11 @@ public class HospitalController {
 	    
 	    return pharmacyService.getPharmaciesByDistance(userLat, userLng, radius);
 	}
+    
+    // ✅ 병원명 검색 API (태그 필터링 옵션)
+    @GetMapping(value = "/hospitals/search", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<HospitalResponseDTO> searchHospitalsByName(
+            @RequestParam String hospitalName) {
+        return hospitalService.searchHospitalsByName(hospitalName);
+    }
 }

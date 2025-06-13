@@ -21,7 +21,7 @@ import lombok.ToString;
 public class HospitalDetail {
 
     @Id
-    @Column(name = "hospital_code", length = 255, nullable = false) // 병원 고유 코드 (ykiho)
+    @Column(name = "hospital_code", length = 50, nullable = false) // 병원 고유 코드 (ykiho)
     private String hospitalCode; // API의 <ykiho>
 
     @Column(name = "em_day_yn", length = 1)

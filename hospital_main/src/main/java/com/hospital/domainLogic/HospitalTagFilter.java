@@ -47,16 +47,23 @@ public class HospitalTagFilter {
                         return false;
                     }
                     break;
-                // ✅ 새로운 태그들 추가
                 case "무료주차":
                     if (Objects.isNull(hospital.getHospitalDetail()) || 
-                        !hospital.getHospitalDetail().isFreeParking()) {
+                        !hospital.getHospitalDetail().hasParkingSpace() ||  // ✅ 주차공간 먼저 체크
+                        !hospital.getHospitalDetail().isFreeParking()) {     // ✅ 그 다음 무료 여부 체크
                         return false;
                     }
                     break;
-                case "주말진료":
+                // ✅ 주말진료를 토요일/일요일로 분리
+                case "토요일진료":
                     if (Objects.isNull(hospital.getHospitalDetail()) || 
-                        !hospital.getHospitalDetail().isWeekendAvailable()) {
+                        !hospital.getHospitalDetail().isSaturdayAvailable()) {
+                        return false;
+                    }
+                    break;
+                case "일요일진료":
+                    if (Objects.isNull(hospital.getHospitalDetail()) || 
+                        !hospital.getHospitalDetail().isSundayAvailable()) {
                         return false;
                     }
                     break;
