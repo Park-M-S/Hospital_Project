@@ -1,29 +1,34 @@
 version: '3.8'
 services:
   mariadb:
-    image: mariadb:10.11  # 더 최신 버전 권장
+    image: mariadb:10.11
     container_name: hospital-mariadb
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-1234}
       MYSQL_DATABASE: hospital_api_db
       MYSQL_USER: hospitaluser
       MYSQL_PASSWORD: ${DB_PASSWORD:-1234}
+      # UTF8MB4 설정 환경변수
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
-      - "3500:3500"  # 외부:내부 모두 3500
+      - "3500:3500"
     volumes:
-      - /opt/hospital/data:/var/lib/mysql
-    command: --port=3500
+      - mariadb_data:/var/lib/mysql
+      # 설정 파일 마운트
+      - ./mysql-config:/etc/mysql/conf.d
+    command: --port=3500 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: unless-stopped
     networks:
       - hospital-network
-      
+
   backend:
     image: hospital-backend:latest
     container_name: hospital-backend
     ports:
       - "8888:8888"
     environment:
-      - DB_URL=jdbc:mariadb://mariadb:3500/hospital_api_db  # 3500 유지
+      - DB_URL=jdbc:mariadb://mariadb:3500/hospital_api_db?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:-1234}
       - SPRING_PROFILES_ACTIVE=production
@@ -32,7 +37,7 @@ services:
     restart: unless-stopped
     networks:
       - hospital-network
-      
+
   frontend:
     image: hospital-frontend:latest
     container_name: hospital-frontend
@@ -44,7 +49,10 @@ services:
     restart: unless-stopped
     networks:
       - hospital-network
-      
+
+volumes:
+  mariadb_data:
+
 networks:
   hospital-network:
     driver: bridge
