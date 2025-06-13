@@ -1,5 +1,5 @@
 # 빌드 스테이지 
-FROM openjdk:21-jdk-slim as builder
+FROM openjdk:21-jdk-slim AS builder
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
@@ -13,6 +13,9 @@ FROM tomcat:10.1-jdk21-openjdk-slim
 
 # 기본 webapps 정리
 RUN rm -rf /usr/local/tomcat/webapps/*
+
+# unzip 설치
+RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
 
 # WAR 파일을 Tomcat webapps에 복사
 COPY --from=builder /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
