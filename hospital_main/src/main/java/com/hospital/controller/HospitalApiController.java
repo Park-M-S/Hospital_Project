@@ -127,7 +127,7 @@ public class HospitalApiController {
         return String.format("진료과목 진행상황: 완료 %d건, 실패 %d건\n", done, fail);
     }
     
-    @GetMapping(value = "/proDoc/save", produces = MediaType.TEXT_PLAIN_VALUE)
+    @PostMapping(value = "/proDoc/save", produces = MediaType.TEXT_PLAIN_VALUE)
     public String syncProDocData() {
         int total = proDocApiService.fetchParseAndSaveProDocs(); // 전체 병원 수 반환
         return String.format("전문의 정보 저장 시작됨! 전체 병원 수: %d개.\n(실시간 진행상황은 로그에서 확인 가능)\n", total);
