@@ -57,7 +57,7 @@ services:
     networks:
       - hospital-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8888/"]
       timeout: 10s
       retries: 5
       interval: 30s
@@ -90,7 +90,7 @@ services:
     networks:
       - hospital-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "-k", "https://localhost/", "||", "curl", "-f", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/", "||", "curl", "-f", "http://localhost:/"]
       timeout: 10s
       retries: 5
       interval: 30s
