@@ -38,8 +38,8 @@ services:
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:-1234}
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      # DuckDNS 도메인을 CORS에 추가
-      - ALLOWED_ORIGINS=https://${DUCKDNS_DOMAIN:-yourdomain.duckdns.org},http://localhost:5173
+      # DuckDNS 도메인을 CORS에 추가 (있는 경우에만)
+      - ALLOWED_ORIGINS=https://${DUCKDNS_DOMAIN:-localhost},http://localhost:5173
     volumes:
       - /opt/hospital/logs/backend:/app/logs
     depends_on:
@@ -68,10 +68,10 @@ services:
       - BACKEND_PORT=${BACKEND_PORT:-8888}
       - ENVIRONMENT=${ENVIRONMENT:-production}
       
-      # DuckDNS 설정 (필수)
-      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN}
-      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
-      - ACME_EMAIL=${ACME_EMAIL:-admin@yourdomain.com}
+      # DuckDNS 설정 (선택사항 - 없으면 HTTP 모드)
+      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
