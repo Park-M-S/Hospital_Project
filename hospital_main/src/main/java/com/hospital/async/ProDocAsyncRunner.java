@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Service // Spring 서비스 컴포넌트로 등록 (비즈니스 로직 실행 담당)
 public class ProDocAsyncRunner {
-	private final RateLimiter rateLimiter = RateLimiter.create(5.0); // 초당 5건 제한
+	private final RateLimiter rateLimiter = RateLimiter.create(8.0); // 초당 5건 제한
 
     // 의존성 주입: API 호출, 파싱, 저장을 담당하는 객체들
     private final ProDocApiCaller apiCaller;

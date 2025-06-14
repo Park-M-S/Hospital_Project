@@ -41,7 +41,7 @@ public class HospitalDetailApiServiceImpl implements HospitalDetailApiService {
     @Override
     public int updateAllHospitalDetails() {
         // 기존 데이터 전체 삭제
-        hospitalDetailRepository.deleteAll();
+        hospitalDetailRepository.deleteAllDetails();
         
         // 병원 코드 리스트 불러오기
         List<String> hospitalCodes = hospitalMainService.getAllHospitalCodes();

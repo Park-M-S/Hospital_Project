@@ -16,7 +16,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 @Component
-public class HospitalMainInfoApiCaller {
+public class HospitalMainApiCaller {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -27,7 +27,7 @@ public class HospitalMainInfoApiCaller {
     @Value("${hospital.main.api.key}")
     private String serviceKey;
 
-    public HospitalMainInfoApiCaller(RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public HospitalMainApiCaller(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
     }
@@ -55,9 +55,9 @@ public class HospitalMainInfoApiCaller {
             throw new RuntimeException("API 호출 중 오류 발생: " + uri.toString() + ", " + e.getMessage(), e);
         }
 
-        HospitalMainApiResponse apiResponseDto; // ★★★ DTO 객체 선언 ★★★
+        HospitalMainApiResponse apiResponseDto; // DTO 객체 선언 
         try {
-            // ★★★ JSON 문자열을 DTO 객체로 직접 매핑 ★★★
+            //  JSON 문자열을 DTO 객체로 직접 매핑 
             apiResponseDto = objectMapper.readValue(responseJson, HospitalMainApiResponse.class);
 
             // resultCode 검사도 DTO 객체를 통해 수행
@@ -71,6 +71,6 @@ public class HospitalMainInfoApiCaller {
             throw new RuntimeException("API 응답 JSON 파싱 오류: " + e.getMessage() + " (응답: " + responseJson + ")", e);
         }
 
-        return apiResponseDto; // ★★★ DTO 객체 반환 ★★★
+        return apiResponseDto; //  DTO 객체 반환 
     }
 }

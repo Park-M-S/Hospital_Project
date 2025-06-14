@@ -50,10 +50,9 @@ public class HospitalConverter {
             .parkingCapacity(detail != null ? detail.getParkQty() : null)
             .parkingFee(detail != null ? detail.getParkXpnsYn() : null)
             
-            
-            // 요일별 운영시간
-            .todayOpen(todayTime.getOpenTime())
-            .todayClose(todayTime.getCloseTime())
+            //운영 시간
+            .todayOpen(formatTime(todayTime.getOpenTime()))
+            .todayClose(formatTime(todayTime.getCloseTime()))
             
             .medicalSubject(convertMedicalSubjectsToString(hospitalMain.getMedicalSubjects()))
             
@@ -75,6 +74,15 @@ public class HospitalConverter {
                 .collect(Collectors.joining(", "));
     }
     
+    private String formatTime(String timeStr) {
+        // null이거나 4자리가 아니면 원본값 그대로 반환
+        if (timeStr == null || timeStr.length() != 4) {
+            return timeStr;
+        }
+        
+        // HHMM을 HH:MM으로 변환
+        return timeStr.substring(0, 2) + ":" + timeStr.substring(2, 4);
+    }
     
     //Hospital 엔티티 리스트를 DTO 리스트로 변환
     public List<HospitalResponse> convertToDtos(List<HospitalMain> hospitals) {

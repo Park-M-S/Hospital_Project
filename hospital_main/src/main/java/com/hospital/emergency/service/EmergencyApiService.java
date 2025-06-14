@@ -116,11 +116,14 @@ public class EmergencyApiService {
 				if (!hospitals.isEmpty()) {
 					HospitalMain hospitalData = hospitals.get(0); // 첫 번째 결과 사용
 					response.setCoordinates(hospitalData.getCoordinateX(), hospitalData.getCoordinateY());
+					response.setEmergencyAddress(hospitalData.getHospitalAddress());
 					System.out.println(
 							"     좌표: (" + hospitalData.getCoordinateX() + ", " + hospitalData.getCoordinateY() + ")");
+					System.out.println("     주소: " + hospitalData.getHospitalAddress());
 				} else {
-					System.out.println("     좌표 정보 없음");
+					System.out.println("     좌표 및 주소 정보 없음");
 					response.setCoordinates(null, null);
+					response.setEmergencyAddress(null); // 주소도 null 설정
 				}
 			}
 
@@ -135,10 +138,10 @@ public class EmergencyApiService {
 	public void startScheduler() {
 		schedulerRunning.set(true);
 
-		// ✅ 여기서 몇 초마다 호출할지 설정!
+		// 몇 초마다 호출할지 설정
 		scheduledTask = taskScheduler.scheduleAtFixedRate(() -> {
 			updateEmergencyRoomData();
-		}, Duration.ofSeconds(30)); // ← 30초마다!
+		}, Duration.ofSeconds(30));
 
 		System.out.println("✅ 30초마다 실행하는 스케줄러 시작!");
 	}
