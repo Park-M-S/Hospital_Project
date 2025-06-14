@@ -1,4 +1,4 @@
-name: Deploy Hospital Project to EC2 (Self-Signed SSL)
+name: 병원 프로젝트 EC2 배포 (DuckDNS SSL)
 
 on:
   push:
@@ -12,16 +12,17 @@ env:
 
 jobs:
   build-and-deploy:
+    name: 빌드 및 배포
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: 소스코드 체크아웃
       uses: actions/checkout@v3
       
-    - name: Set up Docker Buildx
+    - name: Docker Buildx 설정
       uses: docker/setup-buildx-action@v2
       
-    - name: 백엔드 이미지 생성
+    - name: 백엔드 도커 이미지 빌드
       run: |
         cd hospital_main
         echo "🔨 백엔드 Docker 이미지 빌드 중..."
@@ -29,13 +30,13 @@ jobs:
         docker tag hospital-backend:${{ github.sha }} hospital-backend:latest
         echo "✅ 백엔드 이미지 생성 완료"
         
-    - name: 프론트엔드 이미지 생성 (Caddy + 자체 서명 SSL)
+    - name: 프론트엔드 도커 이미지 빌드 (Caddy + DuckDNS SSL)
       run: |
         cd frontend
-        echo "🔨 프론트엔드 Docker 이미지 빌드 중 (Caddy + SSL)..."
+        echo "🔨 프론트엔드 Docker 이미지 빌드 중 (Caddy + DuckDNS SSL)..."
         
-        # Vue.js 환경변수 파일 생성 (HTTPS 기반)
-        echo "VITE_API_BASE_URL=https://${{ secrets.EC2_HOST }}" > .env.production
+        # Vue.js 환경변수 파일 생성 (DuckDNS 도메인 기반)
+        echo "VITE_API_BASE_URL=https://${{ secrets.DUCKDNS_DOMAIN }}" > .env.production
         echo "VITE_GOOGLE_TTS_API_KEY=${{ secrets.VITE_GOOGLE_TTS_API_KEY }}" >> .env.production
         echo "VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }}" >> .env.production
         echo "VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}" >> .env.production
@@ -47,9 +48,9 @@ jobs:
         # Caddy 기반 프론트엔드 이미지 빌드
         docker build -t hospital-frontend:${{ github.sha }} .
         docker tag hospital-frontend:${{ github.sha }} hospital-frontend:latest
-        echo "✅ 프론트엔드 이미지 생성 완료 (Caddy + SSL)"
+        echo "✅ 프론트엔드 이미지 생성 완료 (Caddy + DuckDNS SSL)"
         
-    - name: 도커 이미지 저장
+    - name: 도커 이미지 압축 및 저장
       run: |
         echo "💾 Docker 이미지 압축 중..."
         docker save hospital-backend:latest | gzip > backend.tar.gz
@@ -59,7 +60,7 @@ jobs:
         ls -lh *.tar.gz
         echo "✅ 이미지 압축 완료"
         
-    - name: 배포 파일들 EC2에 복사
+    - name: 배포 파일들을 EC2 서버로 전송
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -68,7 +69,7 @@ jobs:
         source: "backend.tar.gz,frontend.tar.gz,docker-compose.prod.yml,deploy.sh"
         target: "/home/ec2-user/"
         
-    - name: Caddy 설정 파일들 복사
+    - name: Caddy 설정 파일들을 EC2 서버로 전송
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -78,7 +79,7 @@ jobs:
         target: "/home/ec2-user/"
         strip_components: 1
         
-    - name: Deploy to EC2 with Self-Signed SSL
+    - name: EC2 서버에 DuckDNS SSL로 배포
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -86,32 +87,52 @@ jobs:
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         envs: GITHUB_SHA
         script: |
-          echo "🚀 Hospital Project 자체 서명 SSL 배포 시작..."
+          echo "🚀 병원 프로젝트 DuckDNS SSL 배포 시작..."
           
           # Docker 이미지 로드
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
           docker load < /home/ec2-user/frontend.tar.gz
           
-          # 환경변수 설정 (GitHub Secrets에서 전달)
-          export SERVER_IP="${{ secrets.EC2_HOST }}"
-          export SERVER_DOMAIN=""
-          export ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}"
-          export IMAGE_TAG="latest"
-          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          export DB_ROOT_PASSWORD="${{ secrets.DB_ROOT_PASSWORD }}"
-          export BACKEND_PORT="${{ secrets.BACKEND_PORT }}"
-          export DB_PORT="${{ secrets.DB_PORT }}"
-          export ENVIRONMENT="${{ secrets.ENVIRONMENT }}"
-          export CADDY_AUTO_HTTPS="on"
+          # .env 파일 생성 (GitHub Secrets에서 환경변수 설정)
+          cat > .env << EOF
+          ENVIRONMENT=production
+          IMAGE_TAG=latest
+          
+          # 데이터베이스 설정
+          DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_PORT=3500
+          
+          # 백엔드 설정
+          BACKEND_HOST=hospital-backend
+          BACKEND_PORT=8888
+          
+          # DuckDNS 설정
+          DUCKDNS_DOMAIN=${{ secrets.DUCKDNS_DOMAIN }}
+          DUCKDNS_SUBDOMAIN=${{ secrets.DUCKDNS_SUBDOMAIN }}
+          DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
+          ACME_EMAIL=${{ secrets.ACME_EMAIL }}
+          
+          # 병원/약국 API 키 설정
+          HOSPITAL_MAIN_API_KEY=${{ secrets.HOSPITAL_MAIN_API_KEY }}
+          HOSPITAL_DETAIL_API_KEY=${{ secrets.HOSPITAL_DETAIL_API_KEY }}
+          HOSPITAL_MEDICAL_SUBJECT_API_KEY=${{ secrets.HOSPITAL_MEDICAL_SUBJECT_API_KEY }}
+          HOSPITAL_PRODOC_API_KEY=${{ secrets.HOSPITAL_PRODOC_API_KEY }}
+          HOSPITAL_PHARMACY_API_KEY=${{ secrets.HOSPITAL_PHARMACY_API_KEY }}
+          HOSPITAL_EMERGENCY_API_KEY=${{ secrets.HOSPITAL_EMERGENCY_API_KEY }}
+          EOF
           
           # 환경변수 확인
           echo "📋 배포 환경 설정:"
-          echo "  서버 IP: $SERVER_IP"
-          echo "  환경: $ENVIRONMENT"
-          echo "  SSL 타입: 자체 서명 인증서"
-          echo "  백엔드 포트: $BACKEND_PORT"
-          echo "  DB 포트: $DB_PORT"
+          echo "  환경: ${{ secrets.ENVIRONMENT }}"
+          echo "  DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
+          echo "  SSL 타입: Let's Encrypt (DuckDNS)"
+          echo "  백엔드 포트: 8888"
+          echo "  DB 포트: 3500"
+          
+          # DuckDNS 설정 디렉토리 생성
+          mkdir -p ./duckdns
           
           # 배포 스크립트 실행 권한 부여
           chmod +x /home/ec2-user/deploy.sh
@@ -139,30 +160,27 @@ jobs:
           echo "📊 컨테이너 상태:"
           docker-compose -f /home/ec2-user/docker-compose.prod.yml ps
           
-          # 서비스 응답 확인 (최대 60초 대기)
-          echo "🔍 서비스 응답 테스트..."
+          # DuckDNS 도메인으로 테스트
+          TARGET_URL="https://${{ secrets.DUCKDNS_DOMAIN }}"
+          echo "🔍 DuckDNS SSL 서비스 응답 테스트 ($TARGET_URL)..."
           
-          for i in {1..12}; do
-            echo "  시도 $i/12..."
+          # 서비스 응답 확인 (최대 120초 대기 - SSL 인증서 발급 시간 고려)
+          for i in {1..24}; do
+            echo "  시도 $i/24..."
             
-            # HTTPS 프론트엔드 확인 (자체 서명 인증서)
-            if curl -f -s -k --connect-timeout 5 "https://${{ secrets.EC2_HOST }}" > /dev/null 2>&1; then
-              echo "✅ HTTPS 프론트엔드: 정상"
-              FRONTEND_OK=true
-              break
-            elif curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}" > /dev/null 2>&1; then
-              echo "✅ HTTP 프론트엔드: 정상 (HTTPS로 리다이렉트)"
+            if curl -f -s -k --connect-timeout 10 "$TARGET_URL" > /dev/null 2>&1; then
+              echo "✅ 프론트엔드: 정상"
               FRONTEND_OK=true
               break
             else
-              echo "⏳ 프론트엔드 시작 대기 중..."
+              echo "⏳ 프론트엔드 시작 대기 중... (SSL 인증서 발급 대기 포함)"
               sleep 5
             fi
           done
           
           # 백엔드 API 확인
           for i in {1..6}; do
-            if curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}:${{ secrets.BACKEND_PORT }}" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}:8888" > /dev/null 2>&1; then
               echo "✅ 백엔드 API: 정상"
               BACKEND_OK=true
               break
@@ -172,6 +190,14 @@ jobs:
             fi
           done
           
+          # DuckDNS 컨테이너 확인
+          if docker ps | grep hospital-duckdns > /dev/null; then
+            echo "✅ DuckDNS 자동 업데이트: 활성화"
+            docker logs hospital-duckdns --tail=5
+          else
+            echo "⚠️ DuckDNS 자동 업데이트: 비활성화"
+          fi
+          
           # 최종 결과 출력
           echo ""
           echo "🎉 =========================================="
@@ -179,24 +205,13 @@ jobs:
           echo "==========================================="
           echo ""
           echo "📍 접속 정보:"
-          echo "  🔒 HTTPS: https://${{ secrets.EC2_HOST }} (자체 서명 인증서)"
-          echo "  🌍 HTTP:  http://${{ secrets.EC2_HOST }} (HTTPS로 리다이렉트)"
-          echo "  🔧 Backend API: http://${{ secrets.EC2_HOST }}:${{ secrets.BACKEND_PORT }}"
+          echo "  🔒 HTTPS: https://${{ secrets.DUCKDNS_DOMAIN }} (Let's Encrypt SSL)"
+          echo "  🌍 HTTP:  http://${{ secrets.DUCKDNS_DOMAIN }} (HTTPS로 자동 리다이렉트)"
+          echo "  🔧 백엔드 API: http://${{ secrets.EC2_HOST }}:8888"
           echo ""
-          echo "🔐 브라우저 접속 방법:"
-          echo "  1. https://${{ secrets.EC2_HOST }} 접속"
-          echo "  2. 보안 경고에서 '고급' → '안전하지 않음을 승인하고 계속'"
-          echo ""
-          echo "✨ Geolocation API가 HTTPS 환경에서 정상 작동합니다!"
+          echo "✨ DuckDNS 자동 IP 업데이트 + Let's Encrypt SSL 인증서!"
           
-          # 로그 확인 (에러가 있는 경우)
-          if docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=10 | grep -i error > /dev/null 2>&1; then
-            echo ""
-            echo "⚠️ 일부 서비스에서 에러 발견:"
-            docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=20 | grep -i error
-          fi
-          
-    - name: 배포 실패 시 롤백
+    - name: 배포 실패 시 롤백 처리
       if: failure()
       uses: appleboy/ssh-action@v0.1.5
       with:
