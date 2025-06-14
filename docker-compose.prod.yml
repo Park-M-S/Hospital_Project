@@ -1,5 +1,11 @@
-version: '3.8'
+cd ~/Hospital_Project
 
+# 백업 생성
+cp docker-compose.prod.yml docker-compose.prod.yml.backup
+
+# frontend 환경변수 섹션 수정
+cat > docker-compose.prod.yml << 'EOF'
+version: '3.8'
 # Hospital Project Production Compose - 자체 서명 SSL
 services:
   # MariaDB 데이터베이스
@@ -64,10 +70,10 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - SERVER_IP=localhost
-      - BACKEND_HOST=hospital-backend-dev
-      - BACKEND_PORT=8888
-      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - SERVER_IP=${SERVER_IP:-localhost}
+      - BACKEND_HOST=${BACKEND_HOST:-hospital-backend}
+      - BACKEND_PORT=${BACKEND_PORT:-8888}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     volumes:
       - caddy_dev_data:/data
       - caddy_dev_config:/config
@@ -85,3 +91,4 @@ volumes:
   mariadb_dev_data:
   caddy_dev_data:
   caddy_dev_config:
+EOF
