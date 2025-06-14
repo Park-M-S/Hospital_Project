@@ -1,5 +1,10 @@
-# 자체 서명 SSL (브라우저 경고 표시됨)
-${SERVER_IP}:443 {
+# HTTP 전용 (SSL 문제 완전 회피)
+{
+    # 글로벌 설정 - 자동 HTTPS 완전 비활성화
+    auto_https off
+}
+
+${SERVER_IP}:80 {
     root * /usr/share/caddy
     file_server
     try_files {path} /index.html
@@ -11,11 +16,6 @@ ${SERVER_IP}:443 {
         }
     }
     
-    # 자체 서명 인증서 생성
-    tls internal {
-        protocols tls1.2 tls1.3
-    }
-    
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY" 
@@ -23,14 +23,9 @@ ${SERVER_IP}:443 {
         Referrer-Policy "strict-origin-when-cross-origin"
         X-Environment "${ENVIRONMENT}"
     }
-}
-
-http://${SERVER_IP}:80 {
-    handle /api/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT}
-    }
     
-    handle {
-        redir https://${SERVER_IP}{uri} 302
+    # 에러 페이지 설정
+    handle_errors {
+        respond "Error: {err.status_code} - {err.status_text}"
     }
 }
