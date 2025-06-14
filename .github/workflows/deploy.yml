@@ -1,8 +1,9 @@
-name: Deploy Hospital Project to EC2
+name: Deploy Hospital Project to EC2 (Self-Signed SSL)
 
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 env:
   EC2_HOST: ${{ secrets.EC2_HOST }}
@@ -16,34 +17,49 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
+      
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
-
+      
     - name: 백엔드 이미지 생성
       run: |
         cd hospital_main
+        echo "🔨 백엔드 Docker 이미지 빌드 중..."
         docker build --no-cache -t hospital-backend:${{ github.sha }} .
         docker tag hospital-backend:${{ github.sha }} hospital-backend:latest
-
-    - name: 프론트엔드 이미지 생성
+        echo "✅ 백엔드 이미지 생성 완료"
+        
+    - name: 프론트엔드 이미지 생성 (Caddy + 자체 서명 SSL)
       run: |
         cd frontend
-        # 환경변수 파일 생성
-        echo "VITE_API_BASE_URL=http://${{ secrets.EC2_HOST }}:8888" > .env.production
+        echo "🔨 프론트엔드 Docker 이미지 빌드 중 (Caddy + SSL)..."
+        
+        # Vue.js 환경변수 파일 생성 (HTTPS 기반)
+        echo "VITE_API_BASE_URL=https://${{ secrets.EC2_HOST }}" > .env.production
         echo "VITE_GOOGLE_TTS_API_KEY=${{ secrets.VITE_GOOGLE_TTS_API_KEY }}" >> .env.production
         echo "VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }}" >> .env.production
         echo "VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}" >> .env.production
         
+        # 빌드된 환경변수 확인
+        echo "📋 생성된 환경변수:"
+        cat .env.production
+        
+        # Caddy 기반 프론트엔드 이미지 빌드
         docker build -t hospital-frontend:${{ github.sha }} .
         docker tag hospital-frontend:${{ github.sha }} hospital-frontend:latest
-
+        echo "✅ 프론트엔드 이미지 생성 완료 (Caddy + SSL)"
+        
     - name: 도커 이미지 저장
       run: |
+        echo "💾 Docker 이미지 압축 중..."
         docker save hospital-backend:latest | gzip > backend.tar.gz
         docker save hospital-frontend:latest | gzip > frontend.tar.gz
-
-    - name: EC2에 복사하기
+        
+        # 이미지 크기 확인
+        ls -lh *.tar.gz
+        echo "✅ 이미지 압축 완료"
+        
+    - name: 배포 파일들 EC2에 복사
       uses: appleboy/scp-action@v0.1.4
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -51,22 +67,153 @@ jobs:
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         source: "backend.tar.gz,frontend.tar.gz,docker-compose.prod.yml,deploy.sh"
         target: "/home/ec2-user/"
-
-    - name: Deploy to EC2
+        
+    - name: Caddy 설정 파일들 복사
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        source: "frontend/Caddyfile.template,frontend/docker-entrypoint.sh"
+        target: "/home/ec2-user/"
+        strip_components: 1
+        
+    - name: Deploy to EC2 with Self-Signed SSL
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        envs: GITHUB_SHA
+        script: |
+          echo "🚀 Hospital Project 자체 서명 SSL 배포 시작..."
+          
+          # Docker 이미지 로드
+          echo "📦 Docker 이미지 로드 중..."
+          docker load < /home/ec2-user/backend.tar.gz
+          docker load < /home/ec2-user/frontend.tar.gz
+          
+          # 환경변수 설정 (GitHub Secrets에서 전달)
+          export SERVER_IP="${{ secrets.EC2_HOST }}"
+          export SERVER_DOMAIN=""
+          export ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}"
+          export IMAGE_TAG="latest"
+          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          export DB_ROOT_PASSWORD="${{ secrets.DB_ROOT_PASSWORD }}"
+          export BACKEND_PORT="${{ secrets.BACKEND_PORT }}"
+          export DB_PORT="${{ secrets.DB_PORT }}"
+          export ENVIRONMENT="${{ secrets.ENVIRONMENT }}"
+          export CADDY_AUTO_HTTPS="off"
+          
+          # 환경변수 확인
+          echo "📋 배포 환경 설정:"
+          echo "  서버 IP: $SERVER_IP"
+          echo "  환경: $ENVIRONMENT"
+          echo "  SSL 타입: 자체 서명 인증서"
+          echo "  백엔드 포트: $BACKEND_PORT"
+          echo "  DB 포트: $DB_PORT"
+          
+          # 배포 스크립트 실행 권한 부여
+          chmod +x /home/ec2-user/deploy.sh
+          
+          # 배포 실행
+          echo "▶️ 배포 스크립트 실행..."
+          /home/ec2-user/deploy.sh
+          
+          # 임시 파일 정리
+          echo "🧹 임시 파일 정리..."
+          rm -f /home/ec2-user/*.tar.gz
+          
+          echo "✅ 배포 완료!"
+          
+    - name: 서비스 상태 확인 및 헬스체크
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
-          docker load < /home/ec2-user/backend.tar.gz
-          docker load < /home/ec2-user/frontend.tar.gz
+          echo "🏥 서비스 헬스체크 시작..."
           
-          export IMAGE_TAG=latest
-          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
-          export DB_ROOT_PASSWORD="${{ secrets.DB_ROOT_PASSWORD }}"
+          # 컨테이너 상태 확인
+          echo "📊 컨테이너 상태:"
+          docker-compose -f /home/ec2-user/docker-compose.prod.yml ps
           
-          chmod +x /home/ec2-user/deploy.sh
-          /home/ec2-user/deploy.sh
+          # 서비스 응답 확인 (최대 60초 대기)
+          echo "🔍 서비스 응답 테스트..."
           
+          for i in {1..12}; do
+            echo "  시도 $i/12..."
+            
+            # HTTPS 프론트엔드 확인 (자체 서명 인증서)
+            if curl -f -s -k --connect-timeout 5 "https://${{ secrets.EC2_HOST }}" > /dev/null 2>&1; then
+              echo "✅ HTTPS 프론트엔드: 정상"
+              FRONTEND_OK=true
+              break
+            elif curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}" > /dev/null 2>&1; then
+              echo "✅ HTTP 프론트엔드: 정상 (HTTPS로 리다이렉트)"
+              FRONTEND_OK=true
+              break
+            else
+              echo "⏳ 프론트엔드 시작 대기 중..."
+              sleep 5
+            fi
+          done
+          
+          # 백엔드 API 확인
+          for i in {1..6}; do
+            if curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}:${{ secrets.BACKEND_PORT }}" > /dev/null 2>&1; then
+              echo "✅ 백엔드 API: 정상"
+              BACKEND_OK=true
+              break
+            else
+              echo "⏳ 백엔드 시작 대기 중... ($i/6)"
+              sleep 10
+            fi
+          done
+          
+          # 최종 결과 출력
+          echo ""
+          echo "🎉 =========================================="
+          echo "    배포 및 헬스체크 완료!"
+          echo "==========================================="
+          echo ""
+          echo "📍 접속 정보:"
+          echo "  🔒 HTTPS: https://${{ secrets.EC2_HOST }} (자체 서명 인증서)"
+          echo "  🌍 HTTP:  http://${{ secrets.EC2_HOST }} (HTTPS로 리다이렉트)"
+          echo "  🔧 Backend API: http://${{ secrets.EC2_HOST }}:${{ secrets.BACKEND_PORT }}"
+          echo ""
+          echo "🔐 브라우저 접속 방법:"
+          echo "  1. https://${{ secrets.EC2_HOST }} 접속"
+          echo "  2. 보안 경고에서 '고급' → '안전하지 않음을 승인하고 계속'"
+          echo ""
+          echo "✨ Geolocation API가 HTTPS 환경에서 정상 작동합니다!"
+          
+          # 로그 확인 (에러가 있는 경우)
+          if docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=10 | grep -i error > /dev/null 2>&1; then
+            echo ""
+            echo "⚠️ 일부 서비스에서 에러 발견:"
+            docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=20 | grep -i error
+          fi
+          
+    - name: 배포 실패 시 롤백
+      if: failure()
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          echo "❌ 배포 실패! 롤백 시도..."
+          
+          # 컨테이너 중지
+          docker-compose -f /home/ec2-user/docker-compose.prod.yml down || true
+          
+          # 최근 로그 확인
+          echo "📝 최근 로그:"
+          docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=50
+          
+          # 임시 파일 정리
           rm -f /home/ec2-user/*.tar.gz
+          
+          echo "🔄 이전 버전으로 롤백하거나 수동으로 문제를 해결하세요."
