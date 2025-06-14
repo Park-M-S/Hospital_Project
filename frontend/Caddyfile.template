@@ -1,13 +1,9 @@
-# DuckDNS + SSL 설정을 위한 Caddyfile 템플릿
+# DuckDNS + SSL 설정을 위한 Caddyfile 템플릿 (HTTP 챌린지)
 
 # 글로벌 설정
 {
     # ACME 설정 (Let's Encrypt)
-    acme_ca https://acme-v02.api.letsencrypt.org/directory
     email ${ACME_EMAIL}
-    
-    # DuckDNS DNS 챌린지를 위한 설정
-    acme_dns duckdns ${DUCKDNS_TOKEN}
 }
 
 # HTTP에서 HTTPS로 자동 리다이렉트
@@ -17,10 +13,7 @@ http://${DUCKDNS_DOMAIN} {
 
 # HTTPS 메인 설정
 https://${DUCKDNS_DOMAIN} {
-    # Let's Encrypt SSL 인증서 자동 발급
-    tls {
-        dns duckdns ${DUCKDNS_TOKEN}
-    }
+    # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
     
     # Vue.js 정적 파일 서빙
     root * /usr/share/caddy
@@ -50,8 +43,7 @@ https://${DUCKDNS_DOMAIN} {
         X-Frame-Options "DENY" 
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://${DUCKDNS_DOMAIN}"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
         
         # 환경 정보
         X-Environment "${ENVIRONMENT}"
