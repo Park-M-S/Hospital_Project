@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   # MariaDB 데이터베이스
   mariadb:
@@ -39,7 +38,8 @@ services:
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:-1234}
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      - ALLOWED_ORIGINS=https://${SERVER_IP},http://${SERVER_IP}:5173
+      # DuckDNS 도메인을 CORS에 추가
+      - ALLOWED_ORIGINS=https://${DUCKDNS_DOMAIN:-yourdomain.duckdns.org},http://localhost:5173
     volumes:
       - /opt/hospital/logs/backend:/app/logs
     depends_on:
@@ -55,31 +55,45 @@ services:
       interval: 30s
       start_period: 120s
 
-  # Vue.js 프론트엔드 (Caddy + 자체 서명 SSL)
+  # Vue.js 프론트엔드 (Caddy + DuckDNS SSL)
   frontend:
     image: hospital-frontend:${IMAGE_TAG:-latest}
-    container_name: hospital-frontend-dev
+    container_name: hospital-frontend
     ports:
       - "80:80"
       - "443:443"
     environment:
-      - SERVER_IP=${SERVER_IP:-localhost}
+      # 기존 환경변수
       - BACKEND_HOST=${BACKEND_HOST:-hospital-backend}
       - BACKEND_PORT=${BACKEND_PORT:-8888}
       - ENVIRONMENT=${ENVIRONMENT:-production}
+      
+      # DuckDNS 설정 (필수)
+      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
+      - ACME_EMAIL=${ACME_EMAIL:-admin@yourdomain.com}
     volumes:
-      - caddy_dev_data:/data
-      - caddy_dev_config:/config
+      - caddy_data:/data
+      - caddy_config:/config
+      - /opt/hospital/logs/caddy:/var/log/caddy
     depends_on:
       - backend
     restart: unless-stopped
     networks:
       - hospital-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost/", "||", "curl", "-f", "http://localhost/"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 60s
 
 networks:
   hospital-network:
     driver: bridge
 
 volumes:
-  caddy_dev_data:
-  caddy_dev_config:
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
