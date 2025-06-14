@@ -27,7 +27,7 @@ services:
       interval: 10s
       start_period: 30s
 
-  # Spring Framework 백엔드
+  # Spring Boot 백엔드
   backend:
     image: hospital-backend:${IMAGE_TAG:-latest}
     container_name: hospital-backend
@@ -40,6 +40,14 @@ services:
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
       # DuckDNS 도메인을 CORS에 추가 (있는 경우에만)
       - ALLOWED_ORIGINS=https://${DUCKDNS_DOMAIN:-localhost},http://localhost:5173
+      
+      # API 키 환경변수
+      - HOSPITAL_MAIN_API_KEY=${HOSPITAL_MAIN_API_KEY}
+      - HOSPITAL_DETAIL_API_KEY=${HOSPITAL_DETAIL_API_KEY}
+      - HOSPITAL_MEDICAL_SUBJECT_API_KEY=${HOSPITAL_MEDICAL_SUBJECT_API_KEY}
+      - HOSPITAL_PRODOC_API_KEY=${HOSPITAL_PRODOC_API_KEY}
+      - HOSPITAL_PHARMACY_API_KEY=${HOSPITAL_PHARMACY_API_KEY}
+      - HOSPITAL_EMERGENCY_API_KEY=${HOSPITAL_EMERGENCY_API_KEY}
     volumes:
       - /opt/hospital/logs/backend:/app/logs
     depends_on:
