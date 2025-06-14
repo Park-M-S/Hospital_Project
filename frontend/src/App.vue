@@ -208,7 +208,6 @@ export default {
   },
   mounted() {
     if (this.$store.getters.userLat == null) {
-      alert('사용자 위치에 접근할 수 있도록 허용해주시기 바랍니다.')
       setUserLocation();
     }
     // this.fetch();
