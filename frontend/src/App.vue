@@ -165,6 +165,7 @@ import toggleSidebar from '@/services/utils/toggleSidebar.js';
 import toggleBottombar from '@/services/utils/toggleBottombar.js';
 import tag from '@/services/utils/tags.js';
 import selectDiagnosis from '@/services/utils/selectDiagnosis';
+import setUserLocation from './services/utils/setUserLocation';
 
 
 export default {
