@@ -14,7 +14,7 @@ export default {
           return;
         }
         
-        const res = await axios.get('http://localhost:8888/hospitalsData'', {
+        const res = await axios.get('http://localhost:8888/hospitalsData', {
           params: {
             subs: this.subs[0],                 // 첫 번째 요소만 전달
             userLat: userLat,
