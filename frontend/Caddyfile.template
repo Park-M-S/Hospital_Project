@@ -1,5 +1,4 @@
 # DuckDNS + SSL 설정을 위한 Caddyfile 템플릿 (HTTP 챌린지) 
-
 # 글로벌 설정
 {
     # ACME 설정 (Let's Encrypt)
@@ -34,7 +33,78 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # 기타 백엔드 API 엔드포인트들 (필요시 추가)
+    # Emergency API 프록시 설정 (새로 추가)
+    handle /api/emergency/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Emergency API는 응답 시간이 길 수 있으므로 타임아웃 조정
+            timeout 60s
+            dial_timeout 10s
+            read_timeout 60s
+            write_timeout 60s
+        }
+    }
+    
+    # 기타 백엔드 API 엔드포인트들 (기존 + 추가)
+    handle /api/hospital/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/pharmacy/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/main/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/detail/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/medical/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/prodoc/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # 포괄적 API 프록시 (마지막 fallback)
     handle /api/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
