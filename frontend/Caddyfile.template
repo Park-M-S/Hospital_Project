@@ -1,31 +1,80 @@
-# HTTP 전용 (SSL 문제 완전 회피)
+# DuckDNS + SSL 설정을 위한 Caddyfile 템플릿
+
+# 글로벌 설정
 {
-    # 글로벌 설정 - 자동 HTTPS 완전 비활성화
-    auto_https off
+    # ACME 설정 (Let's Encrypt)
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+    email ${ACME_EMAIL}
+    
+    # DuckDNS DNS 챌린지를 위한 설정
+    acme_dns duckdns ${DUCKDNS_TOKEN}
 }
 
-${SERVER_IP}:80 {
+# HTTP에서 HTTPS로 자동 리다이렉트
+http://${DUCKDNS_DOMAIN} {
+    redir https://${DUCKDNS_DOMAIN}{uri} permanent
+}
+
+# HTTPS 메인 설정
+https://${DUCKDNS_DOMAIN} {
+    # Let's Encrypt SSL 인증서 자동 발급
+    tls {
+        dns duckdns ${DUCKDNS_TOKEN}
+    }
+    
+    # Vue.js 정적 파일 서빙
     root * /usr/share/caddy
     file_server
     try_files {path} /index.html
     
+    # API 프록시 설정
     handle /api/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
         }
     }
     
+    # 보안 헤더 설정
     header {
+        # CORS 설정
+        Access-Control-Allow-Origin https://${DUCKDNS_DOMAIN}
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token"
+        Access-Control-Allow-Credentials true
+        
+        # 보안 헤더
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY" 
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://${DUCKDNS_DOMAIN}"
+        
+        # 환경 정보
         X-Environment "${ENVIRONMENT}"
     }
     
     # 에러 페이지 설정
     handle_errors {
-        respond "Error: {err.status_code} - {err.status_text}"
+        @404 expression {http.error.status_code} == 404
+        handle @404 {
+            rewrite * /index.html
+            file_server
+        }
+        respond "Error: {http.error.status_code} - {http.error.status_text}"
+    }
+    
+    # 로그 설정
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+        level INFO
     }
 }
