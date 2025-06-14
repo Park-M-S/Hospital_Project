@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hospital Project 자체 서명 SSL 배포 스크립트 
+# Hospital Project 자체 서명 SSL 배포 스크립트
 set -e
 
 echo "🚀 Hospital Project 자체 서명 SSL 배포 시작..."
