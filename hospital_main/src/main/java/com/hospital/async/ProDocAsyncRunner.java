@@ -39,33 +39,33 @@ public class ProDocAsyncRunner {
         this.repository = repository;
     }
 
-    // ✅ 진행 상태 초기화
+    //  진행 상태 초기화
     public void resetCounter() {
         completedCount.set(0);
         failedCount.set(0);
     }
 
-    // ✅ 총 작업 수 설정 및 카운터 초기화
+    //  총 작업 수 설정 및 카운터 초기화
     public void setTotalCount(int totalCount) {
         this.totalCount = totalCount;
         completedCount.set(0);
         failedCount.set(0);
     }
 
-    // ✅ 현재까지 완료된 작업 수
+    //  현재까지 완료된 작업 수
     public int getCompletedCount() {
         return completedCount.get();
     }
 
-    // ✅ 현재까지 실패한 작업 수
+    //  현재까지 실패한 작업 수
     public int getFailedCount() {
         return failedCount.get();
     }
 
-    // ✅ 병원코드 단위 비동기 처리
+    //  병원코드 단위 비동기 처리
     @Async("apiExecutor") // 동일한 ThreadPoolTaskExecutor 사용
     public void runAsync(String hospitalCode) {
-    	rateLimiter.acquire(); // 🔒 이 한 줄로 초당 호출 제한 적용됨
+    	rateLimiter.acquire(); //  이 한 줄로 초당 호출 제한 적용됨
     	
         try {
             // 1. 병원코드를 쿼리 파라미터로 설정

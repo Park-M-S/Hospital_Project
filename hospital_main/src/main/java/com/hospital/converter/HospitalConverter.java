@@ -1,6 +1,7 @@
 package com.hospital.converter;
 
-import com.hospital.dto.web.HospitalResponseDTO;
+import com.hospital.domainLogic.TodayOperatingTimeCalculator;
+import com.hospital.dto.web.HospitalResponse;
 import com.hospital.entity.HospitalMain;
 import com.hospital.entity.MedicalSubject;
 import com.hospital.entity.HospitalDetail;
@@ -14,18 +15,21 @@ import java.util.stream.Collectors;
 @Component
 public class HospitalConverter {
     
-    /**
-     * Hospital 엔티티를 HospitalResponseDto로 변환
-     */
-    public HospitalResponseDTO convertToDTO(HospitalMain hospitalMain) {
+    
+    //Hospital 엔티티를 HospitalResponseDto로 변환
+    public HospitalResponse convertToDTO(HospitalMain hospitalMain) {
         if (hospitalMain == null) {
             return null;
         }
         
         HospitalDetail detail = hospitalMain.getHospitalDetail();
+        
+        TodayOperatingTimeCalculator.TodayOperatingTime todayTime = 
+                TodayOperatingTimeCalculator.getTodayOperatingTime(detail);
+            
        
         
-        return HospitalResponseDTO.builder()
+        return HospitalResponse.builder()
             // 기본 정보
             .hospitalName(hospitalMain.getHospitalName())
             .hospitalAddress(hospitalMain.getHospitalAddress())
@@ -48,20 +52,8 @@ public class HospitalConverter {
             
             
             // 요일별 운영시간
-            .mondayOpen(detail != null ? detail.getTrmtMonStart() : null)
-            .mondayClose(detail != null ? detail.getTrmtMonEnd() : null)
-            .tuesdayOpen(detail != null ? detail.getTrmtTueStart() : null)
-            .tuesdayClose(detail != null ? detail.getTrmtTueEnd() : null)
-            .wednesdayOpen(detail != null ? detail.getTrmtWedStart() : null)
-            .wednesdayClose(detail != null ? detail.getTrmtWedEnd() : null)
-            .thursdayOpen(detail != null ? detail.getTrmtThurStart() : null)
-            .thursdayClose(detail != null ? detail.getTrmtThurEnd() : null)
-            .fridayOpen(detail != null ? detail.getTrmtFriStart() : null)
-            .fridayClose(detail != null ? detail.getTrmtFriEnd() : null)
-            .saturdayOpen(detail != null ? detail.getTrmtSatStart() : null)
-            .saturdayClose(detail != null ? detail.getTrmtSatEnd() : null)
-            .sundayOpen(detail != null ? detail.getTrmtSunStart() : null)
-            .sundayClose(detail != null ? detail.getTrmtSunEnd() : null)
+            .todayOpen(todayTime.getOpenTime())
+            .todayClose(todayTime.getCloseTime())
             
             .medicalSubject(convertMedicalSubjectsToString(hospitalMain.getMedicalSubjects()))
             
@@ -83,10 +75,9 @@ public class HospitalConverter {
                 .collect(Collectors.joining(", "));
     }
     
-    /**
-     * Hospital 엔티티 리스트를 DTO 리스트로 변환
-     */
-    public List<HospitalResponseDTO> convertToDtos(List<HospitalMain> hospitals) {
+    
+    //Hospital 엔티티 리스트를 DTO 리스트로 변환
+    public List<HospitalResponse> convertToDtos(List<HospitalMain> hospitals) {
         if (hospitals == null) {
             return List.of();
         }
@@ -96,10 +87,8 @@ public class HospitalConverter {
             .collect(Collectors.toList());
     }
     
-    /**
-     * ProDoc 리스트를 문자열로 변환
-     * 형태: "안과:1|이비인후과:1|비뇨의학과:1"
-     */
+    
+     //ProDoc 리스트를 문자열로 변환
     private String convertProDocsToString(List<ProDoc> proDocs) {
         if (proDocs == null || proDocs.isEmpty()) {
             return null;

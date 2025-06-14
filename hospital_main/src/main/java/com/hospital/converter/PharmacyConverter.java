@@ -10,9 +10,8 @@ import java.util.stream.Collectors;
 @Component
 public class PharmacyConverter {
 
-	/**
-	 * Entity -> DTO 변환
-	 */
+	
+	//Entity -> DTO 변환
 	public PharmacyResponse toResponse(Pharmacy pharmacy) {
 		if (pharmacy == null) {
 			return null;
@@ -24,9 +23,7 @@ public class PharmacyConverter {
 				.PharmacyTel(pharmacy.getPhone()).build();
 	}
 
-	/**
-	 * Entity List -> DTO List 변환
-	 */
+	//Entity List -> DTO List 변환
 	public List<PharmacyResponse> toResponseList(List<Pharmacy> pharmacies) {
 		if (pharmacies == null) {
 			return null;

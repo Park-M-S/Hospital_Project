@@ -1,6 +1,6 @@
 package com.hospital.entity;
 
-import java.util.List;
+
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -95,10 +95,9 @@ public class HospitalDetail {
 
   
     
-    @OneToOne
-    @JoinColumn(name = "hospital_code", referencedColumnName = "hospital_code", insertable = false, updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hospital_code", insertable = false, updatable = false)
     private HospitalMain hospital;
-    
     
    
     
@@ -137,12 +136,6 @@ public class HospitalDetail {
         return isValidTime(this.trmtSunStart) && isValidTime(this.trmtSunEnd);
     }
 
-    /**
-     * 주말 진료 가능 여부 (토요일 또는 일요일)
-     */
-    public boolean isWeekendAvailable() {
-        return isSaturdayAvailable() || isSundayAvailable() || hasEmergencyService();
-    }
 
     /**
      * 유효한 시간 값인지 체크

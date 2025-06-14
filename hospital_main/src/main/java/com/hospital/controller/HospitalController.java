@@ -1,7 +1,7 @@
 package com.hospital.controller;
 
 
-import com.hospital.dto.web.HospitalResponseDTO;
+import com.hospital.dto.web.HospitalResponse;
 import com.hospital.dto.web.PharmacyResponse;
 import com.hospital.service.HospitalService;
 import com.hospital.service.PharmacyService;
@@ -33,11 +33,12 @@ public class HospitalController {
     
     
     @GetMapping(value ="/hospitalsData", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<HospitalResponseDTO> getHospitals(@RequestParam List<String> subs, @RequestParam double userLat, 
+    public List<HospitalResponse> getHospitals(@RequestParam List<String> subs, @RequestParam double userLat, 
     		                              @RequestParam double userLng ,@RequestParam double radius,      		                              
     		                              @RequestParam(required = false) List<String> tags) {
         return hospitalService.getHospitals(subs, userLat, userLng, radius, tags); // 서비스에서 병원 데이터 가져오기
     }
+    
     @GetMapping(value = "/pharmaciesData", produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<PharmacyResponse> getNearbyPharmacies(
 	        @RequestParam double userLat,
@@ -47,9 +48,9 @@ public class HospitalController {
 	    return pharmacyService.getPharmaciesByDistance(userLat, userLng, radius);
 	}
     
-    // ✅ 병원명 검색 API (태그 필터링 옵션)
+
     @GetMapping(value = "/hospitals/search", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<HospitalResponseDTO> searchHospitalsByName(
+    public List<HospitalResponse> searchHospitalsByName(
             @RequestParam String hospitalName) {
         return hospitalService.searchHospitalsByName(hospitalName);
     }

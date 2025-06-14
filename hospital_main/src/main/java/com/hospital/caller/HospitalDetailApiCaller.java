@@ -23,7 +23,7 @@ public class HospitalDetailApiCaller {
 	private final RestTemplate restTemplate;
 	private final ObjectMapper objectMapper;
 
-	// ✅ 생성자 주입: ObjectMapper는 스프링이 자동 주입
+	// 생성자 주입: ObjectMapper는 스프링이 자동 주입
 	public HospitalDetailApiCaller(ObjectMapper objectMapper) {
 		this.restTemplate = new RestTemplate(); // HTTP 호출용
 		this.objectMapper = objectMapper; // JSON → 객체 변환용
@@ -31,12 +31,12 @@ public class HospitalDetailApiCaller {
 
 	public HospitalDetailApiResponse callApi(String apiPath, String queryParams) {
 		try {
-			// 🔗 최종 호출할 전체 URL 생성
+			// 최종 호출할 전체 URL 생성
 			String fullUrl = baseUrl + apiPath + "?serviceKey=" + serviceKey + "&_type=json&" + queryParams;
 
 			log.debug("API 호출 URL: {}", fullUrl);
 
-			// 📡 외부 API 호출 (GET 방식)
+			//  외부 API 호출 (GET 방식)
 			String response = restTemplate.getForObject(fullUrl, String.class);
 
 			if (response == null || response.trim().isEmpty()) {
@@ -46,7 +46,7 @@ public class HospitalDetailApiCaller {
 
 			log.debug("API 응답: {}", response);
 
-			// 📦 JSON 응답을 Java 객체로 역직렬화
+			//  JSON 응답을 Java 객체로 역직렬화
 			return objectMapper.readValue(response, HospitalDetailApiResponse.class);
 
 		} catch (HttpClientErrorException e) {

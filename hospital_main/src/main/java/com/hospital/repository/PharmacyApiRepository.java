@@ -15,4 +15,14 @@ public interface PharmacyApiRepository extends JpaRepository<Pharmacy, Long> {
     @Transactional
     @Query(value = "DELETE FROM pharmacy", nativeQuery = true)
     void deleteAllPharmacies();
+    
+ // ✅ AUTO_INCREMENT 초기화
+
+    @Modifying
+
+    @Transactional
+
+    @Query(value = "ALTER TABLE pharmacy AUTO_INCREMENT = 1", nativeQuery = true)
+
+    void resetAutoIncrement();
 }

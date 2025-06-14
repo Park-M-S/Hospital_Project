@@ -2,7 +2,6 @@ package com.hospital.service;
 
 import com.hospital.async.MedicalSubjectApiAsyncRunner;
 import com.hospital.repository.MedicalSubjectApiRepository;
-import com.hospital.service.HospitalMainApiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

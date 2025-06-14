@@ -2,7 +2,7 @@ package com.hospital.domainLogic;
 
 import com.hospital.entity.HospitalMain;
 import com.hospital.entity.HospitalDetail;
-import com.hospital.entity.MedicalSubject;
+
 import com.hospital.entity.ProDoc;
 import com.hospital.util.CurrentTimeUtils;
 
@@ -49,12 +49,12 @@ public class HospitalTagFilter {
                     break;
                 case "무료주차":
                     if (Objects.isNull(hospital.getHospitalDetail()) || 
-                        !hospital.getHospitalDetail().hasParkingSpace() ||  // ✅ 주차공간 먼저 체크
-                        !hospital.getHospitalDetail().isFreeParking()) {     // ✅ 그 다음 무료 여부 체크
+                        !hospital.getHospitalDetail().hasParkingSpace() ||  // 주차공간 먼저 체크
+                        !hospital.getHospitalDetail().isFreeParking()) {     // 그 다음 무료 여부 체크
                         return false;
                     }
                     break;
-                // ✅ 주말진료를 토요일/일요일로 분리
+                // 주말진료를 토요일/일요일로 분리
                 case "토요일진료":
                     if (Objects.isNull(hospital.getHospitalDetail()) || 
                         !hospital.getHospitalDetail().isSaturdayAvailable()) {
@@ -80,9 +80,8 @@ public class HospitalTagFilter {
     }
 
     
-    /**
-     * 현재 시간에 운영중인지 체크 (평일 + 주말)
-     */
+    
+    //현재 시간에 운영중인지 체크 (평일 + 주말)
     private static boolean isCurrentlyOpen(HospitalDetail detail) {
         LocalDateTime now = CurrentTimeUtils.getCurrentDateTime();
         DayOfWeek today = now.getDayOfWeek();

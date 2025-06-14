@@ -153,6 +153,8 @@ public class HospitalDetailApiParser {
                 .lunchWeek(safeGetString(dto.getLunchWeek()))
                 .rcvWeek(safeGetString(dto.getRcvWeek()))
                 .rcvSat(safeGetString(dto.getRcvSat()))
+                .noTrmtHoli(safeGetString(dto.getNoTrmtHoli()))
+                .noTrmtSun(safeGetString(dto.getNoTrmtSun()))
                 .trmtMonStart(safeGetString(dto.getTrmtMonStart()))
                 .trmtMonEnd(safeGetString(dto.getTrmtMonEnd()))
                 .trmtTueStart(safeGetString(dto.getTrmtTueStart()))

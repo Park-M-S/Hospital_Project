@@ -5,7 +5,7 @@ import com.hospital.repository.HospitalRepository;
 import com.hospital.util.DistanceCalculator;
 import com.hospital.converter.HospitalConverter;
 import com.hospital.domainLogic.HospitalTagFilter;
-import com.hospital.dto.web.HospitalResponseDTO;
+import com.hospital.dto.web.HospitalResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,14 +33,14 @@ public class HospitalServiceImpl implements HospitalService {
     
     // 기존 메서드: 진료과목으로 병원 검색
     @Override
-    public List<HospitalResponseDTO> getHospitals(List<String> subs, double userLat, double userLng, double radius, List<String> tags) {
+    public List<HospitalResponse> getHospitals(List<String> subs, double userLat, double userLng, double radius, List<String> tags) {
         List<HospitalMain> hospitalEntities = hospitalRepository.findHospitalsBySubjects(subs);
         return applyFiltersAndSort(hospitalEntities, userLat, userLng, radius, tags);
     }
     
     // ✅ 병원명 검색 
     @Override
-    public List<HospitalResponseDTO> searchHospitalsByName(String hospitalName) {
+    public List<HospitalResponse> searchHospitalsByName(String hospitalName) {
         // 입력값 전처리
         String cleanInput = hospitalName.replace(" ", "");
         
@@ -54,7 +54,7 @@ public class HospitalServiceImpl implements HospitalService {
     }
     
     // ✅ 공통 로직: 필터링 + 정렬
-    private List<HospitalResponseDTO> applyFiltersAndSort(
+    private List<HospitalResponse> applyFiltersAndSort(
             List<HospitalMain> hospitalEntities,
             double userLat, 
             double userLng, 
@@ -78,10 +78,10 @@ public class HospitalServiceImpl implements HospitalService {
     
     // 거리와 함께 임시로 저장하는 내부 클래스
     private static class HospitalWithDistance {
-        final HospitalResponseDTO hospital;
+        final HospitalResponse hospital;
         final double distance;
         
-        HospitalWithDistance(HospitalResponseDTO hospital, double distance) {
+        HospitalWithDistance(HospitalResponse hospital, double distance) {
             this.hospital = hospital;
             this.distance = distance;
         }

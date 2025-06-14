@@ -36,6 +36,8 @@ public class PharmacyApiServiceImpl implements PharmacyApiService {
 		// 1. 커스텀 삭제 메서드 사용
 		pharmacyApiRepository.deleteAllPharmacies();
 		log.info("🗑️ 기존 약국 데이터 전체 삭제 완료");
+		
+		pharmacyApiRepository.resetAutoIncrement();
 
 		List<Pharmacy> allPharmacies = new ArrayList<>();
 		Set<String> processedYkihos = new HashSet<>(); // 중복 방지를 위한 Set

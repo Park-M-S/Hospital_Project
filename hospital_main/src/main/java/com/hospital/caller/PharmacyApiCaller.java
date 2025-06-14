@@ -31,17 +31,17 @@ public class PharmacyApiCaller {
                     + "&numOfRows=1000"
                     + "&_type=xml";
 
-            // ✅ RestTemplate 대신 직접 연결
+            // RestTemplate 대신 직접 연결
             URL url = new URL(fullUrl);
             URLConnection connection = url.openConnection();
             InputStream inputStream = connection.getInputStream();
 
-            // ✅ UTF-8로 명시적 디코딩
+            // UTF-8로 명시적 디코딩
             JAXBContext context = JAXBContext.newInstance(OpenApiWrapper.class);
             Unmarshaller unmarshaller = context.createUnmarshaller();
             InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
 
-            // ✅ XML → 객체 변환
+            // XML → 객체 변환
             OpenApiWrapper result = (OpenApiWrapper) unmarshaller.unmarshal(reader);
             return result.getBody();
 

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 @Service // 서비스 컴포넌트로 등록 (비즈니스 로직)
 public class MedicalSubjectApiAsyncRunner {
-	private final RateLimiter rateLimiter = RateLimiter.create(5.0);
+	private final RateLimiter rateLimiter = RateLimiter.create(8.0);
 
 
     // 의존성 주입: API 호출, 파싱, DB 저장을 담당하는 클래스들
@@ -85,7 +85,7 @@ public class MedicalSubjectApiAsyncRunner {
 
         } catch (Exception e) {
             // ✅ 실패 카운터 증가 및 오류 로그
-            int fail = failedCount.incrementAndGet();
+            //int fail = failedCount.incrementAndGet();
             log.error("❌ 병원코드 {} 처리 실패: {}", hospitalCode, e.getMessage());
         }
     }

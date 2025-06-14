@@ -38,7 +38,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
+
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -58,7 +58,7 @@ import java.nio.charset.StandardCharsets;
 
 @Configuration
 @ComponentScan(basePackages = "com.hospital")
-@PropertySource("classpath:mainApi.properties")
+@PropertySource("classpath:api.properties")
 @PropertySource("classpath:db.properties")
 @EnableTransactionManagement
 @EnableJpaRepositories(basePackages = "com.hospital.repository")
@@ -92,7 +92,7 @@ public class AppConfig implements WebMvcConfigurer, WebSocketConfigurer{
 
         restTemplate.setMessageConverters(messageConverters);
 
-        // --- ★ 핵심 변경 사항 시작 ★ ---
+       
         // RestTemplate에 인터셉터 추가하여 User-Agent 및 Accept 헤더 명시
         restTemplate.setInterceptors(Collections.singletonList(new ClientHttpRequestInterceptor() {
             @Override
@@ -112,7 +112,7 @@ public class AppConfig implements WebMvcConfigurer, WebSocketConfigurer{
                 return execution.execute(request, body);
             }
         }));
-        // --- ★ 핵심 변경 사항 끝 ★ ---
+    
 
         System.out.println("RestTemplate 설정 완료. 메시지 컨버터 개수: " + messageConverters.size());
         return restTemplate;
@@ -126,7 +126,7 @@ public class AppConfig implements WebMvcConfigurer, WebSocketConfigurer{
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(emergencyApiWebSocketHandler(), "/emergency-websocket")
-                .setAllowedOrigins("*"); // 실제 운영에서는 도메인 명시하세요
+                .setAllowedOrigins("*"); 
     }
     
     // 스케줄링을 위한 TaskExecutor
@@ -205,8 +205,8 @@ public class AppConfig implements WebMvcConfigurer, WebSocketConfigurer{
         em.setJpaVendorAdapter(vendorAdapter);
 
         java.util.Properties jpaProperties = new java.util.Properties();
-        jpaProperties.setProperty("hibernate.hbm2ddl.auto", "update");
-        //jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate");
+        //jpaProperties.setProperty("hibernate.hbm2ddl.auto", "update");
+        jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate");
         jpaProperties.setProperty("hibernate.dialect", "org.hibernate.dialect.MariaDBDialect");
         jpaProperties.setProperty("hibernate.show_sql", "false");
         jpaProperties.setProperty("hibernate.format_sql", "false");
