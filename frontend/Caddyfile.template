@@ -1,3 +1,4 @@
+# 자체 서명 SSL (브라우저 경고 표시됨)
 ${SERVER_IP}:443 {
     root * /usr/share/caddy
     file_server
@@ -10,7 +11,10 @@ ${SERVER_IP}:443 {
         }
     }
     
-    tls internal
+    # 자체 서명 인증서 생성
+    tls internal {
+        protocols tls1.2 tls1.3
+    }
     
     header {
         X-Content-Type-Options "nosniff"
