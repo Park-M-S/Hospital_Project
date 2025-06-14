@@ -178,9 +178,9 @@ jobs:
             fi
           done
           
-          # 백엔드 API 확인
+          # 백엔드 API 확인 (포트 8888 사용)
           for i in {1..6}; do
-            if curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}:8888/" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/" > /dev/null 2>&1; then
               echo "✅ 백엔드 API: 정상"
               BACKEND_OK=true
               break
@@ -207,121 +207,9 @@ jobs:
           echo "📍 접속 정보:"
           echo "  🔒 HTTPS: https://${{ secrets.DUCKDNS_DOMAIN }} (Let's Encrypt SSL)"
           echo "  🌍 HTTP:  http://${{ secrets.DUCKDNS_DOMAIN }} (HTTPS로 자동 리다이렉트)"
-          echo "  🔧 백엔드 API: http://${{ secrets.EC2_HOST }}:8888"
+          echo "  🔧 백엔드 API: https://${{ secrets.DUCKDNS_DOMAIN }}:8888"
           echo ""
           echo "✨ DuckDNS 자동 IP 업데이트 + Let's Encrypt SSL 인증서!"
-          
-    - name: 데이터 수집 API 자동 실행
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.EC2_PRIVATE_KEY }}
-        script: |
-          echo "🔄 병원 API 데이터 자동 수집 시작..."
-          
-          # 백엔드 서버가 완전히 시작될 때까지 대기
-          echo "⏳ 백엔드 서버 시작 대기 중..."
-          for i in {1..30}; do
-            if curl -f -s --connect-timeout 5 "https://hospitalmap.duckdns.org:8888" > /dev/null 2>&1; then
-              echo "✅ 백엔드 서버 준비 완료"
-              break
-            else
-              echo "  대기 중... ($i/30)"
-              sleep 10
-            fi
-          done
-          
-          # 추가: API 엔드포인트 존재 여부 확인
-          echo "🔍 API 엔드포인트 존재 여부 확인..."
-          if curl -s -I "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/pharmacy/save" | grep -q "HTTP"; then
-            echo "✅ pharmacy/save API 엔드포인트 접근 가능"
-          else
-            echo "❌ pharmacy/save API 엔드포인트 접근 불가능"
-          fi
-          
-          if curl -s -I "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/main/save" | grep -q "HTTP"; then
-            echo "✅ main/save API 엔드포인트 접근 가능"
-          else
-            echo "❌ main/save API 엔드포인트 접근 불가능"
-            echo "🔍 백엔드 로그 확인:"
-            docker logs hospital-backend --tail=20
-          fi
-          
-          # API 호출 함수
-          call_api() {
-            local api_endpoint="$1"
-            local description="$2"
-            
-            echo "🚀 시작: $description 데이터 수집"
-            echo "📡 API 호출: https://***:8888/$api_endpoint"
-            
-            # API 호출
-            response=$(curl -s -w "%{http_code}" -X POST "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/$api_endpoint" \
-              -H "Content-Type: application/json" \
-              --connect-timeout 30 \
-              --max-time 300 \
-              --verbose 2>&1)
-            
-            # HTTP 상태 코드 추출
-            http_code="${response: -3}"
-            response_body="${response%???}"
-            
-            if [[ "$http_code" == "200" || "$http_code" == "201" ]]; then
-              echo "✅ 성공: $description 데이터 수집 완료 (HTTP $http_code)"
-              echo "📋 응답: ${response_body:0:100}..."
-            else
-              echo "❌ 실패: $description 데이터 수집 실패 - HTTP $http_code"
-              echo "📋 응답 내용: $response_body"
-              return 1
-            fi
-            
-            echo "🏁 완료: $description 데이터 수집"
-            echo "----------------------------------------"
-            
-            # 다음 API 호출 전 대기 (서버 부하 방지)
-            sleep 3
-          }
-          
-          echo "=========================================="
-          echo "🏥 병원 API 데이터 자동 수집 프로세스 시작"
-          echo "=========================================="
-          
-          # 순차적 API 호출
-          if call_api "api/pharmacy/save" "약국"; then
-            if call_api "api/main/save" "병원 기본정보"; then
-              if call_api "api/details/save" "병원 상세정보"; then
-                if call_api "api/subject/save" "진료과목"; then
-                  if call_api "api/proDoc/save" "전문의"; then
-                    echo "=========================================="
-                    echo "🎉 모든 API 데이터 수집 작업이 성공적으로 완료되었습니다!"
-                    echo "📊 수집 완료된 데이터:"
-                    echo "  ✅ 1. 약국 데이터"
-                    echo "  ✅ 2. 병원 기본정보 데이터"
-                    echo "  ✅ 3. 병원 상세정보 데이터"
-                    echo "  ✅ 4. 진료과목 데이터"
-                    echo "  ✅ 5. 전문의 데이터"
-                    echo "=========================================="
-                  else
-                    echo "❌ 전문의 데이터 수집 실패"
-                    exit 1
-                  fi
-                else
-                  echo "❌ 진료과목 데이터 수집 실패"
-                  exit 1
-                fi
-              else
-                echo "❌ 병원 상세정보 데이터 수집 실패"
-                exit 1
-              fi
-            else
-              echo "❌ 병원 기본정보 데이터 수집 실패"
-              exit 1
-            fi
-          else
-            echo "❌ 약국 데이터 수집 실패"
-            exit 1
-          fi
           
     - name: 배포 실패 시 롤백 처리
       if: failure()
