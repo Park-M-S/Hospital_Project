@@ -3,17 +3,18 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# 빌드 과정 확인
-RUN echo "Node version: $(node --version)"
-RUN echo "NPM version: $(npm --version)"
-RUN npx vite --version
-RUN ls -la
 RUN npm run build
+# 빌드 결과 확인
+RUN ls -la dist/
+RUN echo "Checking if index.html exists:"
+RUN test -f dist/index.html && echo "index.html found" || echo "index.html NOT found"
 
 FROM nginx:alpine
-# 빌드된 파일을 올바른 경로로 복사
+# 빌드된 파일 복사 (경로 수정)
 COPY --from=builder /app/dist /usr/share/nginx/html
-# 커스텀 nginx 설정 복사 (있다면)
+# nginx 설정 복사
 COPY nginx.conf /etc/nginx/nginx.conf
+# 권한 설정
+RUN chmod -R 755 /usr/share/nginx/html
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
