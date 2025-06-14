@@ -1,5 +1,8 @@
 version: '3.8'
+
+# Hospital Project Production Compose - 자체 서명 SSL
 services:
+  # MariaDB 데이터베이스
   mariadb:
     image: mariadb:10.11
     container_name: hospital-mariadb
@@ -8,51 +11,77 @@ services:
       MYSQL_DATABASE: hospital_api_db
       MYSQL_USER: hospitaluser
       MYSQL_PASSWORD: ${DB_PASSWORD:-1234}
-      # UTF8MB4 설정 환경변수
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
-      - "3500:3500"
+      - "${DB_PORT:-3500}:3500"
     volumes:
-      - mariadb_data:/var/lib/mysql
-      # 설정 파일 마운트
-      - ./mysql-config:/etc/mysql/conf.d
+      - /opt/hospital/data/mariadb:/var/lib/mysql
+      - ./mysql-config:/etc/mysql/conf.d:ro
     command: --port=3500 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: unless-stopped
     networks:
       - hospital-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-1234}"]
+      timeout: 5s
+      retries: 10
+      interval: 10s
+      start_period: 30s
 
+  # Spring Boot 백엔드
   backend:
-    image: hospital-backend:latest
+    image: hospital-backend:${IMAGE_TAG:-latest}
     container_name: hospital-backend
     ports:
-      - "8888:8888"
+      - "${BACKEND_PORT:-8888}:8888"
     environment:
-      - DB_URL=jdbc:mariadb://mariadb:3500/hospital_api_db?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci
+      - DB_URL=jdbc:mariadb://mariadb:3500/hospital_api_db?useUnicode=true&characterEncoding=UTF-8
       - DB_USERNAME=root
       - DB_PASSWORD=${DB_PASSWORD:-1234}
-      - SPRING_PROFILES_ACTIVE=production
+      - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
+      - ALLOWED_ORIGINS=https://${SERVER_IP},http://${SERVER_IP}:5173
+    volumes:
+      - /opt/hospital/logs/backend:/app/logs
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - hospital-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      timeout: 10s
+      retries: 5
+      interval: 30s
+      start_period: 120s
 
+  # Vue.js 프론트엔드 (Caddy + 자체 서명 SSL)
   frontend:
-    image: hospital-frontend:latest
-    container_name: hospital-frontend
+    image: hospital-frontend:${IMAGE_TAG:-latest}
+    container_name: hospital-frontend-dev
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - SERVER_IP=localhost
+      - BACKEND_HOST=hospital-backend-dev
+      - BACKEND_PORT=8888
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      - caddy_dev_data:/data
+      - caddy_dev_config:/config
     depends_on:
       - backend
     restart: unless-stopped
     networks:
       - hospital-network
 
-volumes:
-  mariadb_data:
-
 networks:
   hospital-network:
     driver: bridge
+
+volumes:
+  mariadb_dev_data:
+  caddy_dev_data:
+  caddy_dev_config:
