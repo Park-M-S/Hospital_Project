@@ -6,7 +6,7 @@ export default {
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        const res = await axios.get('http://localhost:8889/hospital_main/hospitalsData', {
+        const res = await axios.get('http://localhost:8888/hospitalsData', {
           params: {
             subs: this.subs.join(','),        // 진료과 전체 전달
             userLat: this.$store.getters.userLat,
