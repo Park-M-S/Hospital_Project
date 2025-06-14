@@ -14,7 +14,8 @@ export default {
           return;
         }
         
-        const res = await axios.get('http://localhost:8888/hospitalsData', {
+        // localhost:8888 대신 /api 경로 사용 (Caddy 프록시를 통해 백엔드로 전달)
+        const res = await axios.get('/hospitalsData', {
           params: {
             subs: this.subs[0],                 // 첫 번째 요소만 전달
             userLat: userLat,
@@ -62,7 +63,7 @@ export default {
         return;
       }
       
-      const res = await axios.get('/api/pharmaciesData', {
+      const res = await axios.get('/pharmaciesData', {
         params: {
           userLat: userLat,
           userLng: userLng,
