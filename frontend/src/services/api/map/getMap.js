@@ -15,6 +15,7 @@ export default {
 
   // 맵 출력
   loadMap() {
+    this.map = null;
     const container = document.getElementById("map");
     const options = {
       center: new window.kakao.maps.LatLng(this.$store.getters.userLat, this.$store.getters.userLng),
@@ -27,7 +28,7 @@ export default {
     this.loadCircle();
   },
 
-  // 사용자 마커 불러오기 - 커스텀 마커로 변경
+  // 사용자 마커
   loadUserMaker() {
     const imageSrc = 'https://park-m-s.github.io/Spring-study/사용자위치.png';
     const imageSize = new window.kakao.maps.Size(34, 47);
@@ -44,32 +45,107 @@ export default {
     marker.setMap(this.map);
   },
 
-  // 병원 마커 불러오기 - 병원 전용 커스텀 마커
+  // 마커 모음
   loadMaker() {
     this.markers.forEach(marker => marker.setMap(null));
     this.markers = [];
+    // 응급실 마커
+    if (this.emergencyList && this.emergencyList.length) {
+      this.emergencyList.forEach(emergency => this.createEmergencyMarker(emergency));
+    }
 
-    // 1단계: 일반 병원과 응급실 병원을 분리
-    const regularHospitals = this.hospitalList.filter(hospital => hospital.emergency_available !== 'Y');
-    const emergencyHospitals = this.hospitalList.filter(hospital => hospital.emergency_available === 'Y');
-
-    // 2단계: 일반 병원 마커들을 먼저 추가 (아래쪽에 표시됨)
-    regularHospitals.forEach(hospital => {
-      this.createHospitalMarker(hospital, false);
-    });
-
-    // 3단계: 응급실 병원 마커를 나중에 추가 (위쪽에 표시됨)
-    emergencyHospitals.forEach(hospital => {
-      this.createHospitalMarker(hospital, true);
-    });
-
+    // 병원 마커
+    if (this.hospitalList && this.hospitalList.length) {
+      this.hospitalList.forEach(hospital => this.createHospitalMarker(hospital));
+    }
 
     // 약국 마커
     if (this.pharmacyList && this.pharmacyList.length) {
       this.pharmacyList.forEach(pharmacy => this.createPharmacyMarker(pharmacy));
     }
+
+
   },
 
+  // 응급실 마커 생성
+  createEmergencyMarker(emergency) {
+    const imageSrc = 'https://i.imgur.com/xvsaZUe.png'; // 응급실 마커 아이콘
+    const imageSize = new window.kakao.maps.Size(34, 47);
+    const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
+    const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
+    const markerPosition = new window.kakao.maps.LatLng(emergency.coordinateY, emergency.coordinateX);
+
+    const marker = new window.kakao.maps.Marker({
+      position: markerPosition,
+      title: emergency.dutyName,
+      image: markerImage,
+    });
+    marker.setMap(this.map);
+
+    window.kakao.maps.event.addListener(marker, 'click', () => {
+      if (this.activeOverlay) {
+        this.activeOverlay.setMap(null);
+      }
+      const newOverlay = this.emergencyOverlay(emergency); // 객체 전체를 전달
+      newOverlay.setMap(this.map);
+      this.activeOverlay = newOverlay;
+      this.showRoute(emergency);
+    });
+    this.markers.push(marker);
+  },
+
+  // === [수정됨] 응급실 오버레이 ===
+  emergencyOverlay(emergency) {
+    const startY = this.$store.getters.userLat;
+    const startX = this.$store.getters.userLng;
+    const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${emergency.coordinateY},${emergency.coordinateX}&travelmode=transit`;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-overlay-wrap';
+
+    // hvidate (정보 업데이트 시간) 포맷 변경
+    const updateTime = emergency.hvidate.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$4:$5:$6');
+
+    wrapper.innerHTML = `
+      <div class="info-container">
+        <div class="info-title-emergency"> ${emergency.dutyName}
+          <div class="close-btn" title="닫기">×</div>
+        </div>
+        <div class="info-body">
+          <div class="update-time">${updateTime}</div>
+          <ul class="details-list">
+            <li class="${emergency.hospitalAddress != null ? 'available' : 'unavailable'}">🏠 ${emergency.hospitalAddress} </li>
+            <li class="${emergency.hvec > 0 ? 'available' : 'unavailable'}">🚑 응급실 일반병상 : ${emergency.hvec} 석</li>
+            <li class="${emergency.hvoc > 0 ? 'available' : 'unavailable'}">🩺 응글실 수술실 병상 : ${emergency.hvoc} 석</li>
+            <li class="${emergency.hvgc > 0 ? 'available' : 'unavailable'}">🛏️ 일반 입원실 병상 : ${emergency.hvgc} 석</li>
+            <li class="${emergency.hvctayn === 'Y' ? 'available' : 'unavailable'}">🧠 CT : ${emergency.hvctayn === 'Y' ? '가능' : '불가'}</li>
+            <li class="${emergency.hvmriayn === 'Y' ? 'available' : 'unavailable'}">🔬 MRI : ${emergency.hvmriayn === 'Y' ? '가능' : '불가'}</li>
+            <li class="${emergency.hvventiayn === 'Y' ? 'available' : 'unavailable'}">😮 인공호흡기 : ${emergency.hvventiayn === 'Y' ? '가능' : '불가'}</li>
+            ${emergency.dutyTel3 ? `<li class="available">📞 전화번호 : ${emergency.dutyTel3}</li>` : ''}
+          </ul>
+        </div>
+        <div class="info-footer">
+          <a href="${googleDirectionsUrl}" target="_blank" class="emergency-google-btn" rel="noopener noreferrer">
+            길찾기
+          </a>
+        </div>
+      </div>
+    `;
+
+    const position = new window.kakao.maps.LatLng(emergency.coordinateY, emergency.coordinateX);
+    const customOverlay = new window.kakao.maps.CustomOverlay({
+      map: null,
+      position: position,
+      content: wrapper,
+      yAnchor: 1.15,
+      xAnchor: 0.5
+    });
+
+    wrapper.querySelector('.close-btn').onclick = () => customOverlay.setMap(null);
+    return customOverlay;
+  },
+
+  // 약국 마커
   createPharmacyMarker(pharmacy) {
     const imageSrc = 'https://i.imgur.com/z4BFIhQ.png'; // 약국 아이콘
     const imageSize = new window.kakao.maps.Size(34, 47);
@@ -102,6 +178,7 @@ export default {
     this.markers.push(marker);
   },
 
+  // 약국 오버레이
   pharmacyOverlay(y, x, name, address, pharmacyTel) {
     // 출발지: 현재 사용자 위치
     const startY = this.$store.getters.userLat;
@@ -129,15 +206,15 @@ export default {
         <div class="address">${address}</div>
         <ul class="details-list">
           ${pharmacyTel != null
-        ? `<li class="prodoc-available">📞 전화번호 : ${pharmacyTel}</li>`
-        : `<li class="prodoc-unavailable">전화번호 없음</li>`
+        ? `<li class="available">📞 전화번호 : ${pharmacyTel}</li>`
+        : `<li class="unavailable">전화번호 없음</li>`
       }
      
         </ul>
       </div>
       <div class="info-footer">
         <a href="${googleDirectionsUrl}" target="_blank" class="pharmacy-google-btn" rel="noopener noreferrer">
-          🌐 Google Maps 길찾기
+          길찾기
         </a>
       </div>
     </div>
@@ -163,21 +240,13 @@ export default {
   },
 
 
-  // 마커 생성 로직을 별도 함수로 분리
-  createHospitalMarker(hospital, isEmergency) {
-    let imageSrc, imageSize, imageOption;
+  // 병원 마커
+  createHospitalMarker(hospital) {
 
-    if (isEmergency) {
-      // 응급실 가능한 병원 - 빨간색 십자가 마커
-      imageSrc = 'https://park-m-s.github.io/Spring-study/응급실.png';
-      imageSize = new window.kakao.maps.Size(34, 47);
-      imageOption = { offset: new window.kakao.maps.Point(25, 51) };
-    } else {
-      // 일반 병원 마커
-      imageSrc = 'https://park-m-s.github.io/Spring-study/병원.png';
-      imageSize = new window.kakao.maps.Size(34, 47);
-      imageOption = { offset: new window.kakao.maps.Point(20, 40) };
-    }
+    // 일반 병원 마커
+    const imageSrc = 'https://park-m-s.github.io/Spring-study/병원.png';
+    const imageSize = new window.kakao.maps.Size(34, 47);
+    const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
 
     const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
     const markerPosition = new window.kakao.maps.LatLng(hospital.coordinateY, hospital.coordinateX);
@@ -196,7 +265,7 @@ export default {
         this.activeOverlay.setMap(null);
       }
 
-      const newOverlay = this.loadCustomOverlay(hospital.hospitalName, hospital.hospitalAddress, hospital.hospitalTel, hospital.doctorNum, hospital.coordinateX, hospital.coordinateY, hospital.weekdayLunch, hospital.parkingCapacity, hospital.parkingFee, hospital.medicalSubject);
+      const newOverlay = this.loadCustomOverlay(hospital.hospitalName, hospital.todayOpen, hospital.todayClose, hospital.hospitalAddress, hospital.hospitalTel, hospital.doctorNum, hospital.professionalDoctors, hospital.coordinateX, hospital.coordinateY, hospital.weekdayLunch, hospital.parkingCapacity, hospital.parkingFee, hospital.medicalSubject);
       newOverlay.setMap(this.map);
       this.activeOverlay = newOverlay;
 
@@ -205,9 +274,9 @@ export default {
 
     this.markers.push(marker);
   },
-  // 커스텀 오버레이 (오타 수정 최종 버전)
 
-  loadCustomOverlay(hospitalName, hospitalAddress, hospitalTel, doctorNum, coordinateX, coordinateY, weekdayLunch, parkingCapacity, parkingFee, medicalSubject) {
+  // 병원 오버레이
+  loadCustomOverlay(hospitalName, todayOpen, todayClose, hospitalAddress, hospitalTel, doctorNum, professionalDoctors, coordinateX, coordinateY, weekdayLunch, parkingCapacity, parkingFee, medicalSubject) {
 
     // 출발지: 현재 사용자 위치
 
@@ -251,67 +320,76 @@ export default {
 
       <div class="info-body">
 
-        <div class="address">${hospitalAddress}</div>
+      ${medicalSubject != 0 && medicalSubject != null
 
+        ? `<div class="address">
+             <div class="subject-list-container">
+               <div class="subject-tags-wrapper">
+                 ${medicalSubject.split(',').map(subject => `<span class="subject-tag">${subject.trim()}</span>`).join('')}
+               </div>
+             </div>
+           </div>`
+        : ''
+
+      }
         <ul class="details-list">
+
+          ${hospitalAddress != null
+
+        ? `<li class="available"> 🏠 ${hospitalAddress}</li>`
+
+        : ``
+
+      }
 
           ${hospitalTel != 0 && hospitalTel != null
 
-        ? `<li class="parking-available">전화번호: ${hospitalTel}</li>`
+        ? `<li class="available"> 📞 전화번호 : ${hospitalTel}  </li>`
 
-        : `<li class="parking-unavailable">전화번호 없음</li>`
-
-      }
-
-
-          ${medicalSubject != 0 && medicalSubject != null
-
-        ? `<li class="parking-available">진료과목: ${medicalSubject}</li>`
-
-        : `<li class="parking-unavailable">진료과목 없음</li>`
+        : `<li class="unavailable">전화번호 없음</li>`
 
       }
 
+
+          ${todayOpen != null && todayClose != null
+
+        ? `<li class="available"> 🕰️ 진료시간 : ${todayOpen} ~ ${todayClose}</li>`
+
+        : ``
+
+      }
 
           ${weekdayLunch != 0 && weekdayLunch != null
 
-        ? `<li class="parking-available">점심시간: ${weekdayLunch}</li>`
+        ? `<li class="available">🕰️ 점심시간 : ${weekdayLunch}</li>`
 
         : ``
 
       }  
 
+          ${parkingCapacity != 0 && parkingCapacity != null
+        ? `<li class="available">
+          🚗 주차 가능 : ${parkingCapacity}대
+          <span> ${parkingFee === 'Y' ? '&nbsp&nbsp유료 주차' : '&nbsp&nbsp무료 주차'} </span>
+        </li>`
+        : `<li class="unavailable">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;주차장 없음</li>`
+      }
+
           ${doctorNum != 0 && doctorNum != null
 
-        ? `<li class="prodoc-available">🧑‍⚕️ 전문의 : ${doctorNum}</li>`
+        ? `<li class="available">🧑‍⚕️ 일반의 : ${doctorNum}명</li>`
 
-        : `<li class="prodoc-unavailable">전문의 없음</li>`
-
-      }
-
-
-          ${parkingFee != null
-
-        ? (parkingFee === 'Y'
-
-          ? `<li class="parking-available">유료 주차</li>`
-
-          : `<li class="parking-available">무료 주차</li>`)
-
-        : ``
+        : `<li class="unavailable">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;의사 없음</li>`
 
       }
 
+          ${professionalDoctors != 0 && professionalDoctors != null
 
+        ? `<li class="available">👩🏽‍⚕️ 전문의 : ${professionalDoctors}명</li>`
 
-          ${parkingCapacity != 0 && parkingCapacity != null
+        : `<li class="unavailable">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;전문의 없음</li>`
 
-        ? `<li class="parking-available">🚗 주차 가능 수: ${parkingCapacity}대</li>`
-
-        : `<li class="parking-unavailable">주차장 없음</li>`
-
-      }      
-
+      }
         </ul>
 
       </div>
@@ -320,7 +398,7 @@ export default {
 
         <a href="${googleDirectionsUrl}" target="_blank" class="google-btn" rel="noopener noreferrer">
 
-          🌐 Google Maps 길찾기
+          길찾기
 
         </a>
 
@@ -334,7 +412,6 @@ export default {
     const position = new window.kakao.maps.LatLng(coordinateY, coordinateX);
 
 
-    // [수정된 부분] 오타 수정: window.kakaomaps -> window.kakao.maps
 
     const customOverlay = new window.kakao.maps.CustomOverlay({
 
@@ -443,9 +520,9 @@ export default {
         this.dashedLine.setMap(this.map);
 
         // 지도 범위 조정
-        const bounds = new window.kakao.maps.LatLngBounds();
-        path.forEach(point => bounds.extend(point));
-        this.map.setBounds(bounds);
+        // const bounds = new window.kakao.maps.LatLngBounds();
+        // path.forEach(point => bounds.extend(point));
+        // this.map.setBounds(bounds);
 
         // 실제 이동 거리와 시간 표시
         const distance = (route.summary.distance / 1000).toFixed(1); // km 변환

@@ -182,7 +182,7 @@ export default {
       pharmacyList: [],
 
       hospitalimg: hospitalimg,
-      radius: 1.0,
+      radius: 6.0,
 
       // 전체 태그
       tags: [],
@@ -204,10 +204,14 @@ export default {
       isBottombarOptions: true,
       options: options,
       selectedItemId: 0,
+
+      socket: null,
+      emergencyList: [],
     }
   },
   mounted() {
     if (this.$store.getters.userLat == null) {
+      alert('사용자 위치에 접근할 수 있도록 허용해주시기 바랍니다.')
       setUserLocation();
     }
     // this.fetch();
@@ -220,6 +224,52 @@ export default {
     } else {
       this.loadScript();
     }
+
+    this.socket = new WebSocket("ws://localhost:8889/hospital_main/emergency-websocket");
+
+    this.socket.onmessage = (event) => {
+      // 1. 서버가 보낸 JSON 문자열을 항상 자바스크립트 객체/배열로 먼저 변환합니다.
+      const receivedData = JSON.parse(event.data);
+
+      // 2. 데이터의 구조를 확인하여 초기 데이터인지, 업데이트 데이터인지 판별합니다.
+      if (receivedData.body && receivedData.body.items) {
+        // [판단 근거] 'body'와 'items' 속성이 있다면, 이것은 '초기 데이터'입니다.
+        console.log("초기 상세 데이터를 수신했습니다.");
+
+        return
+
+      } else if (Array.isArray(receivedData)) {
+        // [판단 근거] 수신된 데이터가 배열이라면, 이것은 '업데이트 데이터'입니다.
+        console.log("실시간 업데이트 데이터를 수신했습니다.");
+
+        // 이미 원하는 형태의 배열이므로 그대로 할당하거나, 기존 목록과 비교하여 업데이트합니다.
+        // 여기서는 간단히 전체를 교체하는 것으로 가정합니다.
+        this.emergencyList = receivedData;
+
+      } else {
+        console.error("알 수 없는 형식의 데이터 수신:", receivedData);
+      }
+
+      console.log("갱신된 emergencyList:", this.emergencyList);
+    };
+
+    // 연결 성공
+    this.socket.onopen = () => {
+      console.log("WebSocket 연결됨");
+    };
+    // 연결 종료
+    this.socket.onclose = () => {
+      console.log("WebSocket 연결 종료됨");
+    };
+    // 에러 처리
+    this.socket.onerror = (error) => {
+      console.error("WebSocket 에러:", error);
+    };
+  },
+  beforeDestroy() {
+    if (this.socket) {
+      this.socket.close(); // 컴포넌트 제거 시 연결 닫기
+    }
   },
   watch: {
     tags: {
@@ -230,6 +280,8 @@ export default {
           return;
         } else if (this.subsTag.includes('주변 약국')) {
           this.fetch_pharmacy();
+        } else if (this.subsTag.includes('응급실')) {
+          this.fetch_emergency_start();
         } else {
           this.fetch_default();
         }
@@ -240,6 +292,10 @@ export default {
       const sidebarWidth = newVal ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
       document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
     },
+    emergencyList(tags) {
+      console.log('마커 업데이트');
+      // this.loadMaker();
+    }
   },
   methods: {
     currentDepartment(department) {

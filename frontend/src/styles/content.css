@@ -37,12 +37,11 @@
 .custom-overlay-wrap {
   position: relative;
   right: 3px;
-  bottom: 20px;
-  /* 마커의 상단에 오버레이가 위치하도록 조정 */
+  bottom: 15px;
   display: flex;
   flex-direction: column;
-  min-width: 320px;
-  max-width: 350px;
+  min-width: 360px;
+  max-width: 400px;
   background-color: white;
   border-radius: 12px;
   box-shadow: rgba(0, 0, 0, 0.25) 0px 14px 28px, rgba(0, 0, 0, 0.22) 0px 10px 10px;
@@ -101,6 +100,22 @@
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
 }
 
+.info-title-emergency {
+  font-family: 'Pretendard-SemiBold';
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  background: #e74c3c;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* border-bottom: 1px solid #e9ecef; */
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  color: white;
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+}
+
 /* 닫기 버튼 */
 .close-btn {
   width: 24.6333px;
@@ -128,95 +143,74 @@
 /* 주소 */
 .address {
   font-family: 'Pretendard-SemiBold';
-  padding-bottom: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   word-break: break-word;
-  /* 긴 단어(주소 등) 줄바꿈 */
   overflow-wrap: break-word;
-  /* 브라우저 호환성 고려 */
   white-space: normal;
-  /* 줄바꿈 허용 */
-  border-bottom: 1px solid #e9ecef;
 }
 
 
 /* 상세 정보 리스트 */
 .details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 10px;
+  /* background: rgba(240, 240, 243); */
   font-family: 'Pretendard-SemiBold';
   list-style: none;
   padding: 0;
   margin: 0;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #e9ecef;
+  overflow: hidden;
 }
 
 .details-list li {
-  border-radius: 10px;
-  padding: 10px;
-  background: rgba(240, 240, 243);
+  cursor: pointer;
+  padding: 12px;
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #E6E6E6;
+  background: rgba(240, 240, 243);
 }
 
-/* .details-list li:hover{
-  background: gray;
-} */
-
-/* .details-list li::before {
-  content: '•';
-  margin-right: 8px;
-  color: #ced4da;
-} */
-
-/* 응급실 운영 여부 스타일 */
-.emergency-available {
-  font-weight: 600;
-  color: #d94848;
-  /* 빨간색으로 강조 */
+.details-list li:last-child {
+  border-bottom: none;
 }
 
-.emergency-unavailable {
-  color: #868e96;
-  /* 회색으로 표시 */
+.details-list li:hover {
+  background: rgba(225, 225, 230);
+
 }
 
-/* 전문의 여부 */
-.prodoc-available {
+/* 리스터에 데이터가 있을 시 */
+.available {
   word-break: break-word;
-  /* 긴 단어(주소 등) 줄바꿈 */
   overflow-wrap: break-word;
-  /* 브라우저 호환성 고려 */
   white-space: normal;
   color: #495057;
 }
 
-.prodoc-unavailable {
+/* 리스터에 데이터가 없을 시 */
+.unavailable {
   color: #868e96;
 }
 
-/* 주차 가능 여부 */
-.parking-available {
-  color: #495057;
-}
-
-.parking-unavailable {
+.available span {
   color: #868e96;
 }
 
 /* 오버레이 하단 푸터 영역 */
 .info-footer {
-  /* margin-top: 12px; */
-  padding: 12px 16px;
+  padding: 12px;
 }
 
 /* Google Maps 길찾기 버튼 스타일 */
 .google-btn {
+  font-family: 'Pretendard-SemiBold';
   display: block;
   width: 100%;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 15px;
   background-color: #27ae60;
   /* Google 파란색 */
   color: white;
@@ -231,17 +225,15 @@
 }
 
 .google-btn:hover {
-  background-color: #357ae8;
-  /* 호버 시 약간 어둡게 */
+  background: rgb(34, 153, 84);
 }
 
 .pharmacy-google-btn {
   display: block;
   width: 100%;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 15px;
   background-color: #1abc9c;
-  /* Google 파란색 */
   color: white;
   font-size: 0.95rem;
   font-weight: 600;
@@ -255,109 +247,61 @@
   background-color: gray;
 }
 
-/* .wrap {
-  position: absolute;
-  left: 0;
-  bottom: 40px;
-  width: 288px;
-  height: 172px;
-  margin-left: -138px;
-  text-align: left;
-  overflow: hidden;
-  font-size: 12px;
-  font-family: 'Malgun Gothic', dotum, '돋움', sans-serif;
-  line-height: 1.5;
-}
-
-.wrap * {
-  padding: 0;
-  margin: 0;
-}
-
-.wrap .info {
-  width: 286px;
-  height: 160px;
-  border-radius: 5px;
-  border-bottom: 2px solid #ccc;
-  border-right: 1px solid #ccc;
-  overflow: hidden;
-  background: #fff;
-}
-
-.wrap .info:nth-child(1) {
-  border: 0;
-  box-shadow: 0px 1px 2px #888;
-}
-
-.info .title {
+.emergency-google-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #e74c3c;
   color: white;
-  padding: 5px 0 0 10px;
-  height: 30px;
-  background: #11BF7F no-repeat right 14px center;
-  border-bottom: 1px solid #ddd;
-  font-size: 18px;
-  font-weight: bold;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s ease-in-out;
+  box-sizing: border-box;
 }
 
-.info .close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  color: #888;
-  width: 17px;
-  height: 17px;
-  background: url('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/overlay_close.png');
+.emergency-google-btn:hover {
+  background-color: rgba(198, 62, 49);
 }
 
-.info .close:hover {
+/* 진료과목 리스트 스타일 */
+.subject-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 제목과 태그들 사이의 간격 */
+}
+
+.subject-list-title {
+  font-family: 'Pretendard-SemiBold';
+  color: #333;
+}
+
+.subject-tags-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.subject-tag {
+  background: #27ae60;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-family: 'Pretendard-SemiBold';
+}
+
+.subject-tag:hover {
   cursor: pointer;
+  background: rgb(34, 153, 84);
 }
 
-.info .body {
-  position: relative;
-  overflow: hidden;
+.update-time {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: end;
+  color: gray;
+  font-family: 'Pretendard-SemiBold';
 }
-
-.info .desc {
-  position: relative;
-  margin: 13px 0 0 90px;
-  /* height: 75px; */
-/* } */
-
-/* .desc .ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.desc .jibun {
-  font-size: 11px;
-  color: #888;
-  margin-top: -2px;
-}
-
-.info .img {
-  position: absolute;
-  top: 6px;
-  left: 5px;
-  width: 73px;
-  height: 71px;
-  border: 1px solid #ddd;
-  color: #888;
-  overflow: hidden;
-}
-
-.info:after {
-  content: '';
-  position: absolute;
-  margin-left: -12px;
-  left: 50%;
-  bottom: 0;
-  width: 22px;
-  height: 12px;
-  background: url('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/vertex_white.png')
-}
-
-.info .link {
-  color: #5085BB;
-} */

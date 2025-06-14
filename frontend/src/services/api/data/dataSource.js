@@ -1,84 +1,73 @@
 import axios from 'axios';
 
 export default {
+  // 기본 병원 데이터 가져오기
   async fetch_default() {
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        // 필수 파라미터 확인
-        const userLat = this.$store.getters.userLat;
-        const userLng = this.$store.getters.userLng;
-        
-        if (!userLat || !userLng) {
-          console.error('사용자 위치 정보가 없습니다.');
-          return;
-        }
-        
-        // localhost:8888 대신 /api 경로 사용 (Caddy 프록시를 통해 백엔드로 전달)
-        const res = await axios.get('/hospitalsData', {
+        const res = await axios.get('http://localhost:8889/hospital_main/hospitalsData', {
           params: {
-            subs: this.subs[0],                 // 첫 번째 요소만 전달
-            userLat: userLat,
-            userLng: userLng,
+            subs: this.subs.join(','),
+            userLat: this.$store.getters.userLat,
+            userLng: this.$store.getters.userLng,
             radius: this.radius,
-            tags: this.subsTag,
-          },
-          paramsSerializer: function(params) {
-            // Spring Boot가 기대하는 형태로 직렬화
-            const parts = [];
-            for (const key in params) {
-              if (Array.isArray(params[key])) {
-                params[key].forEach(value => {
-                  parts.push(`${key}=${encodeURIComponent(value)}`);
-                });
-              } else if (params[key] !== null && params[key] !== undefined) {
-                parts.push(`${key}=${encodeURIComponent(params[key])}`);
-              }
-            }
-            return parts.join('&');
+            tags: this.subsTag.join(','),
           }
         });
-        
-        console.log('병원 API 응답:', res.data);
         this.hospitalList = res.data;
-        
-        if (this.map && Array.isArray(this.hospitalList)) {
+        // console.log(this.hospitalList);
+        if (this.map) {
           this.loadMaker();
         }
       }
     } catch (err) {
-      console.error('병원 데이터 에러:', err);
-      console.error('요청 설정:', err.config);
+      console.error('에러 발생 : ', err);
     }
   },
-  
+
   // 약국 데이터 가져오기
   async fetch_pharmacy() {
     try {
-      const userLat = this.$store.getters.userLat;
-      const userLng = this.$store.getters.userLng;
-      
-      if (!userLat || !userLng) {
-        console.error('사용자 위치 정보가 없습니다.');
-        return;
-      }
-      
-      const res = await axios.get('/pharmaciesData', {
-        params: {
-          userLat: userLat,
-          userLng: userLng,
-          radius: this.radius,
+      if (this.subsTag && this.subsTag.length != 0) {
+        const res = await axios.get('http://localhost:8889/hospital_main/pharmaciesData', {
+          params: {
+            userLat: this.$store.getters.userLat,
+            userLng: this.$store.getters.userLng,
+            radius: this.radius,
+          }
+        });
+        this.pharmacyList = res.data;
+        if (this.map) {
+          this.loadMaker();
         }
-      });
-      
-      console.log('약국 API 응답:', res.data);
-      this.pharmacyList = res.data;
-      
-      if (this.map && Array.isArray(this.pharmacyList)) {
+      }
+    } catch (err) {
+      console.error('에러 발생 : ', err);
+    }
+  },
+
+  // 응급실 실시간 데이터 시작
+  async fetch_emergency_start() {
+    try {
+      await axios.get('http://localhost:8889/hospital_main/api/emergency/start');
+      if (this.map) {
         this.loadMaker();
       }
     } catch (err) {
-      console.error('약국 데이터 에러:', err);
+      console.error('에러 발생 : ', err);
+    }
+  },
+
+  // 응급실 실시간 데이터 종료
+  async fetch_emergency_stop() {
+    try {
+      if (this.subsTag && this.subsTag.length != 0) {
+        await axios.get('http://localhost:8889/hospital_main/api/emergency/stop');
+        this.emergencyList = [];
+      }
+    } catch (err) {
+      console.error('에러 발생 : ', err);
     }
   }
 }
