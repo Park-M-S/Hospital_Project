@@ -103,7 +103,7 @@ jobs:
           export BACKEND_PORT="${{ secrets.BACKEND_PORT }}"
           export DB_PORT="${{ secrets.DB_PORT }}"
           export ENVIRONMENT="${{ secrets.ENVIRONMENT }}"
-          export CADDY_AUTO_HTTPS="off"
+          export CADDY_AUTO_HTTPS="on"
           
           # 환경변수 확인
           echo "📋 배포 환경 설정:"
