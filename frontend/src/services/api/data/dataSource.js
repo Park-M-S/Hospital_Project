@@ -5,7 +5,7 @@ export default {
   async fetch() {
     try {
       if (this.tags.length != 0 && this.tags != null) {
-        const res = await axios.get('http://localhost:8888/hospital_main/mapData', {
+        const res = await axios.get('http://localhost:8888/mapData', {
           params: {
             sub: this.tags[0],
             userLat: this.$store.getters.userLat,
