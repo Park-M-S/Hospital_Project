@@ -11,7 +11,7 @@
           정보가 없습니다.
         </div>
         <div v-else>
-          <!-- <div class="test_flex">
+          <div class="test_flex">
             <ul class="test">
               <li> <button>구현예정</button> </li>
               <li> <button>구현예정</button> </li>
@@ -27,21 +27,23 @@
                 <option value="uk">옵션5</option>
               </select>
             </div>
-          </div> -->
+          </div>
 
-
-          <div class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
-            <div class="hr"></div>
-            <div class="hospital_flex">
-              <div class="hospital_container">
-                <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
-                <div class="hospital_department"> {{ hospitals.subject }} </div>
-                <div class="hospital_address"> 09 : 00 ~ 16 : 00 </div>
-                <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
+          <div class="hospital_visible" v-if="hospitalList">
+            <div class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
+              <div class="hr"></div>
+              <div class="hospital_flex">
+                <div class="hospital_container">
+                  <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
+                  <div class="hospital_department"> {{ hospitals.subject }} </div>
+                  <div class="hospital_address"> 09 : 00 ~ 16 : 00 </div>
+                  <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
+                </div>
+                <img class="hospital_img" :src="hospitalimg">
               </div>
-              <img class="hospital_img" :src="hospitalimg">
             </div>
           </div>
+
         </div>
       </div>
       <div class="tag_container">
@@ -78,6 +80,8 @@
         </div>
 
       </div>
+
+      <!-- 옵션 메뉴 -->
       <div class="options">
         <ul>
           <li v-for="(optionsItem, i) in options" :key="i" :class="{ optionsSelected: isSelectedOptions(optionsItem) }"
@@ -85,9 +89,9 @@
             }}
           </li>
         </ul>
-
       </div>
 
+      <!-- 진료과 선택 -->
       <div v-if=isBottombarOptions class="bottombar_content">
         <div class="department_info">
           <div v-for="(nameItem, i) in name" :key="i" @click="toggleDepartmentSelection(nameItem.title)">
@@ -103,9 +107,10 @@
         </div>
 
       </div>
+      <!-- 증상 별 진료과 선택 -->
       <div v-else class="bottombar_content">
         <ul class="check_list">
-          <li v-for="item in diagnosis" :key="item.id" @click="toggleSymptom(item)"
+          <li v-for="item in diagnosis" :key="item.id" @click="toggleDepartmentSelection(item.departments)"
             :class="{ selected: isSelected(item) }">
 
             <i :class="item.image"></i>
@@ -114,10 +119,18 @@
         </ul>
       </div>
 
+      <!-- BottomBar-submit-button -->
+      <div v-if=isBottombarOptions class="bottombar_submit"> <button class="submit-button" :disabled="subs.length === 0"
+          @click="submitSymptoms">
+          진료과 선택 완료
+        </button> </div>
+      <div v-else class="bottombar_submit">
+        <button class="submit-button" :disabled="subs.length === 0" @click="submitSymptoms">
+          증상 선택 완료
+        </button>
+      </div>
 
-      <button class="submit-button" :disabled="selectedSymptoms.length === 0" @click="submitSymptoms">
-        증상 선택 완료
-      </button>
+
     </div>
   </div>
 
@@ -136,7 +149,7 @@ import '@/styles/font.css'
 import Vue3TagsInput from 'vue3-tags-input';
 
 // assets
-import hospitalList from '@/assets/hospitalData.js';
+// import hospitalList from '@/assets/hospitalData.js';
 import tagButton from '@/assets/tagButton';
 import hospitalimg from '@/assets/hospital.png';
 import diagnosis from '@/assets/diagnosis.js';
@@ -152,11 +165,10 @@ import toggleSidebar from '@/services/utils/toggleSidebar.js';
 import toggleBottombar from '@/services/utils/toggleBottombar.js';
 import tag from '@/services/utils/tags.js';
 import selectDiagnosis from '@/services/utils/selectDiagnosis';
-import { setUserLocation } from '@/services/setUserLocation.js';
 
 
 export default {
-  name: 'About',
+  name: 'App',
   components: {
     Vue3TagsInput
   },
@@ -164,30 +176,39 @@ export default {
     return {
       name: data,
       map: null,
-      tagList: ['응급실', '전문의', '주차가능', '약국'],
-      hospitalList: hospitalList,
+      // tagList: ['응급실', '전문의', '주차가능', '약국'],
+      hospitalList: [],
+      pharmacyList: [],
 
       hospitalimg: hospitalimg,
       radius: 1.0,
+
+      // 전체 태그
       tags: [],
+
+      // 진료과 태그
+      subs: [],
+
+      // 진료과 세부 태그
+      subsTag: [],
+
       markers: [],
       isSideBar: false,
       isBottomBar: true,
       tagButton: tagButton,
 
       diagnosis: diagnosis,
-      selectedSymptoms: [],
       isBlurred: true,
 
-      isBottombarOptions: false,
+      isBottombarOptions: true,
       options: options,
-      selectedItemId: 1,
+      selectedItemId: 0,
     }
   },
   mounted() {
     if (this.$store.getters.userLat == null) {
       alert('사용자 위치에 접근할 수 있도록 허용해주시기 바랍니다.')
-      setUserLocation(this);
+      setUserLocation();
     }
     // this.fetch();
 
@@ -203,13 +224,15 @@ export default {
   watch: {
     tags: {
       handler(tags) {
-        // 태그 유효성 검사
-        if (this.tagList.includes(tags[0])) {
-          alert(`진료과를 먼저 선택해주세요.`);
-          this.tags.splice(0, 1); // 0 번째 값 제거
+        // alert('전체 태그 : ' + this.tags + '\n\n' + '진료과 태그: ' + this.subs + '\n\n' + '진료과 세부 태그 : ' + this.subsTag);
+        if (this.subs == null || this.subs.length === 0) {
+          alert('진료과를 선택해주세요.');
           return;
+        } else if (this.subsTag.includes('주변 약국')) {
+          this.fetch_pharmacy();
+        } else {
+          this.fetch_default();
         }
-        this.fetch();
       },
       deep: true
     },
@@ -226,20 +249,24 @@ export default {
       // this.isBottombarOptions = !this.isBottombarOptions;
       return item.id === this.selectedItemId;
     },
+
+    // 진료과 토글 선택
     toggleDepartmentSelection(departmentTitle) {
-      const index = this.selectedSymptoms.indexOf(departmentTitle);
-      if (index > -1) {
-        // 이미 선택된 항목이면 배열에서 제거 (선택 해제)
-        this.selectedSymptoms.splice(index, 1);
+      // 현재 진료과 태그 리스트에 값이 있다면
+      if (this.subs.includes(departmentTitle)) {
+        // 리스트에서 해당 과목 제거
+        this.subs = this.subs.filter(item => item !== departmentTitle);
+        this.tags = this.tags.filter(item => item !== departmentTitle);
       } else {
-        // 선택되지 않은 항목이면 배열에 추가 (선택)
-        this.selectedSymptoms.push(departmentTitle);
+        // 리스트에 해당 과목 푸쉬
+        this.tags.push(departmentTitle);
+        this.subs.push(departmentTitle);
       }
     },
 
     // 진료과 이름이 selectedSymptoms 배열에 있는지 확인하는 함수 (클래스 바인딩용)
     isDepartmentSelected(departmentTitle) {
-      return this.selectedSymptoms.includes(departmentTitle);
+      return this.subs.includes(departmentTitle);
     },
     ...dataSource,
     ...getMap,

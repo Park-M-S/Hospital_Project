@@ -135,6 +135,10 @@
   color: #11BF7F;
 }
 
+.bottombar_submit {
+  width: 100%;
+}
+
 .submit-button {
   width: 100%;
   padding: 15px;

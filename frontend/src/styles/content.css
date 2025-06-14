@@ -11,7 +11,251 @@
   /* 기준 */
 }
 
-.wrap {
+/* 애니메이션 */
+.custom-overlay-wrap .info-container .collapsible-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.custom-overlay-wrap .info-container .info-title .toggle-btn {
+  float: right;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1em;
+  margin-left: 5px;
+  padding: 0;
+}
+
+.custom-overlay-wrap .info-container .info-title .toggle-btn.open {
+  transform: rotate(180deg);
+}
+
+
+/* 커스텀 오버레이의 기본 스타일 */
+.custom-overlay-wrap {
+  position: relative;
+  right: 3px;
+  bottom: 20px;
+  /* 마커의 상단에 오버레이가 위치하도록 조정 */
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  max-width: 350px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: rgba(0, 0, 0, 0.25) 0px 14px 28px, rgba(0, 0, 0, 0.22) 0px 10px 10px;
+  font-family: 'Pretendard', sans-serif;
+}
+
+/* 마커를 가리키는 꼬리표 (삼각형) */
+.custom-overlay-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid white;
+}
+
+/* 오버레이 정보 컨테이너 */
+/* .info-container {
+  padding: 16px;
+} */
+
+/* 제목 부분 */
+.info-title {
+  font-family: 'Pretendard-SemiBold';
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  background: #27ae60;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* border-bottom: 1px solid #e9ecef; */
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  color: white;
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+}
+
+.info-title-pharmacy {
+  font-family: 'Pretendard-SemiBold';
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  background: #1abc9c;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* border-bottom: 1px solid #e9ecef; */
+  padding: 12px;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  color: white;
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 2px 6px 2px;
+}
+
+/* 닫기 버튼 */
+.close-btn {
+  width: 24.6333px;
+  height: 24.6333px;
+  font-size: 1.5rem;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  color: white;
+  transition: color 0.2s ease-in-out;
+}
+
+.close-btn:hover {
+  color: #212529;
+}
+
+/* 본문 내용 */
+.info-body {
+  padding-left: 12px;
+  padding-right: 12px;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+/* 주소 */
+.address {
+  font-family: 'Pretendard-SemiBold';
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+  word-break: break-word;
+  /* 긴 단어(주소 등) 줄바꿈 */
+  overflow-wrap: break-word;
+  /* 브라우저 호환성 고려 */
+  white-space: normal;
+  /* 줄바꿈 허용 */
+  border-bottom: 1px solid #e9ecef;
+}
+
+
+/* 상세 정보 리스트 */
+.details-list {
+  font-family: 'Pretendard-SemiBold';
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.details-list li {
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(240, 240, 243);
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* .details-list li:hover{
+  background: gray;
+} */
+
+/* .details-list li::before {
+  content: '•';
+  margin-right: 8px;
+  color: #ced4da;
+} */
+
+/* 응급실 운영 여부 스타일 */
+.emergency-available {
+  font-weight: 600;
+  color: #d94848;
+  /* 빨간색으로 강조 */
+}
+
+.emergency-unavailable {
+  color: #868e96;
+  /* 회색으로 표시 */
+}
+
+/* 전문의 여부 */
+.prodoc-available {
+  word-break: break-word;
+  /* 긴 단어(주소 등) 줄바꿈 */
+  overflow-wrap: break-word;
+  /* 브라우저 호환성 고려 */
+  white-space: normal;
+  color: #495057;
+}
+
+.prodoc-unavailable {
+  color: #868e96;
+}
+
+/* 주차 가능 여부 */
+.parking-available {
+  color: #495057;
+}
+
+.parking-unavailable {
+  color: #868e96;
+}
+
+/* 오버레이 하단 푸터 영역 */
+.info-footer {
+  /* margin-top: 12px; */
+  padding: 12px 16px;
+}
+
+/* Google Maps 길찾기 버튼 스타일 */
+.google-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #27ae60;
+  /* Google 파란색 */
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s ease-in-out;
+  box-sizing: border-box;
+  /* box-shadow: rgba(0, 0, 0, 0.02) 0px 1px 3px 0px, rgba(27, 31, 35, 0.15) 0px 0px 0px 1px; */
+  /* box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset; */
+}
+
+.google-btn:hover {
+  background-color: #357ae8;
+  /* 호버 시 약간 어둡게 */
+}
+
+.pharmacy-google-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #1abc9c;
+  /* Google 파란색 */
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.pharmacy-google-btn:hover {
+  background-color: gray;
+}
+
+/* .wrap {
   position: absolute;
   left: 0;
   bottom: 40px;
@@ -78,9 +322,9 @@
   position: relative;
   margin: 13px 0 0 90px;
   /* height: 75px; */
-}
+/* } */
 
-.desc .ellipsis {
+/* .desc .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -116,4 +360,4 @@
 
 .info .link {
   color: #5085BB;
-}
+} */

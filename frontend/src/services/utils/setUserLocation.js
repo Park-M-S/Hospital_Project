@@ -1,15 +1,19 @@
-// 사용자 현재 위치 설정
-export function setUserLocation(context) {
+import store from "@/store";
+
+export default function setUserLocation() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        context.$store.dispatch('updateLocation', { userLat: position.coords.latitude, userLng: position.coords.longitude });
+        store.dispatch('updateLocation', {
+          userLat: position.coords.latitude,
+          userLng: position.coords.longitude
+        });
       },
       (err) => {
-        console.error = err.message;
+        console.error(err.message);
       }
     );
   } else {
-    console.error = "Geolocation is not supported by this browser.";
+    console.error("Geolocation is not supported by this browser.");
   }
 }

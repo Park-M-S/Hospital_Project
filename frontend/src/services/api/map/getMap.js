@@ -18,7 +18,7 @@ export default {
     const container = document.getElementById("map");
     const options = {
       center: new window.kakao.maps.LatLng(this.$store.getters.userLat, this.$store.getters.userLng),
-      level: 3
+      level: 2
     }
 
     this.map = new window.kakao.maps.Map(container, options);
@@ -62,12 +62,111 @@ export default {
     emergencyHospitals.forEach(hospital => {
       this.createHospitalMarker(hospital, true);
     });
+
+
+    // 약국 마커
+    if (this.pharmacyList && this.pharmacyList.length) {
+      this.pharmacyList.forEach(pharmacy => this.createPharmacyMarker(pharmacy));
+    }
   },
+
+  createPharmacyMarker(pharmacy) {
+    const imageSrc = 'https://i.imgur.com/z4BFIhQ.png'; // 약국 아이콘
+    const imageSize = new window.kakao.maps.Size(34, 47);
+    const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
+
+    const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
+    const markerPosition = new window.kakao.maps.LatLng(pharmacy.coordinateY, pharmacy.coordinateX);
+
+    const marker = new window.kakao.maps.Marker({
+      position: markerPosition,
+      title: pharmacy.pharmacyName,
+      image: markerImage,
+    });
+
+    marker.setMap(this.map);
+
+    // 클릭 이벤트 추가
+    window.kakao.maps.event.addListener(marker, 'click', () => {
+      if (this.activeOverlay) {
+        this.activeOverlay.setMap(null);
+      }
+
+      const newOverlay = this.pharmacyOverlay(pharmacy.coordinateY, pharmacy.coordinateX, pharmacy.pharmacyName, pharmacy.pharmacyAddress, pharmacy.pharmacyTel);
+      newOverlay.setMap(this.map);
+      this.activeOverlay = newOverlay;
+
+      this.showRoute(pharmacy);
+    });
+
+    this.markers.push(marker);
+  },
+
+  pharmacyOverlay(y, x, name, address, pharmacyTel) {
+    // 출발지: 현재 사용자 위치
+    const startY = this.$store.getters.userLat;
+    const startX = this.$store.getters.userLng;
+
+    // 도착지: 클릭한 병원
+    const endY = y;
+    const endX = x;
+
+    // Google Maps 길찾기 URL
+    const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${endY},${endX}&travelmode=transit`;
+
+    // wrapper div 요소 생성
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-overlay-wrap';
+
+    // 버튼 HTML
+    wrapper.innerHTML = `
+    <div class="info-container">
+      <div class="info-title-pharmacy">
+        ${name}
+        <div class="close-btn" title="닫기">×</div>
+      </div>
+      <div class="info-body">
+        <div class="address">${address}</div>
+        <ul class="details-list">
+          ${pharmacyTel != null
+        ? `<li class="prodoc-available">📞 전화번호 : ${pharmacyTel}</li>`
+        : `<li class="prodoc-unavailable">전화번호 없음</li>`
+      }
+     
+        </ul>
+      </div>
+      <div class="info-footer">
+        <a href="${googleDirectionsUrl}" target="_blank" class="pharmacy-google-btn" rel="noopener noreferrer">
+          🌐 Google Maps 길찾기
+        </a>
+      </div>
+    </div>
+  `;
+
+    const position = new window.kakao.maps.LatLng(y, x);
+
+    // [수정된 부분] 오타 수정: window.kakaomaps -> window.kakao.maps
+    const customOverlay = new window.kakao.maps.CustomOverlay({
+      map: null,
+      position: position,
+      content: wrapper,
+      yAnchor: 1.15,
+      xAnchor: 0.5
+    });
+
+    // 닫기 버튼 클릭 이벤트는 그대로 유지
+    wrapper.querySelector('.close-btn').onclick = () => {
+      customOverlay.setMap(null);
+    };
+
+    return customOverlay;
+  },
+
 
   // 마커 생성 로직을 별도 함수로 분리
   createHospitalMarker(hospital, isEmergency) {
     let imageSrc, imageSize, imageOption;
-    
+
     if (isEmergency) {
       // 응급실 가능한 병원 - 빨간색 십자가 마커
       imageSrc = 'https://park-m-s.github.io/Spring-study/응급실.png';
@@ -97,7 +196,7 @@ export default {
         this.activeOverlay.setMap(null);
       }
 
-      const newOverlay = this.loadCustomOverlay(hospital.coordinateY, hospital.coordinateX, hospital.hospitalName, hospital.hospitalAddress, hospital.pro_doc, hospital.emergency_available, hospital.park_available);
+      const newOverlay = this.loadCustomOverlay(hospital.hospitalName, hospital.hospitalAddress, hospital.hospitalTel, hospital.doctorNum, hospital.coordinateX, hospital.coordinateY, hospital.weekdayLunch, hospital.parkingCapacity, hospital.parkingFee, hospital.medicalSubject);
       newOverlay.setMap(this.map);
       this.activeOverlay = newOverlay;
 
@@ -106,55 +205,163 @@ export default {
 
     this.markers.push(marker);
   },
+  // 커스텀 오버레이 (오타 수정 최종 버전)
 
-  // 커스텀 오버레이
-  loadCustomOverlay(y, x, name, address, prodoc, emergency, parking) {
-    // 1. div 요소 생성
+  loadCustomOverlay(hospitalName, hospitalAddress, hospitalTel, doctorNum, coordinateX, coordinateY, weekdayLunch, parkingCapacity, parkingFee, medicalSubject) {
+
+    // 출발지: 현재 사용자 위치
+
+    const startY = this.$store.getters.userLat;
+
+    const startX = this.$store.getters.userLng;
+
+
+    // 도착지: 클릭한 병원
+
+    const endY = coordinateY;
+
+    const endX = coordinateX;
+
+
+    // Google Maps 길찾기 URL
+
+    const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${endY},${endX}&travelmode=transit`;
+
+
+    // wrapper div 요소 생성
+
     const wrapper = document.createElement('div');
-    wrapper.className = 'wrap';
 
-    // 응급실 상태에 따른 스타일 및 텍스트 (추후에 응급실 실시간 여부시 수정필요)
-    const emergencyStatus = emergency === 'Y' 
-      ? `<div class="emergency-available">🚨 응급실 운영중</div>` 
-      : `<div class="emergency-unavailable">응급실 정보 없음</div>`;
+    wrapper.className = 'custom-overlay-wrap';
 
-    // 2. innerHTML로 내부 HTML 구조 추가
+
+    // 버튼 HTML
+
     wrapper.innerHTML = `
-    <div class="info">
-      <div class="title">
-        ${name}
-        <div class="close" title="닫기"></div>
+
+    <div class="info-container">
+
+      <div class="info-title">
+
+        ${hospitalName}
+
+        <div class="close-btn" title="닫기">×</div>
+
       </div>
-      <div class="body">
-        <div class="img">
-          <img src="https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/place_thumb.png" width="73" height="70">
-        </div>
-        <div class="desc">
-          <div class="ellipsis">${address}</div>
-          <div class="jibun ellipsis">(우) 63309 (지번) 영평동 2181</div> 
-          <div> ${prodoc} </div>
-          ${emergencyStatus}
-          <div> ${parking} </div>
-        </div>
+
+      <div class="info-body">
+
+        <div class="address">${hospitalAddress}</div>
+
+        <ul class="details-list">
+
+          ${hospitalTel != 0 && hospitalTel != null
+
+        ? `<li class="parking-available">전화번호: ${hospitalTel}</li>`
+
+        : `<li class="parking-unavailable">전화번호 없음</li>`
+
+      }
+
+
+          ${medicalSubject != 0 && medicalSubject != null
+
+        ? `<li class="parking-available">진료과목: ${medicalSubject}</li>`
+
+        : `<li class="parking-unavailable">진료과목 없음</li>`
+
+      }
+
+
+          ${weekdayLunch != 0 && weekdayLunch != null
+
+        ? `<li class="parking-available">점심시간: ${weekdayLunch}</li>`
+
+        : ``
+
+      }  
+
+          ${doctorNum != 0 && doctorNum != null
+
+        ? `<li class="prodoc-available">🧑‍⚕️ 전문의 : ${doctorNum}</li>`
+
+        : `<li class="prodoc-unavailable">전문의 없음</li>`
+
+      }
+
+
+          ${parkingFee != null
+
+        ? (parkingFee === 'Y'
+
+          ? `<li class="parking-available">유료 주차</li>`
+
+          : `<li class="parking-available">무료 주차</li>`)
+
+        : ``
+
+      }
+
+
+
+          ${parkingCapacity != 0 && parkingCapacity != null
+
+        ? `<li class="parking-available">🚗 주차 가능 수: ${parkingCapacity}대</li>`
+
+        : `<li class="parking-unavailable">주차장 없음</li>`
+
+      }      
+
+        </ul>
+
       </div>
+
+      <div class="info-footer">
+
+        <a href="${googleDirectionsUrl}" target="_blank" class="google-btn" rel="noopener noreferrer">
+
+          🌐 Google Maps 길찾기
+
+        </a>
+
+      </div>
+
     </div>
+
   `;
 
-    const position = new window.kakao.maps.LatLng(y, x);
+
+    const position = new window.kakao.maps.LatLng(coordinateY, coordinateX);
+
+
+    // [수정된 부분] 오타 수정: window.kakaomaps -> window.kakao.maps
 
     const customOverlay = new window.kakao.maps.CustomOverlay({
+
       map: null,
+
       position: position,
+
       content: wrapper,
-      yAnchor: 1,
+
+      yAnchor: 1.15,
+
+      xAnchor: 0.5
+
     });
 
-    // 3. 닫기 버튼 클릭 이벤트 바인딩
-    wrapper.querySelector('.close').onclick = () => {
+
+    // 닫기 버튼 클릭 이벤트는 그대로 유지
+
+    wrapper.querySelector('.close-btn').onclick = () => {
+
       customOverlay.setMap(null);
+
     };
 
+
     return customOverlay;
+
   },
 
   // 닫기 버튼을 눌렀을 때 오버레이 닫기
@@ -252,7 +459,7 @@ export default {
     } catch (error) {
       console.error('경로 검색 오류:', error);
       // 오류 발생 시 직선거리로 표시
-      this.showStraightRoute(hospital);
+      // this.showStraightRoute(hospital);
     }
   },
 
