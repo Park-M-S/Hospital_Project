@@ -1,0 +1,80 @@
+# Hospital Project Caddyfile - 자체 서명 SSL
+{$SERVER_IP} {
+    # 정적 파일 서빙
+    root * /usr/share/caddy
+    file_server
+    
+    # Vue.js SPA를 위한 try_files
+    try_files {path} /index.html
+    
+    # API 프록시 설정
+    handle /api/* {
+        reverse_proxy {$BACKEND_HOST}:{$BACKEND_PORT} {
+            # 헤더 설정
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+            
+            # 타임아웃 설정
+            timeout 30s
+        }
+    }
+    
+    # 자체 서명 SSL 인증서 사용
+    tls internal
+    
+    # 보안 헤더
+    header {
+        # 기본 보안 헤더
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY" 
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # CSP 헤더 (카카오맵 지원)
+        Content-Security-Policy "default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://dapi.kakao.com https://apis-navi.kakaomobility.com blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://dapi.kakao.com https://apis-navi.kakaomobility.com; worker-src 'self' blob:;"
+        
+        # 환경 정보 헤더
+        X-Environment "{$ENVIRONMENT}"
+        X-Server-Type "Caddy-SelfSigned"
+    }
+    
+    # 로깅 설정
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 50mb
+            roll_keep 3
+            roll_keep_for 168h
+        }
+        format json
+        level INFO
+    }
+    
+    # 에러 페이지 처리
+    handle_errors {
+        @404 expression `{err.status_code} == 404`
+        handle @404 {
+            rewrite * /index.html
+            file_server
+        }
+    }
+}
+
+# HTTP에서 HTTPS로 리다이렉트
+http://{$SERVER_IP} {
+    # API 요청은 HTTP에서도 허용 (개발 편의)
+    @api {
+        path /api/*
+    }
+    
+    handle @api {
+        reverse_proxy {$BACKEND_HOST}:{$BACKEND_PORT}
+    }
+    
+    # 나머지는 HTTPS로 리다이렉트
+    handle {
+        redir https://{$SERVER_IP}{uri} 302
+    }
+}
