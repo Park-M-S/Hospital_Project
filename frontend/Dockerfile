@@ -19,7 +19,7 @@ RUN ls -la dist/
 RUN echo "Checking if index.html exists:"
 RUN test -f dist/index.html && echo "✅ index.html found" || echo "❌ index.html NOT found"
 
-# Production stage with Caddy
+# Production stage with Caddy 
 FROM caddy:alpine
 
 # 필요한 패키지 설치
