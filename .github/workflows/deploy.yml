@@ -180,7 +180,7 @@ jobs:
           
           # 백엔드 API 확인
           for i in {1..6}; do
-            if curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}:8888" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "http://${{ secrets.EC2_HOST }}:8888/" > /dev/null 2>&1; then
               echo "✅ 백엔드 API: 정상"
               BACKEND_OK=true
               break
@@ -223,7 +223,7 @@ jobs:
           # 백엔드 서버가 완전히 시작될 때까지 대기
           echo "⏳ 백엔드 서버 시작 대기 중..."
           for i in {1..30}; do
-            if curl -f -s --connect-timeout 5 "http://localhost:8888/actuator/health" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "http://localhost:8888/" > /dev/null 2>&1; then
               echo "✅ 백엔드 서버 준비 완료"
               break
             else
@@ -232,19 +232,36 @@ jobs:
             fi
           done
           
+          # 추가: API 엔드포인트 존재 여부 확인
+          echo "🔍 API 엔드포인트 존재 여부 확인..."
+          if curl -s -I "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/pharmacy/save" | grep -q "HTTP"; then
+            echo "✅ pharmacy/save API 엔드포인트 접근 가능"
+          else
+            echo "❌ pharmacy/save API 엔드포인트 접근 불가능"
+          fi
+          
+          if curl -s -I "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/main/save" | grep -q "HTTP"; then
+            echo "✅ main/save API 엔드포인트 접근 가능"
+          else
+            echo "❌ main/save API 엔드포인트 접근 불가능"
+            echo "🔍 백엔드 로그 확인:"
+            docker logs hospital-backend --tail=20
+          fi
+          
           # API 호출 함수
           call_api() {
             local api_endpoint="$1"
             local description="$2"
             
             echo "🚀 시작: $description 데이터 수집"
-            echo "📡 API 호출: https://${{ secrets.DUCKDNS_DOMAIN }}/$api_endpoint"
+            echo "📡 API 호출: https://***:8888/$api_endpoint"
             
             # API 호출
-            response=$(curl -s -w "%{http_code}" -X POST "https://${{ secrets.DUCKDNS_DOMAIN }}/$api_endpoint" \
+            response=$(curl -s -w "%{http_code}" -X POST "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/$api_endpoint" \
               -H "Content-Type: application/json" \
               --connect-timeout 30 \
-              --max-time 300)
+              --max-time 300 \
+              --verbose 2>&1)
             
             # HTTP 상태 코드 추출
             http_code="${response: -3}"
