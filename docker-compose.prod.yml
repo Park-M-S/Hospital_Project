@@ -27,7 +27,7 @@ services:
       interval: 10s
       start_period: 30s
 
-  # Spring Boot 백엔드
+  # Spring Framework 백엔드
   backend:
     image: hospital-backend:${IMAGE_TAG:-latest}
     container_name: hospital-backend
@@ -87,6 +87,24 @@ services:
       retries: 5
       interval: 30s
       start_period: 60s
+
+  # DuckDNS IP 자동 업데이트
+  duckdns:
+    image: linuxserver/duckdns
+    container_name: hospital-duckdns
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN:-hospitalmap}
+      - TOKEN=${DUCKDNS_TOKEN:-6828e51a-a9cd-4e03-83f6-d0362c2e4993}
+      - LOG_FILE=false
+      - UPDATE_IP=true
+    volumes:
+      - ./duckdns:/config
+    restart: unless-stopped
+    networks:
+      - hospital-network
 
 networks:
   hospital-network:
