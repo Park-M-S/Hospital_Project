@@ -223,7 +223,7 @@ jobs:
           # 백엔드 서버가 완전히 시작될 때까지 대기
           echo "⏳ 백엔드 서버 시작 대기 중..."
           for i in {1..30}; do
-            if curl -f -s --connect-timeout 5 "http://localhost:8888/" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "https://hospitalmap.duckdns.org:8888" > /dev/null 2>&1; then
               echo "✅ 백엔드 서버 준비 완료"
               break
             else
