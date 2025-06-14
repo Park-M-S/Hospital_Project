@@ -1,10 +1,10 @@
-{$SERVER_IP} {
+${SERVER_IP}:443 {
     root * /usr/share/caddy
     file_server
     try_files {path} /index.html
     
     handle /api/* {
-        reverse_proxy {$BACKEND_HOST}:{$BACKEND_PORT} {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
         }
@@ -17,16 +17,16 @@
         X-Frame-Options "DENY" 
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        X-Environment "{$ENVIRONMENT}"
+        X-Environment "${ENVIRONMENT}"
     }
 }
 
-http://{$SERVER_IP} {
+http://${SERVER_IP}:80 {
     handle /api/* {
-        reverse_proxy {$BACKEND_HOST}:{$BACKEND_PORT}
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT}
     }
     
     handle {
-        redir https://{$SERVER_IP}{uri} 302
+        redir https://${SERVER_IP}{uri} 302
     }
 }
