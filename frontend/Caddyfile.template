@@ -15,12 +15,26 @@ http://${DUCKDNS_DOMAIN} {
 https://${DUCKDNS_DOMAIN} {
     # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
     
-    # Vue.js 정적 파일 서빙
-    root * /usr/share/caddy
-    file_server
-    try_files {path} /index.html
+    # 백엔드 API 프록시 설정 (우선 처리)
+    handle /hospitalsData* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
     
-    # API 프록시 설정
+    handle /pharmaciesData* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # 기타 백엔드 API 엔드포인트들 (필요시 추가)
     handle /api/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
@@ -28,6 +42,13 @@ https://${DUCKDNS_DOMAIN} {
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
         }
+    }
+    
+    # Vue.js 정적 파일 서빙 (나머지 모든 요청)
+    handle {
+        root * /usr/share/caddy
+        file_server
+        try_files {path} /index.html
     }
     
     # 보안 헤더 설정
