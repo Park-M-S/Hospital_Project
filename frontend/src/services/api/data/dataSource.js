@@ -1,18 +1,14 @@
-// axios import 추가
 import axios from 'axios';
-
-// config/api.js 또는 utils/api.js 파일 생성
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://hospitalmap.duckdns.org'  // 프로덕션
-  : 'http://localhost:8888';           // 개발
 
 export default {
   // 기본 병원 데이터 가져오기
   async fetch_default() {
+    console.log('일반병원 데이터 집어넣기');
+    this.emergencyList = null;
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        const res = await axios.get(`${API_BASE_URL}/hospitalsData`, {
+        const res = await axios.get('http://localhost:8888/hospitalsData', {
           params: {
             subs: this.subs.join(','),
             userLat: this.$store.getters.userLat,
@@ -30,11 +26,13 @@ export default {
       console.error('에러 발생 : ', err);
     }
   },
+
   // 약국 데이터 가져오기
   async fetch_pharmacy() {
+    console.log('약국 데이터 집어넣기');
     try {
       if (this.subsTag && this.subsTag.length != 0) {
-        const res = await axios.get(`${API_BASE_URL}/pharmaciesData`, {
+        const res = await axios.get('http://localhost:8888/pharmaciesData', {
           params: {
             userLat: this.$store.getters.userLat,
             userLng: this.$store.getters.userLng,
@@ -50,10 +48,43 @@ export default {
       console.error('에러 발생 : ', err);
     }
   },
+
   // 응급실 실시간 데이터 시작
   async fetch_emergency_start() {
+    this.hospitalList = null;
+    this.pharmacyList = null;
+    console.log('응급실 데이터 집어넣기');
     try {
-      await axios.get(`${API_BASE_URL}/api/emergency/start`);
+      if (this.socket == null || WebSocket.CLOSED) {
+        this.socket = new WebSocket("ws://localhost:8888/emergency-websocket");
+      }
+
+      if (this.subs && this.subs.length != 0) {
+        await axios.get('http://localhost:8888/api/emergency/start');
+      }
+
+      this.socket.onmessage = (event) => {
+        const receivedData = JSON.parse(event.data);
+        if (receivedData.body && receivedData.body.items) {
+          console.log("웹소켓 초기 데이터");
+          return;
+        } else if (Array.isArray(receivedData)) {
+          console.log("웹소켓 실시간 업데이트");
+
+          // 이전 데이터와 비교하여 변경사항이 있는지 확인
+          const hasChanges = JSON.stringify(this.emergencyList) !== JSON.stringify(receivedData);
+
+          if (hasChanges) {
+            this.emergencyList = receivedData;
+            console.log("응급실 데이터 업데이트됨");
+          }
+        } else {
+          console.error("웹소켓 알 수 없는 형식의 데이터 수신:", receivedData);
+        }
+      };
+
+
+
       if (this.map) {
         this.loadMaker();
       }
@@ -61,12 +92,16 @@ export default {
       console.error('에러 발생 : ', err);
     }
   },
+
   // 응급실 실시간 데이터 종료
   async fetch_emergency_stop() {
+    console.log('응급실 데이터 없애기');
     try {
-      if (this.subsTag && this.subsTag.length != 0) {
-        await axios.get(`${API_BASE_URL}/api/emergency/stop`);
-        this.emergencyList = [];
+      // console.log("응급실 실시간 데이터 종료");
+      await axios.get('http://localhost:8888/api/emergency/stop');
+      this.emergencyList = [];
+      if (this.map) {
+        this.loadMaker();
       }
     } catch (err) {
       console.error('에러 발생 : ', err);

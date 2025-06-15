@@ -286,11 +286,25 @@
 }
 
 .subject-tag {
+  cursor: pointer;
   background: #27ae60;
   color: white;
   padding: 4px 10px;
   border-radius: 15px;
   font-family: 'Pretendard-SemiBold';
+}
+
+.subject-tag-emergency {
+  cursor: pointer;
+  background: #e74c3c;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-family: 'Pretendard-SemiBold';
+}
+
+.subject-tag-emergency:hover {
+  background-color: rgba(198, 62, 49);
 }
 
 .subject-tag:hover {
@@ -300,8 +314,21 @@
 
 .update-time {
   margin-bottom: 12px;
-  display: flex;
-  justify-content: end;
   color: gray;
   font-family: 'Pretendard-SemiBold';
+}
+
+.emergency_red {
+  color: #e74c3c !important;
+}
+
+.emergency_green {
+  color: #27ae60 !important;
+}
+
+.emergency_default {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #253140 !important;
 }

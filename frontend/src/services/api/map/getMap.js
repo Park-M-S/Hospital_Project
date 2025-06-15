@@ -15,7 +15,6 @@ export default {
 
   // 맵 출력
   loadMap() {
-    this.map = null;
     const container = document.getElementById("map");
     const options = {
       center: new window.kakao.maps.LatLng(this.$store.getters.userLat, this.$store.getters.userLng),
@@ -49,27 +48,22 @@ export default {
   loadMaker() {
     this.markers.forEach(marker => marker.setMap(null));
     this.markers = [];
-    // 응급실 마커
-    if (this.emergencyList && this.emergencyList.length) {
-      this.emergencyList.forEach(emergency => this.createEmergencyMarker(emergency));
-    }
 
-    // 병원 마커
-    if (this.hospitalList && this.hospitalList.length) {
-      this.hospitalList.forEach(hospital => this.createHospitalMarker(hospital));
-    }
+    const markerTypes = [
+      { list: this.emergencyList, method: this.createEmergencyMarker },
+      { list: this.hospitalList, method: this.createHospitalMarker },
+      { list: this.pharmacyList, method: this.createPharmacyMarker },
+    ];
 
-    // 약국 마커
-    if (this.pharmacyList && this.pharmacyList.length) {
-      this.pharmacyList.forEach(pharmacy => this.createPharmacyMarker(pharmacy));
-    }
-
-
+    markerTypes.forEach(({ list, method }) => {
+      if (list?.length) list.forEach(item => method.call(this, item));
+    });
   },
+
 
   // 응급실 마커 생성
   createEmergencyMarker(emergency) {
-    const imageSrc = 'https://i.imgur.com/xvsaZUe.png'; // 응급실 마커 아이콘
+    const imageSrc = 'https://i.imgur.com/xvsaZUe.png';
     const imageSize = new window.kakao.maps.Size(34, 47);
     const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
     const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
@@ -79,6 +73,7 @@ export default {
       position: markerPosition,
       title: emergency.dutyName,
       image: markerImage,
+      zIndex: 1,
     });
     marker.setMap(this.map);
 
@@ -86,7 +81,11 @@ export default {
       if (this.activeOverlay) {
         this.activeOverlay.setMap(null);
       }
-      const newOverlay = this.emergencyOverlay(emergency); // 객체 전체를 전달
+
+      // 현재 열려있는 응급실 ID 저장 (고유 식별자 사용)
+      this.activeEmergencyId = emergency.hpid || emergency.dutyName;
+
+      const newOverlay = this.emergencyOverlay(emergency);
       newOverlay.setMap(this.map);
       this.activeOverlay = newOverlay;
       this.showRoute(emergency);
@@ -104,33 +103,74 @@ export default {
     wrapper.className = 'custom-overlay-wrap';
 
     // hvidate (정보 업데이트 시간) 포맷 변경
-    const updateTime = emergency.hvidate.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$4:$5:$6');
+    const updateTime = emergency.hvidate.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$4 : $5 : $6');
 
     wrapper.innerHTML = `
-      <div class="info-container">
-        <div class="info-title-emergency"> ${emergency.dutyName}
-          <div class="close-btn" title="닫기">×</div>
-        </div>
-        <div class="info-body">
-          <div class="update-time">${updateTime}</div>
-          <ul class="details-list">
-            <li class="${emergency.hospitalAddress != null ? 'available' : 'unavailable'}">🏠 ${emergency.hospitalAddress} </li>
-            <li class="${emergency.hvec > 0 ? 'available' : 'unavailable'}">🚑 응급실 일반병상 : ${emergency.hvec} 석</li>
-            <li class="${emergency.hvoc > 0 ? 'available' : 'unavailable'}">🩺 응글실 수술실 병상 : ${emergency.hvoc} 석</li>
-            <li class="${emergency.hvgc > 0 ? 'available' : 'unavailable'}">🛏️ 일반 입원실 병상 : ${emergency.hvgc} 석</li>
-            <li class="${emergency.hvctayn === 'Y' ? 'available' : 'unavailable'}">🧠 CT : ${emergency.hvctayn === 'Y' ? '가능' : '불가'}</li>
-            <li class="${emergency.hvmriayn === 'Y' ? 'available' : 'unavailable'}">🔬 MRI : ${emergency.hvmriayn === 'Y' ? '가능' : '불가'}</li>
-            <li class="${emergency.hvventiayn === 'Y' ? 'available' : 'unavailable'}">😮 인공호흡기 : ${emergency.hvventiayn === 'Y' ? '가능' : '불가'}</li>
-            ${emergency.dutyTel3 ? `<li class="available">📞 전화번호 : ${emergency.dutyTel3}</li>` : ''}
-          </ul>
-        </div>
-        <div class="info-footer">
-          <a href="${googleDirectionsUrl}" target="_blank" class="emergency-google-btn" rel="noopener noreferrer">
-            길찾기
-          </a>
-        </div>
+    <div class="info-container">
+      <div class="info-title-emergency"> ${emergency.dutyName}
+        <div class="close-btn" title="닫기">×</div>
       </div>
-    `;
+      <div class="info-body">
+        <div class="update-time">
+          <span class="emergency_default">
+            <div class="subject-list-container">
+              <div class="subject-tags-wrapper">
+              ${emergency.hvctayn 
+              ? `<span class="subject-tag-emergency"> CT </span>` 
+              : ''
+              }
+
+              ${emergency.hvmriayn
+              ? `<span class="subject-tag-emergency"> MRI </span>` 
+              : ''
+              }
+
+              ${emergency.hvventiayn 
+              ? `<span class="subject-tag-emergency"> 인공호흡기 </span>` 
+              : ''
+              }
+
+              </div>
+            </div>
+            업데이트 : ${updateTime}
+          </span> 
+        </div>
+        <ul class="details-list">
+      ${emergency.emergencyAddress 
+        ? `<li class="available">🏠 ${emergency.emergencyAddress}</li>` 
+        : '<li class="unavailable">🏠 주소 없음 </li>'
+      }
+
+      ${emergency.hvec > 0 
+        ? `<li class="available">🚑 응급실 일반 병상 : <span class="emergency_green">&nbsp ${emergency.hvec}석</span></li>` 
+        : `<li class="unavailable">🚑 <span class="emergency_red">&nbsp 응급실 일반 병상 부족 : ${emergency.hvec}석</span> </li>`
+      }
+
+      ${emergency.hvoc > 0 
+        ? `<li class="available">🩺 응급실 수술실 병상 : <span class="emergency_green">&nbsp ${emergency.hvoc}석</span></li>` 
+        : `<li class="unavailable">🩺 수술실 병상 부족 : <span class="emergency_red">&nbsp ${emergency.hvoc}석</span> </li>`
+      }
+
+      ${emergency.hvgc > 0 
+        ? `<li class="available">🛏️ 일반 입원실 병상 : <span class="emergency_green">&nbsp ${emergency.hvgc}석</span></li>` 
+        : `<li class="unavailable">🛏️ 입원실 병상 부족 : <span class="emergency_red">&nbsp ${emergency.hvoc}석</span> </li>`
+      }
+
+      ${emergency.dutyTel3 
+        ? `<li class="available">📞 전화번호 : ${emergency.dutyTel3}</li>` 
+        : ''
+      }
+
+
+        </ul>
+      </div>
+      <div class="info-footer">
+        <a href="${googleDirectionsUrl}" target="_blank" class="emergency-google-btn" rel="noopener noreferrer">
+          길찾기
+        </a>
+      </div>
+    </div>
+  `;
 
     const position = new window.kakao.maps.LatLng(emergency.coordinateY, emergency.coordinateX);
     const customOverlay = new window.kakao.maps.CustomOverlay({
@@ -138,13 +178,19 @@ export default {
       position: position,
       content: wrapper,
       yAnchor: 1.15,
-      xAnchor: 0.5
+      xAnchor: 0.5,
+      zIndex: 3,
     });
 
-    wrapper.querySelector('.close-btn').onclick = () => customOverlay.setMap(null);
+    // 닫기 버튼 클릭 시 activeEmergencyId도 초기화
+    wrapper.querySelector('.close-btn').onclick = () => {
+      customOverlay.setMap(null);
+      this.activeOverlay = null;
+      this.activeEmergencyId = null;
+    };
+
     return customOverlay;
   },
-
   // 약국 마커
   createPharmacyMarker(pharmacy) {
     const imageSrc = 'https://i.imgur.com/z4BFIhQ.png'; // 약국 아이콘
@@ -372,14 +418,14 @@ export default {
           🚗 주차 가능 : ${parkingCapacity}대
           <span> ${parkingFee === 'Y' ? '&nbsp&nbsp유료 주차' : '&nbsp&nbsp무료 주차'} </span>
         </li>`
-        : `<li class="unavailable">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;주차장 없음</li>`
+        : `<li class="unavailable">주차장 없음</li>`
       }
 
           ${doctorNum != 0 && doctorNum != null
 
         ? `<li class="available">🧑‍⚕️ 일반의 : ${doctorNum}명</li>`
 
-        : `<li class="unavailable">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;의사 없음</li>`
+        : `<li class="unavailable">의사 없음</li>`
 
       }
 
@@ -387,7 +433,7 @@ export default {
 
         ? `<li class="available">👩🏽‍⚕️ 전문의 : ${professionalDoctors}명</li>`
 
-        : `<li class="unavailable">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;전문의 없음</li>`
+        : `<li class="unavailable">전문의 없음</li>`
 
       }
         </ul>

@@ -147,7 +147,6 @@ import '@/styles/font.css'
 
 // package
 import Vue3TagsInput from 'vue3-tags-input';
-import axios from 'axios';
 
 // assets
 // import hospitalList from '@/assets/hospitalData.js';
@@ -181,9 +180,13 @@ export default {
       // tagList: ['응급실', '전문의', '주차가능', '약국'],
       hospitalList: [],
       pharmacyList: [],
+      emergencyList: [],
+
+      activeOverlay: null,
+      activeEmergencyId: null,
 
       hospitalimg: hospitalimg,
-      radius: 6.0,
+      radius: 1.0,
 
       // 전체 태그
       tags: [],
@@ -207,7 +210,7 @@ export default {
       selectedItemId: 0,
 
       socket: null,
-      emergencyList: [],
+
     }
   },
   mounted() {
@@ -225,68 +228,44 @@ export default {
     } else {
       this.loadScript();
     }
-
-    // WebSocket URL 환경별 설정
-    const WS_BASE_URL = process.env.NODE_ENV === 'production' 
-      ? 'wss://hospitalmap.duckdns.org'    // 프로덕션 (wss)
-      : 'ws://localhost:8888';             // 개발 (ws)
-
-    this.socket = new WebSocket(`${WS_BASE_URL}/emergency-websocket`);
-
-    this.socket.onmessage = (event) => {
-      // 1. 서버가 보낸 JSON 문자열을 항상 자바스크립트 객체/배열로 먼저 변환합니다.
-      const receivedData = JSON.parse(event.data);
-
-      // 2. 데이터의 구조를 확인하여 초기 데이터인지, 업데이트 데이터인지 판별합니다.
-      if (receivedData.body && receivedData.body.items) {
-        // [판단 근거] 'body'와 'items' 속성이 있다면, 이것은 '초기 데이터'입니다.
-        console.log("초기 상세 데이터를 수신했습니다.");
-
-        return
-
-      } else if (Array.isArray(receivedData)) {
-        // [판단 근거] 수신된 데이터가 배열이라면, 이것은 '업데이트 데이터'입니다.
-        console.log("실시간 업데이트 데이터를 수신했습니다.");
-
-        // 이미 원하는 형태의 배열이므로 그대로 할당하거나, 기존 목록과 비교하여 업데이트합니다.
-        // 여기서는 간단히 전체를 교체하는 것으로 가정합니다.
-        this.emergencyList = receivedData;
-
-      } else {
-        console.error("알 수 없는 형식의 데이터 수신:", receivedData);
-      }
-
-      console.log("갱신된 emergencyList:", this.emergencyList);
-    };
-
     // 연결 성공
-    this.socket.onopen = () => {
-      console.log("WebSocket 연결됨");
-    };
-    // 연결 종료
-    this.socket.onclose = () => {
-      console.log("WebSocket 연결 종료됨");
-    };
-    // 에러 처리
-    this.socket.onerror = (error) => {
-      console.error("WebSocket 에러:", error);
-    };
+    // this.socket.onopen = () => {
+    //   console.log("WebSocket 연결됨");
+    // };
+    // // 연결 종료
+    // this.socket.onclose = () => {
+    //   console.log("WebSocket 연결 종료됨");
+    // };
+    // // 에러 처리
+    // this.socket.onerror = (error) => {
+    //   console.error("WebSocket 에러:", error);
+    // };
   },
   beforeDestroy() {
     if (this.socket) {
-      this.socket.close(); // 컴포넌트 제거 시 연결 닫기
+      this.socket.close();
+    }
+    // 오버레이 정리
+    if (this.activeOverlay) {
+      this.activeOverlay.setMap(null);
     }
   },
   watch: {
     tags: {
-      handler(tags) {
-        // alert('전체 태그 : ' + this.tags + '\n\n' + '진료과 태그: ' + this.subs + '\n\n' + '진료과 세부 태그 : ' + this.subsTag);
+      handler(newTags, oldTags) {
+        console.log('tags : ' + this.tags + '\n\n' + 'subs: ' + this.subs + '\n\n' + 'subsTag : ' + this.subsTag);
+        const removedEmergency = oldTags.includes('응급실') && !newTags.includes('응급실');
+        if (removedEmergency) {
+          this.fetch_emergency_stop();
+          this.emergencyList = [];
+        }
+
         if (this.subs == null || this.subs.length === 0) {
           alert('진료과를 선택해주세요.');
           return;
         } else if (this.subsTag.includes('주변 약국')) {
           this.fetch_pharmacy();
-        } else if (this.subsTag.includes('응급실')) {
+        } else if (this.subs.includes('응급실')) {
           this.fetch_emergency_start();
         } else {
           this.fetch_default();
@@ -298,11 +277,39 @@ export default {
       const sidebarWidth = newVal ? 'calc(100vw - 70vw)' : 'calc(100vw - 100vw)';
       document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
     },
-    emergencyList(tags) {
-      console.log('마커 업데이트');
-      // this.loadMaker();
-    }
+    emergencyList: {
+      handler(newList, oldList) {
+        console.log('응급실 데이터 업데이트됨');
+
+        // 현재 응급실 오버레이가 열려있는 경우에만 업데이트
+        if (this.activeOverlay && this.activeEmergencyId) {
+          const updatedEmergency = newList.find(emergency =>
+            emergency.hpid === this.activeEmergencyId ||
+            emergency.dutyName === this.activeEmergencyId
+          );
+
+          if (updatedEmergency) {
+            // 기존 오버레이 제거
+            this.activeOverlay.setMap(null);
+
+            // 새로운 데이터로 오버레이 생성
+            const newOverlay = this.emergencyOverlay(updatedEmergency);
+            newOverlay.setMap(this.map);
+            this.activeOverlay = newOverlay;
+
+            console.log('응급실 오버레이 실시간 업데이트 완료');
+          }
+        }
+
+        // 마커도 업데이트
+        if (this.map) {
+          this.loadMaker();
+        }
+      },
+      deep: true
+    },
   },
+
   methods: {
     currentDepartment(department) {
       this.$store.dispatch('updateDepartment', { department: department });
