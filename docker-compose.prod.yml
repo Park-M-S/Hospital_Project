@@ -57,8 +57,8 @@ services:
     networks:
       - hospital-network
     healthcheck:
-      # 수정된 헬스체크: 올바른 컨텍스트 경로 사용
-      test: ["CMD", "curl", "-f", "http://localhost:8888/hospital_main/"]
+      # 수정된 헬스체크: ROOT 컨텍스트 경로 사용 (hospital_main 제거!)
+      test: ["CMD", "curl", "-f", "http://localhost:8888/"]
       timeout: 10s
       retries: 5
       interval: 30s
