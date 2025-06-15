@@ -112,9 +112,9 @@ https://${DUCKDNS_DOMAIN} {
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
             
-            # WebSocket 업그레이드 지원
-            header_up Upgrade {>Upgrade}
-            header_up Connection {>Connection}
+            # WebSocket 업그레이드 지원 (수정된 문법)
+            header_up Upgrade {http.request.header.Upgrade}
+            header_up Connection {http.request.header.Connection}
         }
     }
     
