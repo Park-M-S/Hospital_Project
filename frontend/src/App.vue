@@ -147,6 +147,7 @@ import '@/styles/font.css'
 
 // package
 import Vue3TagsInput from 'vue3-tags-input';
+import axios from 'axios';
 
 // assets
 // import hospitalList from '@/assets/hospitalData.js';
