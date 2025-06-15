@@ -226,7 +226,12 @@ export default {
       this.loadScript();
     }
 
-    this.socket = new WebSocket("ws://localhost:8889/hospital_main/emergency-websocket");
+    // WebSocket URL 환경별 설정
+    const WS_BASE_URL = process.env.NODE_ENV === 'production' 
+      ? 'wss://hospitalmap.duckdns.org'    // 프로덕션 (wss)
+      : 'ws://localhost:8888';             // 개발 (ws)
+
+    this.socket = new WebSocket(`${WS_BASE_URL}/emergency-websocket`);
 
     this.socket.onmessage = (event) => {
       // 1. 서버가 보낸 JSON 문자열을 항상 자바스크립트 객체/배열로 먼저 변환합니다.
