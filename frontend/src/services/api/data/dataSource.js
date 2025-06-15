@@ -8,7 +8,7 @@ export default {
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        const res = await axios.get('http://localhost:8888/hospitalsData', {
+        const res = await axios.get('https://hospitalmap.duckdns.org/hospitalsData', {
           params: {
             subs: this.subs.join(','),
             userLat: this.$store.getters.userLat,
@@ -32,7 +32,7 @@ export default {
     console.log('약국 데이터 집어넣기');
     try {
       if (this.subsTag && this.subsTag.length != 0) {
-        const res = await axios.get('http://localhost:8888/pharmaciesData', {
+        const res = await axios.get('https://hospitalmap.duckdns.org/pharmaciesData', {
           params: {
             userLat: this.$store.getters.userLat,
             userLng: this.$store.getters.userLng,
@@ -56,11 +56,11 @@ export default {
     console.log('응급실 데이터 집어넣기');
     try {
       if (this.socket == null || WebSocket.CLOSED) {
-        this.socket = new WebSocket("ws://localhost:8888/emergency-websocket");
+        this.socket = new WebSocket("ws:hospitalmap.duckdns.org/emergency-websocket");
       }
 
       if (this.subs && this.subs.length != 0) {
-        await axios.get('http://localhost:8888/api/emergency/start');
+        await axios.get('https://hospitalmap.duckdns.org/api/emergency/start');
       }
 
       this.socket.onmessage = (event) => {
@@ -98,7 +98,7 @@ export default {
     console.log('응급실 데이터 없애기');
     try {
       // console.log("응급실 실시간 데이터 종료");
-      await axios.get('http://localhost:8888/api/emergency/stop');
+      await axios.get('https://hospitalmap.duckdns.org/api/emergency/stop');
       this.emergencyList = [];
       if (this.map) {
         this.loadMaker();
