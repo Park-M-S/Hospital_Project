@@ -8,7 +8,7 @@ export default {
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        const res = await axios.get('https://hospitalmap.duckdns.org/hospitalsData', {
+        const res = await axios.get('http://localhost:8889/hospital_main/hospitalsData', {
           params: {
             subs: this.subs.join(','),
             userLat: this.$store.getters.userLat,
@@ -32,7 +32,7 @@ export default {
     console.log('약국 데이터 집어넣기');
     try {
       if (this.subsTag && this.subsTag.length != 0) {
-        const res = await axios.get('https://hospitalmap.duckdns.org/pharmaciesData', {
+        const res = await axios.get('http://localhost:8889/hospital_main/pharmaciesData', {
           params: {
             userLat: this.$store.getters.userLat,
             userLng: this.$store.getters.userLng,
@@ -54,89 +54,67 @@ export default {
     this.hospitalList = null;
     this.pharmacyList = null;
     console.log('응급실 데이터 집어넣기');
-    
     try {
-      // 기존 WebSocket 연결이 있다면 종료
-      if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
-        this.socket.close();
-      }
-
-      // ✅ 올바른 WebSocket URL (// 추가됨)
-      this.socket = new WebSocket("wss://hospitalmap.duckdns.org/emergency-websocket");
-      
-      // WebSocket 연결 성공 이벤트
-      this.socket.onopen = (event) => {
-        console.log('✅ WebSocket 연결 성공!');
-      };
-      
-      // WebSocket 연결 실패 이벤트
-      this.socket.onerror = (error) => {
-        console.error('❌ WebSocket 연결 오류:', error);
-      };
-      
-      // WebSocket 연결 종료 이벤트
-      this.socket.onclose = (event) => {
-        console.log('🔴 WebSocket 연결 종료:', event.code, event.reason);
-      };
-
-      // 응급실 데이터 시작 API 호출
       if (this.subs && this.subs.length != 0) {
-        await axios.get('https://hospitalmap.duckdns.org/api/emergency/start');
+        console.log('start');
+        await axios.get('http://localhost:8889/hospital_main/api/emergency/start');
       }
 
-      // WebSocket 메시지 수신 처리
+      if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
+        console.log('웹소켓 연결 시도');
+        this.socket = new WebSocket('ws://localhost:8889/hospital_main/emergency-websocket');
+
+        /* 연결 이벤트는 처음 한 번만 등록 */
+        this.socket.addEventListener('open', () => console.log('WebSocket 연결됨'));
+        this.socket.addEventListener('close', () => console.log('WebSocket 연결 종료됨'));
+        this.socket.addEventListener('error', (e) => console.error('WebSocket 에러:', e));
+
+      }
+
       this.socket.onmessage = (event) => {
-        try {
-          const receivedData = JSON.parse(event.data);
-          
-          if (receivedData.body && receivedData.body.items) {
-            console.log("웹소켓 초기 데이터 수신");
-            return;
-          } else if (Array.isArray(receivedData)) {
-            console.log("웹소켓 실시간 업데이트 수신");
-            // 이전 데이터와 비교하여 변경사항이 있는지 확인
-            const hasChanges = JSON.stringify(this.emergencyList) !== JSON.stringify(receivedData);
-            if (hasChanges) {
-              this.emergencyList = receivedData;
-              console.log("응급실 데이터 업데이트됨:", receivedData.length, "건");
-              if (this.map) {
-                this.loadMaker();
-              }
-            }
-          } else {
-            console.error("웹소켓 알 수 없는 형식의 데이터 수신:", receivedData);
+        const receivedData = JSON.parse(event.data);
+        if (receivedData.body && receivedData.body.items) {
+          console.log("웹소켓 초기 데이터 업데이트");
+          this.emergencyList = receivedData.body.items.item;
+          console.log(this.emergencyList);
+          return;
+        } else if (Array.isArray(receivedData)) {
+          console.log("웹소켓 실시간 업데이트");
+
+          // 이전 데이터와 비교하여 변경사항이 있는지 확인
+          const hasChanges = JSON.stringify(this.emergencyList) !== JSON.stringify(receivedData);
+
+          if (hasChanges) {
+            this.emergencyList = receivedData;
+            console.log("응급실 데이터 업데이트됨");
+            console.log(this.emergencyList);
           }
-        } catch (parseError) {
-          console.error("웹소켓 데이터 파싱 오류:", parseError, "원본 데이터:", event.data);
+        } else {
+          console.error("웹소켓 알 수 없는 형식의 데이터 수신:", receivedData);
         }
       };
-      
+
+      if (this.map) {
+        this.loadMaker();
+      }
+
     } catch (err) {
-      console.error('응급실 데이터 시작 오류:', err);
+      console.error('에러 발생 : ', err);
     }
   },
 
   // 응급실 실시간 데이터 종료
   async fetch_emergency_stop() {
-    console.log('응급실 데이터 종료');
+    console.log('응급실 데이터 없애기');
     try {
-      // WebSocket 연결 종료
-      if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
-        this.socket.close();
-        this.socket = null;
-      }
-
-      // 응급실 데이터 종료 API 호출
-      await axios.get('https://hospitalmap.duckdns.org/api/emergency/stop');
-      
+      // console.log("응급실 실시간 데이터 종료");
+      await axios.get('http://localhost:8889/hospital_main/api/emergency/stop');
       this.emergencyList = [];
       if (this.map) {
         this.loadMaker();
       }
-      
-      console.log('응급실 실시간 데이터 종료 완료');
     } catch (err) {
-      console.error('응급실 데이터 종료 오류:', err);
+      console.error('에러 발생 : ', err);
     }
   }
 }

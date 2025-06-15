@@ -1,14 +1,14 @@
 .bottombar {
   position: fixed;
   left: 50%;
-  width: 60%;
-  height: 90%;
+  width: 70%;
+  height: 95%;
   /* vh 단위와 연동됩니다. */
 
   /* --- transform과 bottom 속성 수정 --- */
   transform: translateX(-50%);
   /* 가로 중앙 정렬만 담당 */
-  bottom: calc(40px - 90vh);
+  bottom: calc(40px - 95vh);
   /* 세로 위치: (보여줄 높이) - (전체 높이) */
 
   background-color: white;
@@ -140,6 +140,7 @@
 }
 
 .submit-button {
+  font-family: 'Pretendard-SemiBold';
   width: 100%;
   padding: 15px;
   margin-top: 25px;
@@ -158,7 +159,7 @@
 }
 
 .submit-button:hover {
-  background-color: #11BF7F;
+  background-color: #0FA873;
 }
 
 /* 비활성화 상태일 때의 버튼 스타일 */
@@ -228,3 +229,23 @@
   color: gray;
   font-size: large;
 }
+
+.hospital_flex.selected {
+  background: #D8EFE1;
+}
+
+/* .hospital_flex.selected:hover{
+  background: #D8EFE1;
+} */
+
+/* .hospital_flex:hover{
+  background: #E6E6E6;
+} */
+
+/* .hospital_flex.selected .hospital_container .department_name{
+  color: white;
+}
+
+.hospital_flex.selected .hospital_container .department_content{
+  color: white;
+} */

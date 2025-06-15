@@ -13,6 +13,7 @@ export default function setUserLocation() {
         console.error(err.message);
       }
     );
+    this.loadMap();
   } else {
     console.error("Geolocation is not supported by this browser.");
   }

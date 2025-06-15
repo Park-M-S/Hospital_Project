@@ -17,13 +17,7 @@ export default {
   },
   // '선택 완료' 버튼을 눌렀을 때 실행될 함수 (핵심 로직 수정)
   submitSymptoms() {
-    if (this.subs.length === 0) {
-      alert("증상을 하나 이상 선택해주세요.");
-      return;
-    }
-
     this.isBottomBar = !this.isBottomBar;
-    // this.handleAddTag(this.subs.join(', '))
     this.isBlurred = !this.isBlurred;
   }
 }

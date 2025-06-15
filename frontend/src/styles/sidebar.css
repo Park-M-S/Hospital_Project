@@ -121,13 +121,13 @@
   background-color: yellow;
 } */
 
-.hospital_flex:hover {
+/* .hospital_flex:hover {
   background: rgba(240, 240, 243);
 }
 
 .hospital_flex.selected {
   background: rgba(240, 240, 243);
-}
+} */
 
 .hospital_img {
   width: 200px;
@@ -165,7 +165,7 @@
   align-items: center;
   background-color: rgb(255, 255, 255);
   padding: 10px 10px;
-  border-radius: 10px;
+  border-radius: 20px;
   cursor: pointer;
   box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 3px, rgba(0, 0, 0, 0.24) 0px 1px 2px;
   font-size: larger;

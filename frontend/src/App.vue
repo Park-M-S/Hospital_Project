@@ -4,6 +4,7 @@
   <div class="container" :class="{ 'blurred': isBlurred }">
     <div class="header">
       <vue3-tags-input :tags="tags" placeholder="진료과를 검색 하세요." @on-tags-changed="handleChangeTag" />
+      <div class="header_reset" v-on:click="reset"><i class="fa-solid fa-trash-can"></i> 초 기 화 </div>
     </div>
     <div class="sidebar">
       <div class="sidebar_container">
@@ -228,18 +229,7 @@ export default {
     } else {
       this.loadScript();
     }
-    // 연결 성공
-    // this.socket.onopen = () => {
-    //   console.log("WebSocket 연결됨");
-    // };
-    // // 연결 종료
-    // this.socket.onclose = () => {
-    //   console.log("WebSocket 연결 종료됨");
-    // };
-    // // 에러 처리
-    // this.socket.onerror = (error) => {
-    //   console.error("WebSocket 에러:", error);
-    // };
+
   },
   beforeDestroy() {
     if (this.socket) {
@@ -259,11 +249,8 @@ export default {
           this.fetch_emergency_stop();
           this.emergencyList = [];
         }
-
-        if (this.subs == null || this.subs.length === 0) {
-          alert('진료과를 선택해주세요.');
-          return;
-        } else if (this.subsTag.includes('주변 약국')) {
+        
+        if (this.subsTag.includes('주변 약국')) {
           this.fetch_pharmacy();
         } else if (this.subs.includes('응급실')) {
           this.fetch_emergency_start();
@@ -279,7 +266,6 @@ export default {
     },
     emergencyList: {
       handler(newList, oldList) {
-        console.log('응급실 데이터 업데이트됨');
 
         // 현재 응급실 오버레이가 열려있는 경우에만 업데이트
         if (this.activeOverlay && this.activeEmergencyId) {
@@ -331,6 +317,15 @@ export default {
         this.tags.push(departmentTitle);
         this.subs.push(departmentTitle);
       }
+    },
+
+    // 검색 태그 삭제
+    reset() {
+      this.subs = [];
+      this.tags = [];
+      this.subsTag = [];
+      this.map = null;
+      this.loadMaker();
     },
 
     // 진료과 이름이 selectedSymptoms 배열에 있는지 확인하는 함수 (클래스 바인딩용)

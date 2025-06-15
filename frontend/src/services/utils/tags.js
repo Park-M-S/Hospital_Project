@@ -19,6 +19,14 @@ export default {
     // if (this.tags == null || this.tags.length === 0) {
     // 	this.$store.dispatch('updateDepartment', { department: tags });
     // }'
+    if (this.tags.includes(tags)) {
+      return
+    }
+
+    if (this.subs.length == null || this.subs.length === 0) {
+      alert('진료과를 선택해주세요.');
+      return
+    }
     this.tags.push(tags);
     this.subsTag.push(tags);
   },
