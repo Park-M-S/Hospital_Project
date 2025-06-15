@@ -66,63 +66,31 @@ echo -e "  Backend: ${BACKEND_HOST}:${BACKEND_PORT}"
 # 로그 디렉토리 생성
 mkdir -p /var/log/caddy
 
-# Caddyfile 마운트 여부 확인
-CADDYFILE_MOUNTED=false
-if [ -f "/etc/caddy/Caddyfile" ] && [ ! -w "/etc/caddy/Caddyfile" ]; then
-    echo -e "${BLUE}📄 외부 Caddyfile이 마운트되어 있습니다.${NC}"
-    CADDYFILE_MOUNTED=true
-elif [ -f "/etc/caddy/Caddyfile.template" ]; then
-    echo -e "${BLUE}📄 Caddyfile 템플릿을 사용합니다.${NC}"
-    CADDYFILE_MOUNTED=false
-else
-    echo -e "${YELLOW}📄 기본 Caddyfile을 생성합니다.${NC}"
-    CADDYFILE_MOUNTED=false
+# 템플릿 파일 존재 확인
+if [ ! -f "/etc/caddy/Caddyfile.template" ]; then
+    echo -e "${RED}❌ Caddyfile.template이 없습니다!${NC}"
+    exit 1
 fi
 
-# Caddyfile 생성 (마운트되지 않은 경우만)
-if [ "$CADDYFILE_MOUNTED" = false ]; then
-    echo -e "${YELLOW}📝 Caddyfile 생성 중...${NC}"
-    
-    if [ "$USE_DUCKDNS" = true ] && [ -f "/etc/caddy/Caddyfile.template" ]; then
-        # DuckDNS + SSL 모드 (템플릿 사용)
-        envsubst '${DUCKDNS_DOMAIN} ${DUCKDNS_TOKEN} ${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT} ${ACME_EMAIL}' \
-          < /etc/caddy/Caddyfile.template > /tmp/Caddyfile.new && \
-          cp /tmp/Caddyfile.new /etc/caddy/Caddyfile
-    else
-        # HTTP 전용 모드 - 개선된 WebSocket 설정
-        cat > /etc/caddy/Caddyfile << CADDY_EOF
+# 환경변수를 사용해 Caddyfile 생성
+echo -e "${YELLOW}📝 Caddyfile 생성 중...${NC}"
+if [ "$USE_DUCKDNS" = true ]; then
+    # DuckDNS + SSL 모드
+    envsubst '${DUCKDNS_DOMAIN} ${DUCKDNS_TOKEN} ${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT} ${ACME_EMAIL}' \
+      < /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile
+else
+    # HTTP 전용 모드 - 기본 Caddyfile 생성 (ROOT 컨텍스트로 수정)
+    cat > /etc/caddy/Caddyfile << 'CADDY_EOF'
 {
     auto_https off
 }
 
 :80 {
-    # ✅ WebSocket 전용 엔드포인트 (최우선 처리)
-    handle /emergency-websocket {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
-            # HTTP/1.1 강제 사용 (WebSocket 지원)
-            transport http {
-                versions 1.1
-            }
-            
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            
-            # ✅ WebSocket 필수 헤더들
-            header_up Connection {>Connection}
-            header_up Upgrade {>Upgrade}
-            header_up Sec-WebSocket-Key {>Sec-WebSocket-Key}
-            header_up Sec-WebSocket-Version {>Sec-WebSocket-Version}
-            header_up Sec-WebSocket-Protocol {>Sec-WebSocket-Protocol}
-            header_up Sec-WebSocket-Extensions {>Sec-WebSocket-Extensions}
-            
-            # WebSocket 전용 설정
-            flush_interval -1
-        }
-    }
+    root * /usr/share/caddy
+    file_server
+    try_files {path} /index.html
     
-    # 백엔드 API 프록시 설정
+    # 백엔드 API 프록시 설정들 (ROOT 컨텍스트)
     handle /hospitalsData* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
@@ -141,8 +109,8 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    # API 엔드포인트들
-    handle /api/emergency* {
+    # API 엔드포인트들 (ROOT 컨텍스트)
+    handle /api/emergency/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -152,7 +120,7 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    handle /api/hospital* {
+    handle /api/hospital/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -161,7 +129,7 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    handle /api/pharmacy* {
+    handle /api/pharmacy/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -170,7 +138,7 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    handle /api/main* {
+    handle /api/main/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -179,7 +147,7 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    handle /api/details* {
+    handle /api/details/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -188,7 +156,7 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    handle /api/subject* {
+    handle /api/subject/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -197,12 +165,24 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
     }
     
-    handle /api/proDoc* {
+    handle /api/proDoc/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # WebSocket 지원
+    handle /emergency-websocket {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up Upgrade {>Upgrade}
+            header_up Connection {>Connection}
         }
     }
     
@@ -214,13 +194,6 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
         }
-    }
-    
-    # Vue.js 정적 파일 서빙 (나머지 모든 요청)
-    handle {
-        root * /usr/share/caddy
-        file_server
-        try_files {path} /index.html
     }
     
     header {
@@ -246,27 +219,13 @@ if [ "$CADDYFILE_MOUNTED" = false ]; then
         }
         respond "Error: {http.error.status_code} - {http.error.status_text}"
     }
-    
-    # 로그 설정
-    log {
-        output file /var/log/caddy/access.log {
-            roll_size 10mb
-            roll_keep 5
-            roll_keep_for 720h
-        }
-        format json
-        level INFO
-    }
 }
 CADDY_EOF
-        
-        # 환경변수 치환 (안전한 방법)
-        TEMP_FILE=$(mktemp)
-        envsubst '${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT}' \
-          < /etc/caddy/Caddyfile > "$TEMP_FILE" && \
-          cp "$TEMP_FILE" /etc/caddy/Caddyfile && \
-          rm "$TEMP_FILE"
-    fi
+    
+    # 환경변수 치환
+    envsubst '${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT}' \
+      < /etc/caddy/Caddyfile > /etc/caddy/Caddyfile.tmp && \
+      mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
 fi
 
 # 생성된 Caddyfile 검증
