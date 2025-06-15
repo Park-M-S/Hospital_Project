@@ -1,3 +1,6 @@
+// axios import 추가
+import axios from 'axios';
+
 // config/api.js 또는 utils/api.js 파일 생성
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://hospitalmap.duckdns.org'  // 프로덕션
@@ -27,7 +30,6 @@ export default {
       console.error('에러 발생 : ', err);
     }
   },
-
   // 약국 데이터 가져오기
   async fetch_pharmacy() {
     try {
@@ -48,7 +50,6 @@ export default {
       console.error('에러 발생 : ', err);
     }
   },
-
   // 응급실 실시간 데이터 시작
   async fetch_emergency_start() {
     try {
@@ -60,7 +61,6 @@ export default {
       console.error('에러 발생 : ', err);
     }
   },
-
   // 응급실 실시간 데이터 종료
   async fetch_emergency_stop() {
     try {
