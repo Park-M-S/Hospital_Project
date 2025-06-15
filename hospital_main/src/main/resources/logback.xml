@@ -1,0 +1,28 @@
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+ 
+    <logger name="org.hibernate.resource.transaction" level="WARN"/>
+    <logger name="org.hibernate.internal" level="WARN"/>
+    
+  
+    <logger name="org.springframework.data.jpa" level="WARN"/>
+    <logger name="org.springframework.orm.jpa" level="WARN"/>
+    
+  
+    <logger name="org.hibernate" level="WARN"/>
+    
+    
+    <logger name="org.springframework" level="INFO"/>
+    
+ 
+    <logger name="com.hospital" level="DEBUG"/>
+
+    <root level="INFO">  
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
