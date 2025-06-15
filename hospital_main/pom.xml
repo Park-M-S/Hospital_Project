@@ -1,85 +1,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
-
-	<groupId>com.hospital</groupId>
-	<artifactId>hospital_main</artifactId>
-	<version>1.0-SNAPSHOT</version>
-	<packaging>war</packaging>
 
 	<properties>
 		<java.version>21</java.version>
-		<spring.version>6.1.0</spring.version>
-		<spring-data.version>3.2.0</spring-data.version>
+		<spring.version>6.0.13</spring.version>
+		<spring-data.version>3.0.11</spring-data.version>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<dependencies>
-		<!-- Lombok -->
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<version>1.18.30</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<!-- Spring MVC - 버전 통일 -->
+		<!-- Spring MVC -->
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring Context -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-context</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring ORM -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-orm</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring TX -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-tx</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring WebFlux -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-webflux</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring WebSocket -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-websocket</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring Messaging -->
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-messaging</artifactId>
-			<version>${spring.version}</version>
-		</dependency>
-
-		<!-- Spring Data JPA -->
-		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-jpa</artifactId>
-			<version>${spring-data.version}</version>
 		</dependency>
 
 		<!-- JSTL -->
@@ -109,14 +46,12 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- MariaDB Driver -->
 		<dependency>
 			<groupId>org.mariadb.jdbc</groupId>
 			<artifactId>mariadb-java-client</artifactId>
 			<version>3.3.1</version>
 		</dependency>
 
-		<!-- Database Connection Pool -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-dbcp2</artifactId>
@@ -128,13 +63,6 @@
 			<groupId>jakarta.persistence</groupId>
 			<artifactId>jakarta.persistence-api</artifactId>
 			<version>3.1.0</version>
-		</dependency>
-
-		<!-- JPA 구현체 (Hibernate) -->
-		<dependency>
-			<groupId>org.hibernate.orm</groupId>
-			<artifactId>hibernate-core</artifactId>
-			<version>6.2.7.Final</version>
 		</dependency>
 
 		<!-- SLF4J API -->
@@ -151,14 +79,18 @@
 			<version>1.4.14</version>
 		</dependency>
 
-		<!-- AspectJ - 중복 제거, 최신 버전 하나만 -->
+		<dependency>
+			<groupId>org.aspectj</groupId>
+			<artifactId>aspectjrt</artifactId>
+			<version>1.9.9.1</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjweaver</artifactId>
-			<version>1.9.20</version>
+			<version>1.9.19</version>
 		</dependency>
 
-		<!-- Jackson for JSON -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-xml</artifactId>
@@ -170,41 +102,73 @@
 			<artifactId>jackson-annotations</artifactId>
 			<version>2.15.2</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-core</artifactId>
 			<version>2.15.2</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 			<version>2.15.2</version>
 		</dependency>
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.38</version>
+			<scope>provided</scope>
+		</dependency>
 
-		<!-- JSON -->
 		<dependency>
 			<groupId>org.json</groupId>
 			<artifactId>json</artifactId>
 			<version>20231013</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-jpa</artifactId>
+			<version>${spring-data.version}</version>
+		</dependency>
+		<!-- JPA 구현체 (예: Hibernate) -->
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>6.2.7.Final</version>
+		</dependency>
 
-		<!-- HTTP Client -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-orm</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-tx</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
 			<version>5.2.1</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webflux</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
 		<!-- Reactor Netty (기본 HTTP connector 제공) -->
 		<dependency>
 			<groupId>io.projectreactor.netty</groupId>
 			<artifactId>reactor-netty-http</artifactId>
 			<version>1.1.14</version>
 		</dependency>
-
-		<!-- Jakarta XML Bind -->
 		<dependency>
 			<groupId>jakarta.xml.bind</groupId>
 			<artifactId>jakarta.xml.bind-api</artifactId>
@@ -216,12 +180,21 @@
 			<artifactId>jaxb-runtime</artifactId>
 			<version>4.0.2</version>
 		</dependency>
-
-		<!-- Google Guava -->
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>32.1.2-jre</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-websocket</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-messaging</artifactId>
+			<version>${spring.version}</version>
 		</dependency>
 
 		<!-- Jakarta WebSocket API -->
@@ -237,40 +210,54 @@
 			<artifactId>tomcat-embed-websocket</artifactId>
 			<version>10.1.15</version>
 		</dependency>
-		<!-- quartz -->
+		
 		<dependency>
-    			<groupId>org.springframework.boot</groupId>
-    			<artifactId>spring-boot-starter-quartz</artifactId>
+			<groupId>org.quartz-scheduler</groupId>
+			<artifactId>quartz</artifactId>
 			<version>2.4.0</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>${spring.version}</version>
+		</dependency>
+
+		<!-- ===== 첫 번째 pom.xml에만 있던 누락된 의존성들 ===== -->
+
+		<!-- Spring Boot Quartz (첫 번째에는 이것이 있었음) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-quartz</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
 		<plugins>
-			<!-- Maven Compiler Plugin -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.11.0</version>
 				<configuration>
-					<source>21</source>
-					<target>21</target>
-					<release>21</release>
+					<source>${java.version}</source>
+					<target>${java.version}</target>
+					<release>${java.version}</release>
 					<parameters>true</parameters>
-                			<compilerArgs>
-                    				<arg>-parameters</arg>
-                			</compilerArgs>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-							<version>1.18.30</version>
+							<version>1.18.38</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 
-			<!-- Maven WAR Plugin -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
