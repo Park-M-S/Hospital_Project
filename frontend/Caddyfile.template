@@ -1,173 +1,52 @@
-# DuckDNS + SSL 설정을 위한 Caddyfile 템플릿 (HTTP 챌린지)
-# 글로벌 설정
+# 현재 문제 있는 프론트엔드 정리
+docker stop hospital-frontend
+docker rm hospital-frontend
+
+# 검증 단계를 건너뛰고 직접 Caddy 실행
+docker run -d \
+  --name hospital-frontend \
+  --network ec2-user_hospital-network \
+  -p 80:80 -p 443:443 \
+  caddy:2-alpine \
+  sh -c '
+echo "
 {
-    # ACME 설정 (Let's Encrypt)
-    email ${ACME_EMAIL}
+    email mmmg0306@g.shingu.ac.kr
 }
 
-# HTTP에서 HTTPS로 자동 리다이렉트
-http://${DUCKDNS_DOMAIN} {
-    redir https://${DUCKDNS_DOMAIN}{uri} permanent
+http://hospitalmap.duckdns.org {
+    redir https://hospitalmap.duckdns.org{uri} permanent
 }
 
-# HTTPS 메인 설정
-https://${DUCKDNS_DOMAIN} {
-    # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
+https://hospitalmap.duckdns.org {
+    handle /emergency-websocket {
+        reverse_proxy http://hospital-backend:8888
+    }
     
-    # 백엔드 API 프록시 설정 (우선 처리) - ROOT 컨텍스트
+    handle /api/* {
+        reverse_proxy http://hospital-backend:8888
+    }
+    
     handle /hospitalsData* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
+        reverse_proxy http://hospital-backend:8888
     }
     
     handle /pharmaciesData* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
+        reverse_proxy http://hospital-backend:8888
     }
     
-    # Emergency API 프록시 설정 (새로 추가) - ROOT 컨텍스트
-    handle /api/emergency/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            
-            # Emergency API는 응답 시간이 길 수 있으므로 타임아웃 조정
-            timeout 60s
-            dial_timeout 10s
-            read_timeout 60s
-            write_timeout 60s
-        }
-    }
+    respond / \"🏥 Hospital Service is running!\" 200
     
-    # 기타 백엔드 API 엔드포인트들 (기존 + 추가) - ROOT 컨텍스트
-    handle /api/hospital/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    handle /api/pharmacy/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    handle /api/main/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    handle /api/details/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    handle /api/subject/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    handle /api/proDoc/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    # WebSocket 프록시 설정 (Caddy 2.x 표준 방식)
-    handle /emergency-websocket {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    # 포괄적 API 프록시 (마지막 fallback) - ROOT 컨텍스트
-    handle /api/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    # Vue.js 정적 파일 서빙 (나머지 모든 요청)
-    handle {
-        root * /usr/share/caddy
-        file_server
-        try_files {path} /index.html
-    }
-    
-    # 보안 헤더 설정
     header {
-        # CORS 설정
-        Access-Control-Allow-Origin https://${DUCKDNS_DOMAIN}
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token"
-        Access-Control-Allow-Credentials true
-        
-        # 보안 헤더
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY" 
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        
-        # 환경 정보
-        X-Environment "${ENVIRONMENT}"
-    }
-    
-    # 에러 페이지 설정
-    handle_errors {
-        @404 expression {http.error.status_code} == 404
-        handle @404 {
-            rewrite * /index.html
-            file_server
-        }
-        respond "Error: {http.error.status_code} - {http.error.status_text}"
-    }
-    
-    # 로그 설정
-    log {
-        output file /var/log/caddy/access.log {
-            roll_size 10mb
-            roll_keep 5
-            roll_keep_for 720h
-        }
-        format json
-        level INFO
+        Access-Control-Allow-Origin https://hospitalmap.duckdns.org
+        Access-Control-Allow-Methods \"GET, POST, PUT, DELETE, OPTIONS\"
+        Access-Control-Allow-Headers \"Accept, Authorization, Content-Type, X-CSRF-Token\"
+        Content-Type \"text/plain; charset=utf-8\"
     }
 }
+" > /etc/caddy/Caddyfile
+
+echo "✅ Caddyfile 생성 완료"
+echo "🚀 Caddy 시작 중..."
+
+caddy run --config /etc/caddy/Caddyfile --adapter caddyfile'
