@@ -25,9 +25,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
     
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(emergencyApiWebSocketHandler(), "/emergency-websocket")
-                .setAllowedOrigins("*");  // 실제 운영에서는 특정 도메인으로 제한 권장
-        
-        System.out.println("✅ WebSocket 핸들러 등록 완료: /emergency-websocket");
-    }
+    registry.addHandler(emergencyApiWebSocketHandler(), "/emergency-websocket")
+            .setAllowedOrigins(
+                "https://hospitalmap.duckdns.org",
+                "http://hospitalmap.duckdns.org",
+                "http://localhost:5173"  // 개발용
+            );
+    
+    System.out.println("✅ WebSocket 핸들러 등록 완료: /emergency-websocket");
+}
 }
