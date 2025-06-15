@@ -14,7 +14,7 @@ https://${DUCKDNS_DOMAIN} {
     
     # ✅ WebSocket 전용 엔드포인트 (최우선 처리 + HTTP/1.1 강제)
     handle /emergency-websocket {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             # ✅ HTTP/1.1 강제 사용 (WebSocket 지원을 위해 필수)
             transport http {
                 versions 1.1
@@ -40,7 +40,7 @@ https://${DUCKDNS_DOMAIN} {
     
     # 백엔드 API 프록시 설정 (우선 처리)
     handle /hospitalsData* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -50,7 +50,7 @@ https://${DUCKDNS_DOMAIN} {
     
     # API 프록시 설정
     handle /pharmaciesData* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -60,7 +60,7 @@ https://${DUCKDNS_DOMAIN} {
     
     # 응급실 REST API
     handle /api/emergency* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -70,7 +70,7 @@ https://${DUCKDNS_DOMAIN} {
     
     # 기타 백엔드 API 엔드포인트들
     handle /api/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
