@@ -9,6 +9,7 @@ import com.hospital.entity.HospitalMain;
 import com.hospital.repository.HospitalMainApiRepository;
 import com.hospital.websocket.EmergencyApiWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
 
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class EmergencyApiService {
 	private TaskScheduler taskScheduler;
 
 	@Autowired
+	@Qualifier("emergencyApiWebSocketHandler")  // Bean 이름으로 명시적 주입
 	private EmergencyApiWebSocketHandler webSocketHandler;
 
 	public EmergencyApiService(EmergencyApiCaller apiCaller, HospitalMainApiRepository hospitalMainApiRepository) {
