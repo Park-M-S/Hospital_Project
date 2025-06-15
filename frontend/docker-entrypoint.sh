@@ -79,7 +79,7 @@ if [ "$USE_DUCKDNS" = true ]; then
     envsubst '${DUCKDNS_DOMAIN} ${DUCKDNS_TOKEN} ${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT} ${ACME_EMAIL}' \
       < /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile
 else
-    # HTTP 전용 모드 - 기본 Caddyfile 생성
+    # HTTP 전용 모드 - 기본 Caddyfile 생성 (ROOT 컨텍스트로 수정)
     cat > /etc/caddy/Caddyfile << 'CADDY_EOF'
 {
     auto_https off
@@ -90,14 +90,120 @@ else
     file_server
     try_files {path} /index.html
     
+    # 백엔드 API 프록시 설정들 (ROOT 컨텍스트)
+    handle /hospitalsData* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /pharmaciesData* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # API 엔드포인트들 (ROOT 컨텍스트)
+    handle /api/emergency/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            timeout 60s
+        }
+    }
+    
+    handle /api/hospital/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/pharmacy/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/main/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/details/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/subject/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    handle /api/proDoc/* {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    
+    # WebSocket 지원
+    handle /emergency-websocket {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            header_up Upgrade {>Upgrade}
+            header_up Connection {>Connection}
+        }
+    }
+    
+    # 포괄적 API 프록시 (마지막 fallback)
     handle /api/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
         }
     }
     
     header {
+        # CORS 설정
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token"
+        Access-Control-Allow-Credentials true
+        
+        # 보안 헤더
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY" 
         X-XSS-Protection "1; mode=block"
@@ -106,7 +212,12 @@ else
     }
     
     handle_errors {
-        respond "Error: {err.status_code} - {err.status_text}"
+        @404 expression {http.error.status_code} == 404
+        handle @404 {
+            rewrite * /index.html
+            file_server
+        }
+        respond "Error: {http.error.status_code} - {http.error.status_text}"
     }
 }
 CADDY_EOF
