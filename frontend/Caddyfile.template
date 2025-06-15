@@ -14,9 +14,9 @@ http://${DUCKDNS_DOMAIN} {
 https://${DUCKDNS_DOMAIN} {
     # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
     
-    # 백엔드 API 프록시 설정 (우선 처리)
+    # 백엔드 API 프록시 설정 (우선 처리) - HTTP로 명시적 지정
     handle /hospitalsData* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -25,7 +25,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /pharmaciesData* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -33,9 +33,9 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # Emergency API 프록시 설정 (새로 추가)
+    # Emergency API 프록시 설정 (새로 추가) - HTTP로 명시적 지정
     handle /api/emergency/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -49,9 +49,9 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # 기타 백엔드 API 엔드포인트들 (기존 + 추가)
+    # 기타 백엔드 API 엔드포인트들 (기존 + 추가) - 모두 HTTP로 명시적 지정
     handle /api/hospital/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -60,7 +60,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/pharmacy/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -69,7 +69,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/main/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -77,8 +77,8 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    handle /api/detail/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+    handle /api/details/* {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -86,8 +86,8 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    handle /api/medical/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+    handle /api/subject/* {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -95,8 +95,8 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    handle /api/prodoc/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+    handle /api/proDoc/* {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -104,9 +104,9 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # 포괄적 API 프록시 (마지막 fallback)
+    # 포괄적 API 프록시 (마지막 fallback) - HTTP로 명시적 지정
     handle /api/* {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
