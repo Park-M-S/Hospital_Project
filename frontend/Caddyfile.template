@@ -1,4 +1,4 @@
-# DuckDNS + SSL 설정을 위한 Caddyfile 템플릿 (HTTP 챌린지)
+# DuckDNS + SSL 설정을 위한 Caddyfile 템플릿 (HTTP 챌린지) 
 # 글로벌 설정
 {
     # ACME 설정 (Let's Encrypt)
