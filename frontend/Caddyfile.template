@@ -11,7 +11,7 @@ http://${DUCKDNS_DOMAIN} {
 # HTTPS 메인 설정
 https://${DUCKDNS_DOMAIN} {
     # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
-    
+
     # ✅ WebSocket 전용 엔드포인트 (최우선 처리 + HTTP/1.1 강제)
     handle /emergency-websocket {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
@@ -19,31 +19,25 @@ https://${DUCKDNS_DOMAIN} {
             transport http {
                 versions 1.1
             }
-            
+
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
-            
-            # ✅ WebSocket 헤더 전달 (중요!)
+
+            # WebSocket 헤더 전달 (중요!)
             header_up Connection {>Connection}
             header_up Upgrade {>Upgrade}
             header_up Sec-WebSocket-Key {>Sec-WebSocket-Key}
             header_up Sec-WebSocket-Version {>Sec-WebSocket-Version}
             header_up Sec-WebSocket-Protocol {>Sec-WebSocket-Protocol}
             header_up Sec-WebSocket-Extensions {>Sec-WebSocket-Extensions}
-            header_up Origin {>Origin}
-            
-            # ✅ WebSocket 전용 설정
+
+            # WebSocket 전용 설정
             flush_interval -1
-            timeout 0s
-            
-            # ✅ 연결 유지 헤더
-            header_down Connection "Upgrade"
-            header_down Upgrade "websocket"
         }
     }
-    
+
     # 백엔드 API 프록시 설정 (우선 처리)
     handle /hospitalsData* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
@@ -53,7 +47,7 @@ https://${DUCKDNS_DOMAIN} {
             header_up X-Forwarded-Proto {scheme}
         }
     }
-    
+
     # API 프록시 설정
     handle /pharmaciesData* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
@@ -63,7 +57,7 @@ https://${DUCKDNS_DOMAIN} {
             header_up X-Forwarded-Proto {scheme}
         }
     }
-    
+
     # 응급실 REST API
     handle /api/emergency* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
@@ -73,7 +67,7 @@ https://${DUCKDNS_DOMAIN} {
             header_up X-Forwarded-Proto {scheme}
         }
     }
-    
+
     # 기타 백엔드 API 엔드포인트들
     handle /api/* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
@@ -83,33 +77,33 @@ https://${DUCKDNS_DOMAIN} {
             header_up X-Forwarded-Proto {scheme}
         }
     }
-    
+
     # Vue.js 정적 파일 서빙 (나머지 모든 요청)
     handle {
         root * /usr/share/caddy
         file_server
         try_files {path} /index.html
     }
-    
-    # ✅ 보안 헤더 설정 (WebSocket CORS 지원)
+
+    # 보안 헤더 설정
     header {
-        # ✅ WebSocket 친화적인 CORS 설정
+        # CORS 설정
         Access-Control-Allow-Origin https://${DUCKDNS_DOMAIN}
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol, Sec-WebSocket-Extensions, Origin"
+        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token"
         Access-Control-Allow-Credentials true
-        
+
         # 보안 헤더
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY" 
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        
+
         # 환경 정보
         X-Environment "${ENVIRONMENT}"
     }
-    
+
     # 에러 페이지 설정
     handle_errors {
         @404 expression {http.error.status_code} == 404
@@ -119,8 +113,8 @@ https://${DUCKDNS_DOMAIN} {
         }
         respond "Error: {http.error.status_code} - {http.error.status_text}"
     }
-    
-    # ✅ 상세한 로그 설정 (WebSocket 디버깅용)
+
+    # 로그 설정
     log {
         output file /var/log/caddy/access.log {
             roll_size 10mb
@@ -128,6 +122,6 @@ https://${DUCKDNS_DOMAIN} {
             roll_keep_for 720h
         }
         format json
-        level DEBUG
+        level INFO
     }
 }
