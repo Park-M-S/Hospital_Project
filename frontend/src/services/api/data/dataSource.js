@@ -56,7 +56,7 @@ export default {
     console.log('응급실 데이터 집어넣기');
     try {
       if (this.socket == null || WebSocket.CLOSED) {
-        this.socket = new WebSocket("ws:hospitalmap.duckdns.org/emergency-websocket");
+        this.socket = new WebSocket("wss:hospitalmap.duckdns.org/emergency-websocket");
       }
 
       if (this.subs && this.subs.length != 0) {
