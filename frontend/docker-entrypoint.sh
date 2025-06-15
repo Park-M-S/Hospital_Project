@@ -79,18 +79,46 @@ if [ "$USE_DUCKDNS" = true ]; then
     envsubst '${DUCKDNS_DOMAIN} ${DUCKDNS_TOKEN} ${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT} ${ACME_EMAIL}' \
       < /etc/caddy/Caddyfile.template > /etc/caddy/Caddyfile
 else
-    # HTTP 전용 모드 - 기본 Caddyfile 생성 (ROOT 컨텍스트로 수정)
+    # HTTP 전용 모드 - WebSocket 오류 해결된 설정
     cat > /etc/caddy/Caddyfile << 'CADDY_EOF'
 {
     auto_https off
 }
 
 :80 {
-    root * /usr/share/caddy
-    file_server
-    try_files {path} /index.html
+    # ✅ WebSocket 전용 엔드포인트 (최우선 처리 + 완전한 WebSocket 지원)
+    handle /emergency-websocket {
+        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            # ✅ HTTP/1.1 강제 사용 (WebSocket 필수)
+            transport http {
+                versions 1.1
+            }
+            
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # ✅ 모든 WebSocket 헤더 전달 (오류 해결의 핵심)
+            header_up Connection {>Connection}
+            header_up Upgrade {>Upgrade}
+            header_up Sec-WebSocket-Key {>Sec-WebSocket-Key}
+            header_up Sec-WebSocket-Version {>Sec-WebSocket-Version}
+            header_up Sec-WebSocket-Protocol {>Sec-WebSocket-Protocol}
+            header_up Sec-WebSocket-Extensions {>Sec-WebSocket-Extensions}
+            header_up Origin {>Origin}
+            
+            # ✅ WebSocket 전용 타임아웃 설정
+            flush_interval -1
+            timeout 0s
+            
+            # ✅ 연결 유지 설정
+            header_down Connection "Upgrade"
+            header_down Upgrade "websocket"
+        }
+    }
     
-    # 백엔드 API 프록시 설정들 (ROOT 컨텍스트)
+    # 백엔드 API 프록시 설정들
     handle /hospitalsData* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
@@ -109,8 +137,8 @@ else
         }
     }
     
-    # API 엔드포인트들 (ROOT 컨텍스트)
-    handle /api/emergency/* {
+    # API 엔드포인트들
+    handle /api/emergency* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -120,7 +148,7 @@ else
         }
     }
     
-    handle /api/hospital/* {
+    handle /api/hospital* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -129,7 +157,7 @@ else
         }
     }
     
-    handle /api/pharmacy/* {
+    handle /api/pharmacy* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -138,7 +166,7 @@ else
         }
     }
     
-    handle /api/main/* {
+    handle /api/main* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -147,7 +175,7 @@ else
         }
     }
     
-    handle /api/details/* {
+    handle /api/details* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -156,7 +184,7 @@ else
         }
     }
     
-    handle /api/subject/* {
+    handle /api/subject* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
@@ -165,24 +193,12 @@ else
         }
     }
     
-    handle /api/proDoc/* {
+    handle /api/proDoc* {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
-        }
-    }
-    
-    # WebSocket 지원
-    handle /emergency-websocket {
-        reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
-            header_up Host {upstream_hostport}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-            header_up Upgrade {>Upgrade}
-            header_up Connection {>Connection}
         }
     }
     
@@ -196,11 +212,18 @@ else
         }
     }
     
+    # Vue.js 정적 파일 서빙 (나머지 모든 요청)
+    handle {
+        root * /usr/share/caddy
+        file_server
+        try_files {path} /index.html
+    }
+    
     header {
-        # CORS 설정
+        # ✅ WebSocket 친화적인 CORS 설정
         Access-Control-Allow-Origin "*"
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token"
+        Access-Control-Allow-Headers "Accept, Authorization, Content-Type, X-CSRF-Token, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol, Sec-WebSocket-Extensions"
         Access-Control-Allow-Credentials true
         
         # 보안 헤더
@@ -219,13 +242,26 @@ else
         }
         respond "Error: {http.error.status_code} - {http.error.status_text}"
     }
+    
+    # ✅ 상세한 로그 설정 (WebSocket 디버깅용)
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+            roll_keep_for 720h
+        }
+        format json
+        level DEBUG
+    }
 }
 CADDY_EOF
     
-    # 환경변수 치환
+    # ✅ 안전한 환경변수 치환 (Resource busy 오류 방지)
+    TEMP_FILE=$(mktemp)
     envsubst '${BACKEND_HOST} ${BACKEND_PORT} ${ENVIRONMENT}' \
-      < /etc/caddy/Caddyfile > /etc/caddy/Caddyfile.tmp && \
-      mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+      < /etc/caddy/Caddyfile > "$TEMP_FILE" && \
+      cp "$TEMP_FILE" /etc/caddy/Caddyfile && \
+      rm "$TEMP_FILE"
 fi
 
 # 생성된 Caddyfile 검증
@@ -261,6 +297,7 @@ if [ "$USE_DUCKDNS" = true ]; then
     echo -e "  📱 브라우저 접속: https://${DUCKDNS_DOMAIN}"
     echo -e "  🔒 Let's Encrypt 인증서 자동 발급"
     echo -e "  🔄 HTTP → HTTPS 자동 리다이렉트"
+    echo -e "  🌐 WebSocket URL: wss://${DUCKDNS_DOMAIN}/emergency-websocket"
     
     # DuckDNS 백그라운드 업데이트 스크립트 생성
     cat > /usr/local/bin/duckdns-update.sh << EOF
@@ -281,7 +318,9 @@ EOF
     /usr/local/bin/duckdns-update.sh &
 else
     echo -e "${BLUE}🌐 HTTP 모드:${NC}"
-    echo -e "  📱 브라우저 접속: http://$(curl -s https://ipv4.icanhazip.com 2>/dev/null || echo 'your-server-ip')"
+    SERVER_IP=$(curl -s https://ipv4.icanhazip.com 2>/dev/null || echo 'your-server-ip')
+    echo -e "  📱 브라우저 접속: http://${SERVER_IP}"
+    echo -e "  🌐 WebSocket URL: ws://${SERVER_IP}/emergency-websocket"
     echo -e "  ⚠️ SSL 없음 - DuckDNS 설정 후 HTTPS 사용 가능"
 fi
 
@@ -290,6 +329,12 @@ mkdir -p /data/caddy /config/caddy
 chown -R caddy:caddy /data/caddy /config/caddy 2>/dev/null || true
 
 echo -e "${GREEN}🎉 초기화 완료! Caddy 서버 시작...${NC}"
+echo -e "${YELLOW}📝 WebSocket 설정 요약:${NC}"
+echo -e "  ✅ HTTP/1.1 강제 사용"
+echo -e "  ✅ 모든 WebSocket 헤더 전달"
+echo -e "  ✅ 무제한 타임아웃"
+echo -e "  ✅ 연결 유지 설정"
+
 if [ "$USE_DUCKDNS" = true ]; then
     echo -e "${BLUE}🌐 접속 URL: https://${DUCKDNS_DOMAIN}${NC}"
 else
