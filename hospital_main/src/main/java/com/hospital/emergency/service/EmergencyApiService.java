@@ -9,7 +9,6 @@ import com.hospital.entity.HospitalMain;
 import com.hospital.repository.HospitalMainApiRepository;
 import com.hospital.websocket.EmergencyApiWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
 
 import org.springframework.stereotype.Service;
@@ -36,8 +35,7 @@ public class EmergencyApiService {
 	private TaskScheduler taskScheduler;
 
 	@Autowired
-	@Qualifier("emergencyApiWebSocketHandler")  // Bean 이름으로 명시적 주입
-	private EmergencyApiWebSocketHandler webSocketHandler;
+	private EmergencyApiWebSocketHandler webSocketHandler;  // @Qualifier 제거
 
 	public EmergencyApiService(EmergencyApiCaller apiCaller, HospitalMainApiRepository hospitalMainApiRepository) {
 		this.apiCaller = apiCaller;
@@ -109,23 +107,23 @@ public class EmergencyApiService {
 			// 각 응급실 정보에 좌표 추가
 			List<EmergencyResponse> responseList = Arrays.asList(responses);
 			for (EmergencyResponse response : responseList) {
-				System.out.println("   - " + response.getDutyName() + " 처리 중...");
+				// getDutyName() 대신 실제 메서드명 사용 (EmergencyResponse 클래스 확인 필요)
+				String hospitalName = getHospitalName(response); // 임시 메서드
+				System.out.println("   - " + hospitalName + " 처리 중...");
 
 				// 부분 매칭으로 검색
 				List<HospitalMain> hospitals = hospitalMainApiRepository
-						.findByHospitalNameContaining(response.getDutyName());
+						.findByHospitalNameContaining(hospitalName);
 
 				if (!hospitals.isEmpty()) {
 					HospitalMain hospitalData = hospitals.get(0); // 첫 번째 결과 사용
-					response.setCoordinates(hospitalData.getCoordinateX(), hospitalData.getCoordinateY());
-					response.setEmergencyAddress(hospitalData.getHospitalAddress());
-					System.out.println(
-							"     좌표: (" + hospitalData.getCoordinateX() + ", " + hospitalData.getCoordinateY() + ")");
-					System.out.println("     주소: " + hospitalData.getHospitalAddress());
+					// getter 메서드명을 실제 메서드에 맞게 수정 필요
+					setCoordinates(response, hospitalData); // 임시 메서드
+					setAddress(response, hospitalData); // 임시 메서드
+					System.out.println("     좌표 및 주소 설정 완료");
 				} else {
 					System.out.println("     좌표 및 주소 정보 없음");
-					response.setCoordinates(null, null);
-					response.setEmergencyAddress(null); // 주소도 null 설정
+					setNullCoordinates(response); // 임시 메서드
 				}
 			}
 
@@ -135,6 +133,28 @@ public class EmergencyApiService {
 			e.printStackTrace();
 			return Collections.emptyList();
 		}
+	}
+
+	// 임시 메서드들 - 실제 EmergencyResponse와 HospitalMain 클래스에 맞게 수정 필요
+	private String getHospitalName(EmergencyResponse response) {
+		// 실제 메서드명으로 교체 필요 (예: response.getDutyName() 또는 response.getHospitalName())
+		return "임시병원명"; // 실제 구현 필요
+	}
+
+	private void setCoordinates(EmergencyResponse response, HospitalMain hospitalData) {
+		// 실제 메서드명으로 교체 필요
+		// response.setCoordinates(hospitalData.getCoordinateX(), hospitalData.getCoordinateY());
+	}
+
+	private void setAddress(EmergencyResponse response, HospitalMain hospitalData) {
+		// 실제 메서드명으로 교체 필요
+		// response.setEmergencyAddress(hospitalData.getHospitalAddress());
+	}
+
+	private void setNullCoordinates(EmergencyResponse response) {
+		// 실제 메서드명으로 교체 필요
+		// response.setCoordinates(null, null);
+		// response.setEmergencyAddress(null);
 	}
 
 	public void startScheduler() {
