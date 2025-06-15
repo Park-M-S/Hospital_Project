@@ -14,9 +14,9 @@ http://${DUCKDNS_DOMAIN} {
 https://${DUCKDNS_DOMAIN} {
     # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
     
-    # 백엔드 API 프록시 설정 (우선 처리) - HTTP로 명시적 지정
+    # 백엔드 API 프록시 설정 (우선 처리) - HTTP + 컨텍스트 경로 추가
     handle /hospitalsData* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -25,7 +25,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /pharmaciesData* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -33,9 +33,9 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # Emergency API 프록시 설정 (새로 추가) - HTTP로 명시적 지정
+    # Emergency API 프록시 설정 (새로 추가) - HTTP + 컨텍스트 경로 추가
     handle /api/emergency/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -49,9 +49,9 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # 기타 백엔드 API 엔드포인트들 (기존 + 추가) - 모두 HTTP로 명시적 지정
+    # 기타 백엔드 API 엔드포인트들 (기존 + 추가) - 모두 HTTP + 컨텍스트 경로 추가
     handle /api/hospital/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -60,7 +60,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/pharmacy/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -69,7 +69,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/main/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -78,7 +78,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/details/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -87,7 +87,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/subject/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -96,7 +96,7 @@ https://${DUCKDNS_DOMAIN} {
     }
     
     handle /api/proDoc/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
@@ -104,9 +104,23 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # 포괄적 API 프록시 (마지막 fallback) - HTTP로 명시적 지정
+    # 백엔드 웹소켓 프록시 설정 추가 (WebSocket 지원)
+    handle /emergency-websocket {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
+            header_up Host {upstream_hostport}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # WebSocket 업그레이드 지원
+            header_up Upgrade {>Upgrade}
+            header_up Connection {>Connection}
+        }
+    }
+    
+    # 포괄적 API 프록시 (마지막 fallback) - HTTP + 컨텍스트 경로 추가
     handle /api/* {
-        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
+        reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT}/hospital_main {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
