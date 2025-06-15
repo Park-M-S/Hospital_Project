@@ -223,9 +223,7 @@
 			<version>${spring.version}</version>
 		</dependency>
 
-		<!-- ===== 첫 번째 pom.xml에만 있던 누락된 의존성들 ===== -->
-
-		<!-- Spring Boot Quartz (첫 번째에는 이것이 있었음) -->
+		<!-- Spring Boot Quartz -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-quartz</artifactId>
