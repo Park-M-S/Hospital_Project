@@ -1,4 +1,7 @@
-import axios from 'axios';
+// config/api.js 또는 utils/api.js 파일 생성
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://hospitalmap.duckdns.org'  // 프로덕션
+  : 'http://localhost:8888';           // 개발
 
 export default {
   // 기본 병원 데이터 가져오기
@@ -6,7 +9,7 @@ export default {
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        const res = await axios.get('http://localhost:8888/hospitalsData', {
+        const res = await axios.get(`${API_BASE_URL}/hospitalsData`, {
           params: {
             subs: this.subs.join(','),
             userLat: this.$store.getters.userLat,
@@ -16,7 +19,6 @@ export default {
           }
         });
         this.hospitalList = res.data;
-        // console.log(this.hospitalList);
         if (this.map) {
           this.loadMaker();
         }
@@ -30,7 +32,7 @@ export default {
   async fetch_pharmacy() {
     try {
       if (this.subsTag && this.subsTag.length != 0) {
-        const res = await axios.get('http://localhost:8889/hospital_main/pharmaciesData', {
+        const res = await axios.get(`${API_BASE_URL}/pharmaciesData`, {
           params: {
             userLat: this.$store.getters.userLat,
             userLng: this.$store.getters.userLng,
@@ -50,7 +52,7 @@ export default {
   // 응급실 실시간 데이터 시작
   async fetch_emergency_start() {
     try {
-      await axios.get('http://localhost:8889/hospital_main/api/emergency/start');
+      await axios.get(`${API_BASE_URL}/api/emergency/start`);
       if (this.map) {
         this.loadMaker();
       }
@@ -63,7 +65,7 @@ export default {
   async fetch_emergency_stop() {
     try {
       if (this.subsTag && this.subsTag.length != 0) {
-        await axios.get('http://localhost:8889/hospital_main/api/emergency/stop');
+        await axios.get(`${API_BASE_URL}/api/emergency/stop`);
         this.emergencyList = [];
       }
     } catch (err) {
