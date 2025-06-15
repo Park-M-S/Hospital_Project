@@ -14,9 +14,14 @@ http://${DUCKDNS_DOMAIN} {
 https://${DUCKDNS_DOMAIN} {
     # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
     
-    # ✅ WebSocket 전용 엔드포인트 (최우선 처리 - 추가됨)
+    # ✅ WebSocket 전용 엔드포인트 (최우선 처리 + HTTP/1.1 강제)
     handle /emergency-websocket {
         reverse_proxy ${BACKEND_HOST}:${BACKEND_PORT} {
+            # ✅ HTTP/1.1 강제 사용 (WebSocket 지원을 위해 필수)
+            transport http {
+                versions 1.1
+            }
+            
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
