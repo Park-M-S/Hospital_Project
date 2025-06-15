@@ -104,17 +104,13 @@ https://${DUCKDNS_DOMAIN} {
         }
     }
     
-    # 백엔드 웹소켓 프록시 설정 추가 (WebSocket 지원) - ROOT 컨텍스트
+    # WebSocket 프록시 설정 (Caddy 2.x 표준 방식)
     handle /emergency-websocket {
         reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
             header_up Host {upstream_hostport}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto {scheme}
-            
-            # WebSocket 업그레이드 지원 (수정된 문법)
-            header_up Upgrade {http.request.header.Upgrade}
-            header_up Connection {http.request.header.Connection}
         }
     }
     
