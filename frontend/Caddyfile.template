@@ -20,18 +20,18 @@ https://${DUCKDNS_DOMAIN} {
                 versions 1.1
             }
             
-            header_up Host {upstream_hostport}
+            # ✅ 고정값 헤더 (변수 문제 해결)
+            header_up Host "${DUCKDNS_DOMAIN}"
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Proto "https"
             
-            # WebSocket 헤더 전달 (중요!)
-            header_up Connection {>Connection}
-            header_up Upgrade {>Upgrade}
+            # ✅ WebSocket 헤더 고정값으로 전달 (핵심 수정)
+            header_up Connection "Upgrade"
+            header_up Upgrade "websocket"
             header_up Sec-WebSocket-Key {>Sec-WebSocket-Key}
-            header_up Sec-WebSocket-Version {>Sec-WebSocket-Version}
-            header_up Sec-WebSocket-Protocol {>Sec-WebSocket-Protocol}
-            header_up Sec-WebSocket-Extensions {>Sec-WebSocket-Extensions}
+            header_up Sec-WebSocket-Version "13"
+            header_up Origin "https://${DUCKDNS_DOMAIN}"
             
             # WebSocket 전용 설정
             flush_interval -1
