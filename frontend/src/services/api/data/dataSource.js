@@ -7,7 +7,7 @@ export default {
     this.pharmacyList = null;
     try {
       if (this.subs && this.subs.length != 0) {
-        const res = await axios.get('https://hospitalmap.duckdns.org/hospital_main/hospitalsData', {
+        const res = await axios.get('https://hospitalmap.duckdns.org/hospitalsData', {
           params: {
             subs: this.subs.join(','),
             userLat: this.$store.getters.userLat,
@@ -30,7 +30,7 @@ export default {
     console.log('약국 데이터 집어넣기');
     try {
       if (this.subsTag && this.subsTag.length != 0) {
-        const res = await axios.get('https://hospitalmap.duckdns.org/hospital_main/pharmaciesData', {
+        const res = await axios.get('https://hospitalmap.duckdns.org/pharmaciesData', {
           params: {
             userLat: this.$store.getters.userLat,
             userLng: this.$store.getters.userLng,
@@ -54,11 +54,11 @@ export default {
     try {
       if (this.subs && this.subs.length != 0) {
         console.log('start');
-        await axios.get('https://hospitalmap.duckdns.org/hospital_main/api/emergency/start');
+        await axios.get('https://hospitalmap.duckdns.org/api/emergency/start');
       }
       if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
         console.log('웹소켓 연결 시도');
-        this.socket = new WebSocket('wss://hospitalmap.duckdns.org/hospital_main/emergency-websocket');
+        this.socket = new WebSocket('wss://hospitalmap.duckdns.org/emergency-websocket');
         /* 연결 이벤트는 처음 한 번만 등록 */
         this.socket.addEventListener('open', () => console.log('WebSocket 연결됨'));
         this.socket.addEventListener('close', () => console.log('WebSocket 연결 종료됨'));
@@ -96,7 +96,7 @@ export default {
     console.log('응급실 데이터 없애기');
     try {
       // console.log("응급실 실시간 데이터 종료");
-      await axios.get('https://hospitalmap.duckdns.org/hospital_main/api/emergency/stop');
+      await axios.get('https://hospitalmap.duckdns.org/api/emergency/stop');
       this.emergencyList = [];
       if (this.map) {
         this.loadMaker();
