@@ -3,35 +3,35 @@
 {
     # ACME 설정 (Let's Encrypt)
     email ${ACME_EMAIL}
+    
+    # ✅ 전역적으로 HTTP/1.1만 사용 (WebSocket 호환성을 위해)
+    servers {
+        protocols h1
+    }
 }
+
 # HTTP에서 HTTPS로 자동 리다이렉트
 http://${DUCKDNS_DOMAIN} {
     redir https://${DUCKDNS_DOMAIN}{uri} permanent
 }
+
 # HTTPS 메인 설정
 https://${DUCKDNS_DOMAIN} {
     # HTTP 챌린지로 SSL 인증서 자동 발급 (DNS 챌린지 대신)
     
-    # ✅ WebSocket 전용 엔드포인트 (최우선 처리 + HTTP/1.1 강제)
+    # ✅ WebSocket 전용 엔드포인트 (최우선 처리 + 강화된 HTTP/1.1 설정)
     handle /emergency-websocket {
         reverse_proxy http://${BACKEND_HOST}:${BACKEND_PORT} {
-            # ✅ HTTP/1.1 강제 사용 (WebSocket 지원을 위해 필수)
+            # ✅ 더 강력한 HTTP/1.1 강제 설정
             transport http {
                 versions 1.1
+                max_conns_per_host 1
+                keepalive off
             }
             
-            # ✅ 고정값 헤더 (변수 문제 해결)
+            # ✅ 간소화된 헤더 (문제 소지 제거)
             header_up Host "${DUCKDNS_DOMAIN}"
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
             header_up X-Forwarded-Proto "https"
-            
-            # ✅ WebSocket 헤더 고정값으로 전달 (핵심 수정)
-            header_up Connection "Upgrade"
-            header_up Upgrade "websocket"
-            header_up Sec-WebSocket-Key {>Sec-WebSocket-Key}
-            header_up Sec-WebSocket-Version "13"
-            header_up Origin "https://${DUCKDNS_DOMAIN}"
             
             # WebSocket 전용 설정
             flush_interval -1
