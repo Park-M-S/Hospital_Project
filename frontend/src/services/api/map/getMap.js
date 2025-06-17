@@ -290,15 +290,12 @@ export default {
       <div class="info-title-emergency"> 
         <span>${emergency.dutyName}</span>
         <div class="header-controls">
-          <button class="tts-main-btn" onclick="speakEmergencyInfo(${JSON.stringify(emergency).replace(/"/g, '&quot;')})" title="전체 정보 듣기">
-            <i class="fa-solid fa-volume-up"></i>
-          </button>
           <button class="toggle-btn open" title="상세 정보 접기/펼치기">▲</button>
           <div class="close-btn" title="닫기">×</div>
         </div>
       </div>
 
-      <div class="info-body" ondblclick="speakEmergencyInfo(${JSON.stringify(emergency).replace(/"/g, '&quot;')})" title="더블클릭하면 전체 정보를 읽어드립니다"> 
+      <div class="info-body" title="개별 항목을 클릭하여 듣기"> 
         <div class="update-time">
           <span class="emergency_default">
             <div class="subject-list-container">
