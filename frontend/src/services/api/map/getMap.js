@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { speakText, stopSpeech } from '@/services/api/tts/tts.js';
 
 const KAKAO_MAP_KEY = import.meta.env.VITE_KAKAO_MAP_KEY;
 const KAKAO_REST_API_KEY = import.meta.env.VITE_KAKAO_REST_API_KEY;
@@ -25,6 +26,169 @@ export default {
     this.loadUserMaker();
     this.loadMaker();
     this.loadCircle();
+    
+    // TTS 전역 함수 설정
+    this.setupGlobalTTSFunctions();
+  },
+
+  // TTS 전역 함수 설정 (오버레이에서 사용하기 위해)
+  setupGlobalTTSFunctions() {
+    // 기본 TTS 함수를 전역으로 설정
+    window.speakText = speakText;
+    window.stopSpeech = stopSpeech;
+    
+    // 응급실 전체 정보 읽기
+    window.speakEmergencyInfo = (emergency) => {
+      let message = `${emergency.dutyName || '응급실'} 정보를 안내드립니다. `;
+      
+      if (emergency.emergencyAddress) {
+        message += `주소는 ${emergency.emergencyAddress}입니다. `;
+      }
+      
+      const equipment = [];
+      if (emergency.hvctayn) equipment.push('CT');
+      if (emergency.hvmriayn) equipment.push('MRI');
+      if (emergency.hvventiayn) equipment.push('인공호흡기');
+      
+      if (equipment.length > 0) {
+        message += `보유 장비는 ${equipment.join(', ')}입니다. `;
+      }
+      
+      if (emergency.hvec !== undefined) {
+        if (emergency.hvec > 0) {
+          message += `응급실 일반 병상이 ${emergency.hvec}석 사용 가능합니다. `;
+        } else {
+          message += `응급실 일반 병상이 부족합니다. `;
+        }
+      }
+      
+      if (emergency.hvoc !== undefined) {
+        if (emergency.hvoc > 0) {
+          message += `응급실 수술실 병상이 ${emergency.hvoc}석 사용 가능합니다. `;
+        } else {
+          message += `응급실 수술실 병상이 부족합니다. `;
+        }
+      }
+      
+      if (emergency.hvgc !== undefined) {
+        if (emergency.hvgc > 0) {
+          message += `일반 입원실 병상이 ${emergency.hvgc}석 사용 가능합니다. `;
+        } else {
+          message += `일반 입원실 병상이 부족합니다. `;
+        }
+      }
+      
+      if (emergency.dutyTel3) {
+        const formattedNumber = emergency.dutyTel3.replace(/-/g, ' ');
+        message += `전화번호는 ${formattedNumber}입니다.`;
+      }
+      
+      speakText(message);
+    };
+
+    // 개별 항목 읽기 함수들
+    window.speakEmergencyAddress = (address) => {
+      speakText(`주소: ${address}`);
+    };
+
+    window.speakEmergencyBedInfo = (type, count) => {
+      const bedTypes = {
+        'hvec': '응급실 일반 병상',
+        'hvoc': '응급실 수술실 병상', 
+        'hvgc': '일반 입원실 병상'
+      };
+      
+      const bedName = bedTypes[type] || '병상';
+      const status = count > 0 ? `${count}석 사용 가능` : '부족';
+      const message = `${bedName}이 ${status}합니다.`;
+      speakText(message);
+    };
+
+    window.speakEmergencyPhone = (phoneNumber) => {
+      // 전화번호를 자연스럽게 읽기 위해 처리
+      let formattedNumber = phoneNumber.replace(/-/g, '');
+      
+      // 지역번호와 나머지 번호를 분리하여 자연스럽게 읽기
+      if (formattedNumber.length === 10 || formattedNumber.length === 11) {
+        // 02-1234-5678 형태나 031-123-4567 형태 처리
+        if (formattedNumber.startsWith('02')) {
+          // 서울 지역번호 (02)
+          const areaCode = '공이';
+          const middle = formattedNumber.slice(2, -4).split('').join(' ');
+          const last = formattedNumber.slice(-4).split('').join(' ');
+          formattedNumber = `${areaCode} ${middle} ${last}`;
+        } else if (formattedNumber.startsWith('031')) {
+          // 경기도 지역번호 (031)
+          const areaCode = '공삼일';
+          const middle = formattedNumber.slice(3, 6).split('').join(' ');
+          const last = formattedNumber.slice(6).split('').join(' ');
+          formattedNumber = `${areaCode} ${middle} ${last}`;
+        } else if (formattedNumber.length === 11) {
+          // 010-1234-5678 형태
+          const areaCode = formattedNumber.slice(0, 3).split('').join(' ');
+          const middle = formattedNumber.slice(3, 7).split('').join(' ');
+          const last = formattedNumber.slice(7).split('').join(' ');
+          formattedNumber = `${areaCode} ${middle} ${last}`;
+        } else {
+          // 기타 지역번호
+          const areaCode = formattedNumber.slice(0, 3).split('').join(' ');
+          const middle = formattedNumber.slice(3, 6).split('').join(' ');
+          const last = formattedNumber.slice(6).split('').join(' ');
+          formattedNumber = `${areaCode} ${middle} ${last}`;
+        }
+      } else {
+        // 기본적으로 모든 숫자를 하나씩 읽기
+        formattedNumber = phoneNumber.replace(/-/g, '').split('').join(' ');
+      }
+      
+      speakText(`전화번호: ${formattedNumber}`);
+    };
+
+
+    window.speakEmergencyEquipment = (equipment) => {
+      speakText(`${equipment} 장비를 보유하고 있습니다.`);
+    };
+
+    // 병원 정보 읽기
+    window.speakHospitalInfo = (hospital) => {
+      let message = `${hospital.hospitalName} 병원 정보입니다. `;
+      
+      if (hospital.hospitalAddress) {
+        message += `주소는 ${hospital.hospitalAddress}입니다. `;
+      }
+      
+      if (hospital.medicalSubject) {
+        const subjects = hospital.medicalSubject.split(',').map(s => s.trim()).join(', ');
+        message += `진료과목은 ${subjects}입니다. `;
+      }
+      
+      if (hospital.todayOpen && hospital.todayClose) {
+        message += `진료시간은 ${hospital.todayOpen}부터 ${hospital.todayClose}까지입니다. `;
+      }
+      
+      if (hospital.hospitalTel) {
+        const formattedNumber = hospital.hospitalTel.replace(/-/g, ' ');
+        message += `전화번호는 ${formattedNumber}입니다.`;
+      }
+      
+      speakText(message);
+    };
+
+    // 약국 정보 읽기
+    window.speakPharmacyInfo = (pharmacy) => {
+      let message = `${pharmacy.pharmacyName} 약국 정보입니다. `;
+      
+      if (pharmacy.pharmacyAddress) {
+        message += `주소는 ${pharmacy.pharmacyAddress}입니다. `;
+      }
+      
+      if (pharmacy.pharmacyTel) {
+        const formattedNumber = pharmacy.pharmacyTel.replace(/-/g, ' ');
+        message += `전화번호는 ${formattedNumber}입니다.`;
+      }
+      
+      speakText(message);
+    };
   },
 
   // 사용자 마커
@@ -62,7 +226,6 @@ export default {
     });
   },
 
-
   // 응급실 마커 생성
   createEmergencyMarker(emergency) {
     const imageSrc = 'https://i.imgur.com/xvsaZUe.png';
@@ -82,29 +245,20 @@ export default {
     window.kakao.maps.event.addListener(marker, 'click', () => {
       const emergencyId = emergency.hpid || emergency.dutyName;
 
-      // 1. 이미 해당 마커의 오버레이가 열려있는지 확인
       if (this.openOverlays[emergencyId]) {
-        // 2. 열려있다면 닫아줍니다 (토글 기능)
         const existingOverlay = this.openOverlays[emergencyId];
         existingOverlay.setMap(null);
-
-        // openOverlays 객체에서도 제거합니다.
         delete this.openOverlays[emergencyId];
-
       } else {
-        // 3. 열려있지 않다면 새로 생성해서 보여줍니다.
-        // 기존의 "다른 오버레이 닫는 로직"은 삭제합니다.
         const newOverlay = this.emergencyOverlay(emergency);
         newOverlay.setMap(this.map);
-
-        // 새로 연 오버레이를 openOverlays 객체에 추가하여 관리합니다.
         this.openOverlays[emergencyId] = newOverlay;
       }
     });
     this.markers.push(marker);
   },
 
-  // === [수정됨] 응급실 오버레이 ===
+  // 응급실 오버레이 (TTS 기능 추가)
   emergencyOverlay(emergency) {
     const emergencyId = emergency.hpid || emergency.dutyName;
     const startY = this.$store.getters.userLat;
@@ -114,27 +268,44 @@ export default {
     const wrapper = document.createElement('div');
     wrapper.className = 'custom-overlay-wrap';
 
-    // hvidate (정보 업데이트 시간) 포맷 변경
     const updateTime = emergency.hvidate.replace(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$4 : $5 : $6');
 
     wrapper.innerHTML = `
+    <style>
+      .tts-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+      .tts-item .content {
+        flex: 1;
+      }
+      .tts-item .mini-speaker {
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+    </style>
     <div class="info-container">
       <div class="info-title-emergency"> 
         <span>${emergency.dutyName}</span>
         <div class="header-controls">
+          <button class="tts-main-btn" onclick="speakEmergencyInfo(${JSON.stringify(emergency).replace(/"/g, '&quot;')})" title="전체 정보 듣기">
+            <i class="fa-solid fa-volume-up"></i>
+          </button>
           <button class="toggle-btn open" title="상세 정보 접기/펼치기">▲</button>
           <div class="close-btn" title="닫기">×</div>
         </div>
       </div>
 
-      <div class="info-body"> 
+      <div class="info-body" ondblclick="speakEmergencyInfo(${JSON.stringify(emergency).replace(/"/g, '&quot;')})" title="더블클릭하면 전체 정보를 읽어드립니다"> 
         <div class="update-time">
           <span class="emergency_default">
             <div class="subject-list-container">
               <div class="subject-tags-wrapper">
-                ${emergency.hvctayn ? `<span class="subject-tag-emergency"> CT </span>` : ''}
-                ${emergency.hvmriayn ? `<span class="subject-tag-emergency"> MRI </span>` : ''}
-                ${emergency.hvventiayn ? `<span class="subject-tag-emergency"> 인공호흡기 </span>` : ''}
+                ${emergency.hvctayn ? `<span class="subject-tag-emergency" onclick="speakEmergencyEquipment('CT');" style="cursor: pointer;" title="클릭하여 듣기"> CT </span>` : ''}
+                ${emergency.hvmriayn ? `<span class="subject-tag-emergency" onclick="speakEmergencyEquipment('MRI');" style="cursor: pointer;" title="클릭하여 듣기"> MRI </span>` : ''}
+                ${emergency.hvventiayn ? `<span class="subject-tag-emergency" onclick="speakEmergencyEquipment('인공호흡기');" style="cursor: pointer;" title="클릭하여 듣기"> 인공호흡기 </span>` : ''}
               </div>
             </div>
             업데이트 : ${updateTime}
@@ -143,11 +314,11 @@ export default {
 
         <div class="collapsible-content open">
           <ul class="details-list">
-            ${emergency.emergencyAddress ? `<li class="available">🏠&nbsp ${emergency.emergencyAddress}</li>` : ''}
-            ${emergency.hvec > 0 ? `<li class="available">🚑 &nbsp <span class="emergency_green"> 응급실 일반 병상 : ${emergency.hvec}석</span></li>` : `<li class="unavailable">🚑 <span class="emergency_red"> &nbsp 응급실 일반 병상 부족 : ${emergency.hvec}석</span> </li>`}
-            ${emergency.hvoc > 0 ? `<li class="available">🩺 &nbsp <span class="emergency_green"> 응급실 수술실 병상 : ${emergency.hvoc}석</span></li>` : `<li class="unavailable">🩺 <span class="emergency_red"> &nbsp 수술실 병상 부족 : ${emergency.hvoc}석</span> </li>`}
-            ${emergency.hvgc > 0 ? `<li class="available">🛏️ &nbsp <span class="emergency_green"> 일반 입원실 병상 : ${emergency.hvgc}석</span></li>` : `<li class="unavailable">🛏️ <span class="emergency_red"> &nbsp 입원실 병상 부족 : ${emergency.hvgc}석</span> </li>`}
-            ${emergency.dutyTel3 ? `<li class="available">📞&nbsp 전화번호 : ${emergency.dutyTel3}</li>` : ''}
+            ${emergency.emergencyAddress ? `<li class="available emergency-tts-item tts-item" onclick="speakEmergencyAddress('${emergency.emergencyAddress.replace(/'/g, "\\'")}');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🏠&nbsp ${emergency.emergencyAddress}</span></li>` : ''}
+            ${emergency.hvec !== undefined ? `<li class="${emergency.hvec > 0 ? 'available' : 'unavailable'} emergency-tts-item tts-item" onclick="speakEmergencyBedInfo('hvec', ${emergency.hvec});" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🚑 &nbsp <span class="${emergency.hvec > 0 ? 'emergency_green' : 'emergency_red'}"> ${emergency.hvec > 0 ? `응급실 일반 병상 : ${emergency.hvec}석` : `응급실 일반 병상 부족 : ${emergency.hvec}석`}</span></span></li>` : ''}
+            ${emergency.hvoc !== undefined ? `<li class="${emergency.hvoc > 0 ? 'available' : 'unavailable'} emergency-tts-item tts-item" onclick="speakEmergencyBedInfo('hvoc', ${emergency.hvoc});" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🩺 &nbsp <span class="${emergency.hvoc > 0 ? 'emergency_green' : 'emergency_red'}"> ${emergency.hvoc > 0 ? `응급실 수술실 병상 : ${emergency.hvoc}석` : `수술실 병상 부족 : ${emergency.hvoc}석`}</span></span></li>` : ''}
+            ${emergency.hvgc !== undefined ? `<li class="${emergency.hvgc > 0 ? 'available' : 'unavailable'} emergency-tts-item tts-item" onclick="speakEmergencyBedInfo('hvgc', ${emergency.hvgc});" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🛏️ &nbsp <span class="${emergency.hvgc > 0 ? 'emergency_green' : 'emergency_red'}"> ${emergency.hvgc > 0 ? `일반 입원실 병상 : ${emergency.hvgc}석` : `입원실 병상 부족 : ${emergency.hvgc}석`}</span></span></li>` : ''}
+            ${emergency.dutyTel3 ? `<li class="available emergency-tts-item tts-item" onclick="speakEmergencyPhone('${emergency.dutyTel3}');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">📞&nbsp 전화번호 : ${emergency.dutyTel3}</span></li>` : ''}
           </ul>
         </div>
       </div>
@@ -173,26 +344,24 @@ export default {
     const toggleBtn = wrapper.querySelector('.toggle-btn');
     const collapsibleContent = wrapper.querySelector('.collapsible-content');
 
-
     toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // 이벤트 버블링 방지
+      e.stopPropagation();
       collapsibleContent.classList.toggle('open');
       toggleBtn.classList.toggle('open');
       toggleBtn.innerHTML = toggleBtn.classList.contains('open') ? '▲' : '▼';
     });
 
-    // 닫기 버튼 클릭 시 activeEmergencyId도 초기화
     wrapper.querySelector('.close-btn').onclick = () => {
-      customOverlay.setMap(null); // 오버레이를 지도에서 제거
-      // openOverlays 객체에서도 해당 ID의 오버레이를 삭제합니다.
+      customOverlay.setMap(null);
       delete this.openOverlays[emergencyId];
     };
 
     return customOverlay;
   },
+
   // 약국 마커
   createPharmacyMarker(pharmacy) {
-    const imageSrc = 'https://i.imgur.com/z4BFIhQ.png'; // 약국 아이콘
+    const imageSrc = 'https://i.imgur.com/z4BFIhQ.png';
     const imageSize = new window.kakao.maps.Size(34, 47);
     const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
 
@@ -207,7 +376,6 @@ export default {
 
     marker.setMap(this.map);
 
-    // 클릭 이벤트 추가
     window.kakao.maps.event.addListener(marker, 'click', () => {
       if (this.activeOverlay) {
         this.activeOverlay.setMap(null);
@@ -223,38 +391,48 @@ export default {
     this.markers.push(marker);
   },
 
-  // 약국 오버레이
+  // 약국 오버레이 (TTS 기능 추가)
   pharmacyOverlay(y, x, name, address, pharmacyTel) {
-    // 출발지: 현재 사용자 위치
     const startY = this.$store.getters.userLat;
     const startX = this.$store.getters.userLng;
+    const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${y},${x}&travelmode=transit`;
 
-    // 도착지: 클릭한 병원
-    const endY = y;
-    const endX = x;
-
-    // Google Maps 길찾기 URL
-    const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${endY},${endX}&travelmode=transit`;
-
-    // wrapper div 요소 생성
     const wrapper = document.createElement('div');
     wrapper.className = 'custom-overlay-wrap';
 
-    // 버튼 HTML
+    const pharmacyData = { pharmacyName: name, pharmacyAddress: address, pharmacyTel: pharmacyTel };
+
     wrapper.innerHTML = `
+    <style>
+      .tts-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+      .tts-item .content {
+        flex: 1;
+      }
+      .tts-item .mini-speaker {
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+    </style>
     <div class="info-container">
       <div class="info-title-pharmacy">
         ${name}
+        <button class="tts-main-btn" onclick="speakPharmacyInfo(${JSON.stringify(pharmacyData).replace(/"/g, '&quot;')})" title="약국 정보 듣기">
+          <i class="fa-solid fa-volume-up"></i>
+        </button>
         <div class="close-btn" title="닫기">×</div>
       </div>
-      <div class="info-body">
+      <div class="info-body" ondblclick="speakPharmacyInfo(${JSON.stringify(pharmacyData).replace(/"/g, '&quot;')})" title="더블클릭하면 전체 정보를 읽어드립니다">
         <div class="address">${address}</div>
         <ul class="details-list">
           ${pharmacyTel != null
-        ? `<li class="available">📞&nbsp 전화번호 : ${pharmacyTel}</li>`
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakEmergencyPhone('${pharmacyTel}');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">📞&nbsp 전화번호 : ${pharmacyTel}</span></li>`
         : `<li class="unavailable">전화번호 없음</li>`
       }
-     
         </ul>
       </div>
       <div class="info-footer">
@@ -266,8 +444,6 @@ export default {
   `;
 
     const position = new window.kakao.maps.LatLng(y, x);
-
-    // [수정된 부분] 오타 수정: window.kakaomaps -> window.kakao.maps
     const customOverlay = new window.kakao.maps.CustomOverlay({
       map: null,
       position: position,
@@ -276,7 +452,6 @@ export default {
       xAnchor: 0.5
     });
 
-    // 닫기 버튼 클릭 이벤트는 그대로 유지
     wrapper.querySelector('.close-btn').onclick = () => {
       customOverlay.setMap(null);
     };
@@ -284,11 +459,8 @@ export default {
     return customOverlay;
   },
 
-
   // 병원 마커
   createHospitalMarker(hospital) {
-
-    // 일반 병원 마커
     const imageSrc = 'https://park-m-s.github.io/Spring-study/병원.png';
     const imageSize = new window.kakao.maps.Size(34, 47);
     const imageOption = { offset: new window.kakao.maps.Point(20, 40) };
@@ -304,7 +476,6 @@ export default {
 
     marker.setMap(this.map);
 
-    // 클릭 이벤트 추가
     window.kakao.maps.event.addListener(marker, 'click', () => {
       if (this.activeOverlay) {
         this.activeOverlay.setMap(null);
@@ -320,189 +491,132 @@ export default {
     this.markers.push(marker);
   },
 
-  // 병원 오버레이
+  // 병원 오버레이 (TTS 기능 추가)
   loadCustomOverlay(hospitalName, todayOpen, todayClose, hospitalAddress, hospitalTel, doctorNum, professionalDoctors, coordinateX, coordinateY, weekdayLunch, parkingCapacity, parkingFee, medicalSubject) {
-
-    // 출발지: 현재 사용자 위치
-
     const startY = this.$store.getters.userLat;
-
     const startX = this.$store.getters.userLng;
-
-
-    // 도착지: 클릭한 병원
-
     const endY = coordinateY;
-
     const endX = coordinateX;
-
-
-    // Google Maps 길찾기 URL
-
     const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${endY},${endX}&travelmode=transit`;
 
-
-    // wrapper div 요소 생성
-
     const wrapper = document.createElement('div');
-
     wrapper.className = 'custom-overlay-wrap';
 
-
-    // 버튼 HTML
+    const hospitalData = {
+      hospitalName,
+      hospitalAddress,
+      medicalSubject,
+      todayOpen,
+      todayClose,
+      hospitalTel
+    };
 
     wrapper.innerHTML = `
-
+    <style>
+      .tts-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+      .tts-item .content {
+        flex: 1;
+      }
+      .tts-item .mini-speaker {
+        flex-shrink: 0;
+        margin-left: 8px;
+      }
+    </style>
     <div class="info-container">
-
       <div class="info-title">
-
         ${hospitalName}
-
         <div class="close-btn" title="닫기">×</div>
-
       </div>
-
       <div class="info-body">
-
       ${medicalSubject != 0 && medicalSubject != null
-
         ? `<div class="address">
              <div class="subject-list-container">
                <div class="subject-tags-wrapper">
-                 ${medicalSubject.split(',').map(subject => `<span class="subject-tag">${subject.trim()}</span>`).join('')}
+                 ${medicalSubject.split(',').map(subject => `<span class="subject-tag" onclick="speakText('${subject.trim()} 진료과');" style="cursor: pointer;" title="클릭하여 듣기">${subject.trim()}</span>`).join('')}
                </div>
              </div>
            </div>`
         : ''
-
       }
         <ul class="details-list">
-
           ${hospitalAddress != null
-
-        ? `<li class="available"> 🏠&nbsp ${hospitalAddress}</li>`
-
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakText('주소: ${hospitalAddress.replace(/'/g, "\\'")}');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🏠&nbsp ${hospitalAddress}</span></li>`
         : ``
-
       }
-
           ${hospitalTel != 0 && hospitalTel != null
-
-        ? `<li class="available"> 📞&nbsp 전화번호 : ${hospitalTel}  </li>`
-
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakEmergencyPhone('${hospitalTel}');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">📞&nbsp 전화번호 : ${hospitalTel}</span></li>`
         : `<li class="unavailable">전화번호 없음</li>`
-
       }
-
-
           ${todayOpen != null && todayClose != null
-
-        ? `<li class="available"> 🕰️&nbsp 진료시간 : ${todayOpen} ~ ${todayClose}</li>`
-
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakText('진료시간: ${todayOpen}부터 ${todayClose}까지');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🕰️&nbsp 진료시간 : ${todayOpen} ~ ${todayClose}</span></li>`
         : ``
-
       }
-
           ${weekdayLunch != 0 && weekdayLunch != null
-
-        ? `<li class="available">🕰️&nbsp 점심시간 : ${weekdayLunch}</li>`
-
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakText('점심시간: ${weekdayLunch}');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🕰️&nbsp 점심시간 : ${weekdayLunch}</span></li>`
         : ``
-
       }  
-
           ${parkingCapacity != 0 && parkingCapacity != null
-        ? `<li class="available">
-          🚗&nbsp 주차 가능 : ${parkingCapacity}대
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakText('주차 가능: ${parkingCapacity}대, ${parkingFee === 'Y' ? '유료 주차' : '무료 주차'}');" style="cursor: pointer;" title="클릭하여 듣기">
+          <span class="content">🚗&nbsp 주차 가능 : ${parkingCapacity}대
           <span> ${parkingFee === 'Y' ? '&nbsp&nbsp유료 주차' : '&nbsp&nbsp무료 주차'} </span>
+          </span>
         </li>`
         : `<li class="unavailable">주차장 없음</li>`
       }
-
           ${doctorNum != 0 && doctorNum != null
-
-        ? `<li class="available">🧑‍⚕️&nbsp 일반의 : ${doctorNum}명</li>`
-
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakText('일반의: ${doctorNum}명');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">🧑‍⚕️&nbsp 일반의 : ${doctorNum}명</span></li>`
         : `<li class="unavailable">의사 없음</li>`
-
       }
-
           ${professionalDoctors != 0 && professionalDoctors != null
-
-        ? `<li class="available">👩🏽‍⚕️&nbsp 전문의 : ${professionalDoctors}명</li>`
-
+        ? `<li class="available emergency-tts-item tts-item" onclick="speakText('전문의: ${professionalDoctors}명');" style="cursor: pointer;" title="클릭하여 듣기"><span class="content">👩🏽‍⚕️&nbsp 전문의 : ${professionalDoctors}명</span></li>`
         : `<li class="unavailable">전문의 없음</li>`
-
       }
         </ul>
-
       </div>
-
       <div class="info-footer">
-
         <a href="${googleDirectionsUrl}" target="_blank" class="google-btn" rel="noopener noreferrer">
-
           길찾기
-
         </a>
-
       </div>
-
     </div>
-
   `;
 
-
     const position = new window.kakao.maps.LatLng(coordinateY, coordinateX);
-
-
-
     const customOverlay = new window.kakao.maps.CustomOverlay({
-
       map: null,
-
       position: position,
-
       content: wrapper,
-
       yAnchor: 1.12,
-
       xAnchor: 0.5
-
     });
 
-
-    // 닫기 버튼 클릭 이벤트는 그대로 유지
-
     wrapper.querySelector('.close-btn').onclick = () => {
-
       customOverlay.setMap(null);
-
     };
 
-
     return customOverlay;
-
   },
+
   // 반경 표시
   loadCircle() {
     var circle = new window.kakao.maps.Circle({
       center: new window.kakao.maps.LatLng(this.$store.getters.userLat, this.$store.getters.userLng),
-      radius: this.radius * 1000, // 미터 단위의 원의 반지름 
-      strokeWeight: 5, // 선 두께 
-      strokeColor: '#75B8FA', // 선 색깔
-      strokeOpacity: 1, // 선의 불투명도, 1에서 0 사이의 값이며 0에 가까울수록 투명
-      strokeStyle: 'dashed', // 선 스타일
-      // fillColor: '#CFE7FF', // 채우기 색깔
-      // fillOpacity: 0.1  // 채우기 불투명도   
+      radius: this.radius * 1000,
+      strokeWeight: 5,
+      strokeColor: '#75B8FA',
+      strokeOpacity: 1,
+      strokeStyle: 'dashed',
     })
     circle.setMap(this.map);
   },
 
   // 실제 도로 경로 표시 기능
   async showRoute(hospital) {
-    // 기존 경로가 있다면 제거
     if (this.routePolyline) {
       this.routePolyline.setMap(null);
     }
@@ -511,22 +625,19 @@ export default {
     const hospitalPosition = new window.kakao.maps.LatLng(hospital.coordinateY, hospital.coordinateX);
 
     try {
-      // 카카오 길찾기 API 호출
       const routeData = await this.getDirections(
         this.$store.getters.userLng, this.$store.getters.userLat,
         hospital.coordinateX, hospital.coordinateY
       );
 
       if (routeData && routeData.routes && routeData.routes.length > 0) {
-        // 실제 도로 경로 표시
         const route = routeData.routes[0];
         const path = [];
 
-        // 경로의 모든 좌표를 추출
         route.sections.forEach(section => {
           section.roads.forEach(road => {
             road.vertexes.forEach((vertex, index) => {
-              if (index % 2 === 0) { // x, y 좌표 쌍으로 처리
+              if (index % 2 === 0) {
                 const lng = road.vertexes[index];
                 const lat = road.vertexes[index + 1];
                 if (lng && lat) {
@@ -537,7 +648,6 @@ export default {
           });
         });
 
-        // 경로를 지도에 표시
         this.routePolyline = new window.kakao.maps.Polyline({
           path: path,
           strokeWeight: 10,
@@ -557,24 +667,13 @@ export default {
         this.routePolyline.setMap(this.map);
         this.dashedLine.setMap(this.map);
 
-        // 지도 범위 조정
-        // const bounds = new window.kakao.maps.LatLngBounds();
-        // path.forEach(point => bounds.extend(point));
-        // this.map.setBounds(bounds);
-
-        // 실제 이동 거리와 시간 표시
-        const distance = (route.summary.distance / 1000).toFixed(1); // km 변환
-        const duration = Math.round(route.summary.duration / 60); // 분 변환
-
-        // alert(`${hospital.hospitalName}까지\n거리: ${distance}km\n예상 시간: ${duration}분`);
+        const distance = (route.summary.distance / 1000).toFixed(1);
+        const duration = Math.round(route.summary.duration / 60);
       } else {
-        // 길찾기 실패 시 직선거리로 표시
         this.showStraightRoute(hospital);
       }
     } catch (error) {
       console.error('경로 검색 오류:', error);
-      // 오류 발생 시 직선거리로 표시
-      // this.showStraightRoute(hospital);
     }
   },
 
@@ -586,7 +685,7 @@ export default {
           origin: `${startX},${startY}`,
           destination: `${endX},${endY}`,
           waypoints: '',
-          priority: 'RECOMMEND', // 추천 경로
+          priority: 'RECOMMEND',
           car_fuel: 'GASOLINE',
           car_hipass: false,
           alternatives: false,
@@ -632,12 +731,11 @@ export default {
       hospital.coordinateY,
       hospital.coordinateX
     );
-
-    // alert(`${hospital.hospitalName}까지의 직선거리: ${distance.toFixed(2)}km\n(실제 경로를 찾을 수 없어 직선거리로 표시)`);
   },
+
   // 두 지점 간의 거리 계산 (하버사인 공식)
   calculateDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371; // 지구의 반지름 (km)
+    const R = 6371;
     const dLat = this.deg2rad(lat2 - lat1);
     const dLng = this.deg2rad(lng2 - lng1);
     const a =
