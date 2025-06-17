@@ -234,6 +234,17 @@
   background: #D8EFE1;
 }
 
+.hospital_flex {
+  padding: 30px;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 30px;
+  background: white;
+  transition: all 0.2s ease-in-out;
+}
+
+
 /* .hospital_flex.selected:hover{
   background: #D8EFE1;
 } */

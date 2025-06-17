@@ -49,7 +49,7 @@ export default [
   },
   {
     id: 9,
-    title: "한의원",
+    title: "한의과",
     image: "https://i.imgur.com/L0mMSxd.png",
     content: "만성 통증, 기력 보강, 수술 후 회복"
   },

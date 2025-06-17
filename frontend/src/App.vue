@@ -15,11 +15,12 @@
         </div>
         <div v-else>
           <div class="test_flex">
-            <ul class="test">
+            병원 리스트
+            <!-- <ul class="test">
               <li> <button>구현예정</button> </li>
               <li> <button>구현예정</button> </li>
               <li> <button>구현예정</button> </li>
-            </ul>
+            </ul> -->
             <div class="custom-select">
               <select id="custom-select">
                 <option value="">정렬</option>
@@ -35,15 +36,34 @@
           <div class="hospital_visible" v-if="hospitalList">
             <div class="hospital_info" v-for="(hospitals, i) in hospitalList" :key="i">
               <div class="hr"></div>
-              <div class="hospital_flex">
+              <a class="hospital_flex_info" :href="hospitals.hospitalHomepage ?? ''" target="_blank"
+                rel="noopener noreferrer">
                 <div class="hospital_container">
                   <div class="hospital_name"> {{ hospitals.hospitalName }} </div>
                   <div class="hospital_department"> {{ hospitals.subject }} </div>
-                  <div class="hospital_address"> 09 : 00 ~ 16 : 00 </div>
+                  <div v-if="hospitals.todayOpen" class="hospital_address">
+                    {{ hospitals.todayOpen }} ~ {{ hospitals.todayClose || '' }}
+                  </div>
+                  <div v-else class="hospital_address">
+                    진료시간 정보 없음
+                  </div>
+                  <div v-if="hospitals.hospitalHomepage" class="hospital_address">
+                    <a :href="hospitals.hospitalHomepage">{{ hospitals.hospitalHomepage }} </a>
+                  </div>
+                  <div v-else class="hospital_address">
+                    홈페이지 정보 없음
+                  </div>
                   <div class="hospital_content"> {{ hospitals.hospitalAddress }} </div>
                 </div>
-                <img class="hospital_img" :src="hospitalimg">
-              </div>
+                <div class="hospital_load">
+                  <a :href="`https://www.google.com/maps/dir/?api=1&origin=${this.$store.getters.userLat},${this.$store.getters.userLng}&destination=${hospitals.coordinateY},${hospitals.coordinateX}&travelmode=transit`"
+                    target="_blank" class="hospital_load-btn" rel="noopener noreferrer">
+                    길찾기
+                  </a>
+                </div>
+                <!-- <img class="hospital_img" :src="hospitalimg"> -->
+
+              </a>
             </div>
           </div>
 

@@ -5,7 +5,7 @@ export default {
   async fetch_default() {
     try {
       // subs 조건은 호출하는 쪽(App.vue)에서 이미 확인하므로 여기서 중복 확인할 필요가 없습니다.
-      const res = await axios.get('https://hospitalmap.duckdns.org/hospitalsData', {
+      const res = await axios.get('http://localhost:8889/hospital_main/hospitalsData', {
         params: {
           subs: this.subs.join(','),
           userLat: this.$store.getters.userLat,
@@ -24,7 +24,7 @@ export default {
   // 약국 데이터 가져오기
   async fetch_pharmacy() {
     try {
-      const res = await axios.get('https://hospitalmap.duckdns.org/pharmaciesData', {
+      const res = await axios.get('http://localhost:8889/hospital_main/pharmaciesData', {
         params: {
           userLat: this.$store.getters.userLat,
           userLng: this.$store.getters.userLng,
@@ -43,8 +43,8 @@ export default {
     try {
 
       if (!this.socket || this.socket.readyState === WebSocket.CLOSED) {
-        // console.log('웹소켓 연결 시도');
-        this.socket = new WebSocket('wss://hospitalmap.duckdns.org/emergency-websocket');
+        console.log('웹소켓 연결 시도');
+        this.socket = new WebSocket('ws://localhost:8889/hospital_main/emergency-websocket');
 
         /* 연결 이벤트는 처음 한 번만 등록 */
         this.socket.addEventListener('open', () => console.log('WebSocket 연결됨'));
@@ -56,19 +56,19 @@ export default {
       this.socket.onmessage = (event) => {
         const receivedData = JSON.parse(event.data);
         if (receivedData.body && receivedData.body.items) {
-          // console.log("웹소켓 초기 데이터 업데이트");
+          console.log("웹소켓 초기 데이터 업데이트");
           this.emergencyList = receivedData.body.items.item;
           console.log(this.emergencyList);
           return;
         } else if (Array.isArray(receivedData)) {
-          // console.log("웹소켓 실시간 업데이트");
+          console.log("웹소켓 실시간 업데이트");
 
           // 이전 데이터와 비교하여 변경사항이 있는지 확인
           const hasChanges = JSON.stringify(this.emergencyList) !== JSON.stringify(receivedData);
 
           if (hasChanges) {
             this.emergencyList = receivedData;
-            // console.log("응급실 데이터 업데이트됨");
+            console.log("응급실 데이터 업데이트됨");
             console.log(this.emergencyList);
           }
         } else {

@@ -58,7 +58,7 @@ export default [
   {
     id: 8,
     title: "소화 / 식사",
-    image: "fa-solid fa-stomach",
+    image: "fa-solid fa-skull",
     content: "예전보다 밥맛이 없고, 식사 후에 속이 더부룩한 경우가 많아지셨나요?",
     departments: ["가정의학과"]
   },

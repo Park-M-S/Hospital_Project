@@ -9,6 +9,10 @@
 }
 
 .test_flex {
+  font-family: 'Pretendard-SemiBold';
+  font-size: x-large;
+  color: #298f20;
+  margin-left: 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -86,7 +90,7 @@
   flex-direction: column;
 }
 
-.hospital_flex {
+.hospital_flex_li {
   padding: 30px;
   display: flex;
   justify-content: space-between;
@@ -96,14 +100,30 @@
   transition: all 0.2s ease-in-out;
 }
 
+.hospital_flex_info {
+  padding: 30px;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 30px;
+  background: white;
+  transition: all 0.2s ease-in-out;
+}
+
+/* .hospital_flex_info:hover{
+  background: rgba(225, 225, 230);
+} */
+
 .hospital_container {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 10px;
 }
 
 .hospital_name {
-  color: #33af28;
+  font-family: 'Pretendard-SemiBold';
+  color: #298f20;
   font-size: 20px;
   font-weight: bold;
 }
@@ -114,6 +134,32 @@
 
 .hospital_address {
   color: gray;
+}
+
+.hospital_load {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+}
+
+.hospital_load-btn {
+  display: block;
+  width: 100px;
+  padding: 10px 20px;
+  border-radius: 15px;
+  background-color: gray;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s ease-in-out;
+  box-sizing: border-box;
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
+}
+
+.hospital_load-btn:hover {
+  background-color: #298f20;
 }
 
 /* .hospital_content {
