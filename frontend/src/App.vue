@@ -57,7 +57,7 @@
                 </div>
                 <div class="hospital_load">
                   <a :href="`https://www.google.com/maps/dir/?api=1&origin=${this.$store.getters.userLat},${this.$store.getters.userLng}&destination=${hospitals.coordinateY},${hospitals.coordinateX}&travelmode=transit`"
-                    target="_blank" class="hospital_load-btn" rel="noopener noreferrer">
+                    target="_blank" class="hospital_load-btn" rel="noopener noreferrer" @click="speakTagTitle('해당병원까지의 길찾기 페이지로 이동합니다.')">
                     길찾기
                   </a>
                 </div>
