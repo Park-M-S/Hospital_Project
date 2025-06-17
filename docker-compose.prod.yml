@@ -48,6 +48,7 @@ services:
       - HOSPITAL_PRODOC_API_KEY=${HOSPITAL_PRODOC_API_KEY}
       - HOSPITAL_PHARMACY_API_KEY=${HOSPITAL_PHARMACY_API_KEY}
       - HOSPITAL_EMERGENCY_API_KEY=${HOSPITAL_EMERGENCY_API_KEY}
+      - API_ADMIN_KEY=${API_ADMIN_KEY}
     volumes:
       - /opt/hospital/logs/backend:/app/logs
     depends_on:
