@@ -5,7 +5,7 @@
     <div class="header">
       <vue3-tags-input :tags="tags" placeholder="진료과를 검색 하세요." @on-tags-changed="handleChangeTag" />
       <div v-if="subs.length" class="header_reset">
-        <div v-on:click="reset"> 초기화 <i class="fa-solid fa-trash-can"></i></div>
+        <div v-on:click="reset"> <i class="fa-solid fa-trash-can"></i> 초기화 </div>
       </div>
     </div>
     <div class="sidebar">
@@ -50,7 +50,8 @@
         </div>
       </div>
       <div class="tag_container">
-        <div class="tag" v-for="(tagItem, i) in tagButton" :key="i" @click="handleAddTag(tagItem.title)">
+        <div class="tag" v-for="(tagItem, i) in tagButton" :key="i"
+          @click="handleAddTag(tagItem.title); speakTagTitle(tagItem.title + '태그를 클릭하셨습니다.')">
           <i :class="tagItem.image"></i>
           <span> {{ tagItem.title }} </span>
         </div>
@@ -97,7 +98,8 @@
       <!-- 진료과 선택 -->
       <div v-if=isBottombarOptions class="bottombar_content">
         <div class="department_info">
-          <div v-for="(nameItem, i) in name" :key="i" @click="toggleDepartmentSelection(nameItem.title)">
+          <div v-for="(nameItem, i) in name" :key="i"
+            @click="toggleDepartmentSelection(nameItem.title); speakTagTitle(nameItem.title + '를 클릭하셨습니다.')">
             <div class="hr"></div>
             <div class="hospital_flex" :class="{ selected: isDepartmentSelected(nameItem.title) }">
               <div class="hospital_container">
@@ -108,13 +110,13 @@
             </div>
           </div>
         </div>
-
       </div>
       <!-- 증상 별 진료과 선택 -->
       <div v-else class="bottombar_content">
         <ul class="check_list">
-          <li v-for="item in diagnosis" :key="item.id" @click="toggleDepartmentSelection(item.departments)"
-            :class="{ selected: isSelected(item) }">
+          <li v-for="item in diagnosis" :key="item.id"
+            @click="toggleDepartmentSelection(item.departments); speakTagTitle(item.content)"
+            :class="{ selected: isSelected(item.departments) }">
 
             <i :class="item.image"></i>
             <span>{{ item.content }}</span>
@@ -150,6 +152,7 @@ import '@/styles/font.css'
 
 // package
 import Vue3TagsInput from 'vue3-tags-input';
+import { speakText } from '@/services/api/tts/tts.js'
 
 // assets
 // import hospitalList from '@/assets/hospitalData.js';
@@ -196,7 +199,7 @@ export default {
       subsTag: [],
 
       markers: [],
-      isSideBar: false,
+      isSideBar: true,
       isBottomBar: true,
       tagButton: tagButton,
 
@@ -349,19 +352,40 @@ export default {
       return item.id === this.selectedItemId;
     },
 
+    speakTagTitle(title) {
+      speakText(title);
+    },
+
     // 진료과 토글 선택
     toggleDepartmentSelection(departmentTitle) {
-      // 현재 진료과 태그 리스트에 값이 있다면
-      if (this.subs.includes(departmentTitle)) {
-        // 리스트에서 해당 과목 제거
-        this.subs = this.subs.filter(item => item !== departmentTitle);
-        this.tags = this.tags.filter(item => item !== departmentTitle);
-      } else {
-        // 리스트에 해당 과목 푸쉬
-        this.tags.push(departmentTitle);
-        this.subs.push(departmentTitle);
+      // 배열일 경우 (복수 항목)
+      if (Array.isArray(departmentTitle)) {
+        const isAllIncluded = departmentTitle.every(item => this.subs.includes(item));
+
+        if (isAllIncluded) {
+          // 전부 포함되어 있다면 제거
+          this.subs = this.subs.filter(item => !departmentTitle.includes(item));
+          this.tags = this.tags.filter(item => !departmentTitle.includes(item));
+        } else {
+          // 일부라도 없으면 추가
+          departmentTitle.forEach(item => {
+            if (!this.subs.includes(item)) this.subs.push(item);
+            if (!this.tags.includes(item)) this.tags.push(item);
+          });
+        }
+      }
+      // 문자열일 경우 (단일 항목)
+      else {
+        if (this.subs.includes(departmentTitle)) {
+          this.subs = this.subs.filter(item => item !== departmentTitle);
+          this.tags = this.tags.filter(item => item !== departmentTitle);
+        } else {
+          this.subs.push(departmentTitle);
+          this.tags.push(departmentTitle);
+        }
       }
     },
+
 
     // 검색 태그 삭제
     // 검색 태그 삭제 및 초기화
