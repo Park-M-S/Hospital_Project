@@ -121,6 +121,7 @@ jobs:
           HOSPITAL_PRODOC_API_KEY=${{ secrets.HOSPITAL_PRODOC_API_KEY }}
           HOSPITAL_PHARMACY_API_KEY=${{ secrets.HOSPITAL_PHARMACY_API_KEY }}
           HOSPITAL_EMERGENCY_API_KEY=${{ secrets.HOSPITAL_EMERGENCY_API_KEY }}
+          API_ADMIN_KEY=${{ secrets.API_ADMIN_KEY }}
           EOF
           
           # 환경변수 확인
