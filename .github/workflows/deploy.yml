@@ -123,13 +123,9 @@ jobs:
           HOSPITAL_EMERGENCY_API_KEY=${{ secrets.HOSPITAL_EMERGENCY_API_KEY }}
           API_ADMIN_KEY=${{ secrets.API_ADMIN_KEY }}
           
-          # 지역 설정
-          HOSPITAL_REGION_SIDO_CODE=${{ secrets.HOSPITAL_REGION_SIDO_CODE }}
-          HOSPITAL_REGION_SIDO_NAME=${{ secrets.HOSPITAL_REGION_SIDO_NAME }}
-          HOSPITAL_REGION_CITY_NAME=${{ secrets.HOSPITAL_REGION_CITY_NAME }}
-          HOSPITAL_REGION_SIGUNGU_CODES=${{ secrets.HOSPITAL_REGION_SIGUNGU_CODES }}
-          HOSPITAL_REGION_SIGUNGU_NAMES=${{ secrets.HOSPITAL_REGION_SIGUNGU_NAMES }}
-          HOSPITAL_REGION_EMERGENCY_CITY_NAME=${{ secrets.HOSPITAL_REGION_EMERGENCY_CITY_NAME }}
+          # 데이터베이스 설정
+          DB_URL=${{ secrets.DB_URL }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
           
 
           EOF
