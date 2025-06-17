@@ -122,6 +122,22 @@ jobs:
           HOSPITAL_PHARMACY_API_KEY=${{ secrets.HOSPITAL_PHARMACY_API_KEY }}
           HOSPITAL_EMERGENCY_API_KEY=${{ secrets.HOSPITAL_EMERGENCY_API_KEY }}
           API_ADMIN_KEY=${{ secrets.API_ADMIN_KEY }}
+          
+          # 지역 설정
+          HOSPITAL_REGION_SIDO_CODE=${{ secrets.HOSPITAL_REGION_SIDO_CODE }}
+          HOSPITAL_REGION_SIDO_NAME=${{ secrets.HOSPITAL_REGION_SIDO_NAME }}
+          HOSPITAL_REGION_CITY_NAME=${{ secrets.HOSPITAL_REGION_CITY_NAME }}
+          HOSPITAL_REGION_SIGUNGU_CODES=${{ secrets.HOSPITAL_REGION_SIGUNGU_CODES }}
+          HOSPITAL_REGION_SIGUNGU_NAMES=${{ secrets.HOSPITAL_REGION_SIGUNGU_NAMES }}
+          HOSPITAL_REGION_EMERGENCY_CITY_NAME=${{ secrets.HOSPITAL_REGION_EMERGENCY_CITY_NAME }}
+          
+          # API 베이스 URL 설정
+          HOSPITAL_MAIN_API_BASE_URL=${{ secrets.HOSPITAL_MAIN_API_BASE_URL }}
+          HOSPITAL_DETAIL_API_BASE_URL=${{ secrets.HOSPITAL_DETAIL_API_BASE_URL }}
+          HOSPITAL_MEDICAL_SUBJECT_API_BASE_URL=${{ secrets.HOSPITAL_MEDICAL_SUBJECT_API_BASE_URL }}
+          HOSPITAL_PRODOC_API_BASE_URL=${{ secrets.HOSPITAL_PRODOC_API_BASE_URL }}
+          HOSPITAL_PHARMACY_API_BASE_URL=${{ secrets.HOSPITAL_PHARMACY_API_BASE_URL }}
+          HOSPITAL_EMERGENCY_API_BASE_URL=${{ secrets.HOSPITAL_EMERGENCY_API_BASE_URL }}
           EOF
           
           # 환경변수 확인
@@ -131,6 +147,7 @@ jobs:
           echo "  SSL 타입: Let's Encrypt (DuckDNS)"
           echo "  백엔드 포트: 8888"
           echo "  DB 포트: 3500"
+          echo "  지역: ${{ secrets.HOSPITAL_REGION_CITY_NAME }}"
           
           # DuckDNS 설정 디렉토리 생성
           mkdir -p ./duckdns
