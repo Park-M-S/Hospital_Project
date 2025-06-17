@@ -4,7 +4,9 @@
   <div class="container" :class="{ 'blurred': isBlurred }">
     <div class="header">
       <vue3-tags-input :tags="tags" placeholder="진료과를 검색 하세요." @on-tags-changed="handleChangeTag" />
-      <div class="header_reset" v-on:click="reset"><i class="fa-solid fa-trash-can"></i> 초 기 화 </div>
+      <div v-if="subs.length" class="header_reset">
+        <div v-on:click="reset"> 초기화 <i class="fa-solid fa-trash-can"></i></div>
+      </div>
     </div>
     <div class="sidebar">
       <div class="sidebar_container">
@@ -178,24 +180,19 @@ export default {
     return {
       name: data,
       map: null,
-      // tagList: ['응급실', '전문의', '주차가능', '약국'],
+
       hospitalList: [],
       pharmacyList: [],
       emergencyList: [],
 
-      activeOverlay: null,
-      activeEmergencyId: null,
+      openOverlays: {},
 
       hospitalimg: hospitalimg,
       radius: 1.0,
 
-      // 전체 태그
+
       tags: [],
-
-      // 진료과 태그
       subs: [],
-
-      // 진료과 세부 태그
       subsTag: [],
 
       markers: [],
@@ -242,20 +239,59 @@ export default {
   },
   watch: {
     tags: {
-      handler(newTags, oldTags) {
+      async handler(newTags, oldTags) {
         console.log('tags : ' + this.tags + '\n\n' + 'subs: ' + this.subs + '\n\n' + 'subsTag : ' + this.subsTag);
-        const removedEmergency = oldTags.includes('응급실') && !newTags.includes('응급실');
-        if (removedEmergency) {
-          this.fetch_emergency_stop();
+
+        // 실행할 Promise들을 미리 정의합니다.
+        // 기본값은 빈 배열을 즉시 반환하는 해결된(resolved) Promise입니다.
+        let hospitalPromise = Promise.resolve([]);
+        let pharmacyPromise = Promise.resolve([]);
+        let emergencyPromise = Promise.resolve([]);
+
+        if (this.subs.length) {
+          // fetch 함수가 반환하는 Promise 자체를 변수에 할당합니다.
+          hospitalPromise = this.fetch_default();
+        }
+
+        // --- 주변 약국 데이터 관리 ---
+        if (this.tags.includes('주변 약국')) {
+          pharmacyPromise = this.fetch_pharmacy();
+        }
+
+        // --- 응급실 데이터 관리 (웹소켓은 비동기 대기 없이 즉시 실행) ---
+        if (this.tags.includes('응급실')) {
+          emergencyPromise = this.fetch_emergency();
+        } else {
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.close();
+          }
           this.emergencyList = [];
         }
-        
-        if (this.subsTag.includes('주변 약국')) {
-          this.fetch_pharmacy();
-        } else if (this.subs.includes('응급실')) {
-          this.fetch_emergency_start();
-        } else {
-          this.fetch_default();
+
+        try {
+          // Promise.all로 두 요청이 모두 끝나기를 기다리고, '반환된' 데이터를 각각 변수에 받습니다.
+          const [hospitalData, pharmacyData, emergencyData] = await Promise.all([
+            hospitalPromise,
+            pharmacyPromise,
+            emergencyPromise
+          ]);
+
+          // 받아온 데이터로 컴포넌트의 상태를 '직접' 업데이트합니다.
+          // 이 시점에 데이터 상태가 확정됩니다.
+          this.hospitalList = hospitalData || [];
+          this.pharmacyList = pharmacyData || [];
+          this.emergencyList = emergencyData || [];
+
+          // 모든 상태가 완벽하게 준비된 후, 마커를 그립니다.
+          this.loadMaker();
+
+        } catch (error) {
+          console.error("데이터를 가져오는 중 오류 발생:", error);
+          // 오류 발생 시 모든 리스트를 비워 안전하게 만듭니다.
+          this.hospitalList = [];
+          this.pharmacyList = [];
+          this.emergencyList = [];
+          this.loadMaker();
         }
       },
       deep: true
@@ -265,29 +301,37 @@ export default {
       document.documentElement.style.setProperty('--sidebar-width', sidebarWidth);
     },
     emergencyList: {
-      handler(newList, oldList) {
+      handler(newList) {
+        // 1. this.emergencyList가 null 또는 undefined가 아닌지 확인
+        //    그리고 배열인지 확인 (선택적이지만 안전성을 높여줌)
+        if (this.emergencyList && Array.isArray(this.emergencyList)) {
+          // 2.newList가 유효한 배열인지도 확인 (handler의 인자로 넘어오는 값)
+          if (newList && Array.isArray(newList)) {
+            // 현재 열려있는 모든 오버레이에 대해 반복 실행
+            for (const emergencyId in this.openOverlays) {
+              // 최신 목록에서 해당 응급실의 업데이트된 정보를 찾습니다.
+              const updatedEmergency = newList.find(e => (e.hpid || e.dutyName) === emergencyId);
+              const oldOverlay = this.openOverlays[emergencyId];
 
-        // 현재 응급실 오버레이가 열려있는 경우에만 업데이트
-        if (this.activeOverlay && this.activeEmergencyId) {
-          const updatedEmergency = newList.find(emergency =>
-            emergency.hpid === this.activeEmergencyId ||
-            emergency.dutyName === this.activeEmergencyId
-          );
-
-          if (updatedEmergency) {
-            // 기존 오버레이 제거
-            this.activeOverlay.setMap(null);
-
-            // 새로운 데이터로 오버레이 생성
-            const newOverlay = this.emergencyOverlay(updatedEmergency);
-            newOverlay.setMap(this.map);
-            this.activeOverlay = newOverlay;
-
-            console.log('응급실 오버레이 실시간 업데이트 완료');
+              if (oldOverlay) { // oldOverlay가 존재하는지 확인
+                if (updatedEmergency) {
+                  // 정보가 있다면, 기존 오버레이를 닫고 새 정보로 다시 엽니다.
+                  oldOverlay.setMap(null);
+                  const newOverlay = this.emergencyOverlay(updatedEmergency);
+                  newOverlay.setMap(this.map);
+                  // 관리 객체에 새로 만든 오버레이로 교체해줍니다.
+                  this.openOverlays[emergencyId] = newOverlay;
+                } else {
+                  // 최신 목록에 해당 응급실이 없다면, 그냥 닫아버립니다.
+                  oldOverlay.setMap(null);
+                  delete this.openOverlays[emergencyId];
+                }
+              }
+            }
           }
         }
 
-        // 마커도 업데이트
+        // 마커 업데이트 로직은 그대로 유지
         if (this.map) {
           this.loadMaker();
         }
@@ -320,12 +364,32 @@ export default {
     },
 
     // 검색 태그 삭제
+    // 검색 태그 삭제 및 초기화
     reset() {
       this.subs = [];
       this.tags = [];
       this.subsTag = [];
-      this.map = null;
-      this.loadMaker();
+      // this.map = null; // 이 줄을 제거하거나 주석 처리합니다.
+      this.loadMaker(); // 이 함수가 마커를 다시 로드합니다.
+      // 추가적으로, 모든 오버레이를 닫는 로직이 필요할 수 있습니다.
+      for (const emergencyId in this.openOverlays) {
+        if (this.openOverlays[emergencyId]) {
+          this.openOverlays[emergencyId].setMap(null);
+          delete this.openOverlays[emergencyId];
+        }
+      }
+      // 만약 routePolyline이나 dashedLine이 있다면 제거
+      if (this.routePolyline) {
+        this.routePolyline.setMap(null);
+        this.routePolyline = null;
+      }
+      if (this.dashedLine) {
+        this.dashedLine.setMap(null);
+        this.dashedLine = null;
+      }
+
+      // (선택 사항) 오버레이 겹침 방지 로직을 사용한다면 overlaysToManage 배열도 초기화
+      this.overlaysToManage = [];
     },
 
     // 진료과 이름이 selectedSymptoms 배열에 있는지 확인하는 함수 (클래스 바인딩용)

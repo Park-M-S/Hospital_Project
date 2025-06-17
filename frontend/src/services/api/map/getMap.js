@@ -55,6 +55,8 @@ export default {
       { list: this.pharmacyList, method: this.createPharmacyMarker },
     ];
 
+    console.log('emergencyList : ' + this.emergencyList + '\n\n' + 'hospitalList: ' + this.hospitalList + '\n\n' + 'pharmacyList : ' + this.pharmacyList);
+
     markerTypes.forEach(({ list, method }) => {
       if (list?.length) list.forEach(item => method.call(this, item));
     });
@@ -78,23 +80,33 @@ export default {
     marker.setMap(this.map);
 
     window.kakao.maps.event.addListener(marker, 'click', () => {
-      if (this.activeOverlay) {
-        this.activeOverlay.setMap(null);
+      const emergencyId = emergency.hpid || emergency.dutyName;
+
+      // 1. 이미 해당 마커의 오버레이가 열려있는지 확인
+      if (this.openOverlays[emergencyId]) {
+        // 2. 열려있다면 닫아줍니다 (토글 기능)
+        const existingOverlay = this.openOverlays[emergencyId];
+        existingOverlay.setMap(null);
+
+        // openOverlays 객체에서도 제거합니다.
+        delete this.openOverlays[emergencyId];
+
+      } else {
+        // 3. 열려있지 않다면 새로 생성해서 보여줍니다.
+        // 기존의 "다른 오버레이 닫는 로직"은 삭제합니다.
+        const newOverlay = this.emergencyOverlay(emergency);
+        newOverlay.setMap(this.map);
+
+        // 새로 연 오버레이를 openOverlays 객체에 추가하여 관리합니다.
+        this.openOverlays[emergencyId] = newOverlay;
       }
-
-      // 현재 열려있는 응급실 ID 저장 (고유 식별자 사용)
-      this.activeEmergencyId = emergency.hpid || emergency.dutyName;
-
-      const newOverlay = this.emergencyOverlay(emergency);
-      newOverlay.setMap(this.map);
-      this.activeOverlay = newOverlay;
-      this.showRoute(emergency);
     });
     this.markers.push(marker);
   },
 
   // === [수정됨] 응급실 오버레이 ===
   emergencyOverlay(emergency) {
+    const emergencyId = emergency.hpid || emergency.dutyName;
     const startY = this.$store.getters.userLat;
     const startX = this.$store.getters.userLng;
     const googleDirectionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${startY},${startX}&destination=${emergency.coordinateY},${emergency.coordinateX}&travelmode=transit`;
@@ -107,86 +119,73 @@ export default {
 
     wrapper.innerHTML = `
     <div class="info-container">
-      <div class="info-title-emergency"> ${emergency.dutyName}
-        <div class="close-btn" title="닫기">×</div>
+      <div class="info-title-emergency"> 
+        <span>${emergency.dutyName}</span>
+        <div class="header-controls">
+          <button class="toggle-btn open" title="상세 정보 접기/펼치기">▲</button>
+          <div class="close-btn" title="닫기">×</div>
+        </div>
       </div>
-      <div class="info-body">
+
+      <div class="info-body"> 
         <div class="update-time">
           <span class="emergency_default">
             <div class="subject-list-container">
               <div class="subject-tags-wrapper">
-              ${emergency.hvctayn 
-              ? `<span class="subject-tag-emergency"> CT </span>` 
-              : ''
-              }
-
-              ${emergency.hvmriayn
-              ? `<span class="subject-tag-emergency"> MRI </span>` 
-              : ''
-              }
-
-              ${emergency.hvventiayn 
-              ? `<span class="subject-tag-emergency"> 인공호흡기 </span>` 
-              : ''
-              }
-
+                ${emergency.hvctayn ? `<span class="subject-tag-emergency"> CT </span>` : ''}
+                ${emergency.hvmriayn ? `<span class="subject-tag-emergency"> MRI </span>` : ''}
+                ${emergency.hvventiayn ? `<span class="subject-tag-emergency"> 인공호흡기 </span>` : ''}
               </div>
             </div>
             업데이트 : ${updateTime}
           </span> 
         </div>
-        <ul class="details-list">
-      ${emergency.emergencyAddress 
-        ? `<li class="available">🏠 ${emergency.emergencyAddress}</li>` 
-        : '<li class="unavailable">🏠 주소 없음 </li>'
-      }
 
-      ${emergency.hvec > 0 
-        ? `<li class="available">🚑 응급실 일반 병상 : <span class="emergency_green">&nbsp ${emergency.hvec}석</span></li>` 
-        : `<li class="unavailable">🚑 <span class="emergency_red">&nbsp 응급실 일반 병상 부족 : ${emergency.hvec}석</span> </li>`
-      }
-
-      ${emergency.hvoc > 0 
-        ? `<li class="available">🩺 응급실 수술실 병상 : <span class="emergency_green">&nbsp ${emergency.hvoc}석</span></li>` 
-        : `<li class="unavailable">🩺 수술실 병상 부족 : <span class="emergency_red">&nbsp ${emergency.hvoc}석</span> </li>`
-      }
-
-      ${emergency.hvgc > 0 
-        ? `<li class="available">🛏️ 일반 입원실 병상 : <span class="emergency_green">&nbsp ${emergency.hvgc}석</span></li>` 
-        : `<li class="unavailable">🛏️ 입원실 병상 부족 : <span class="emergency_red">&nbsp ${emergency.hvoc}석</span> </li>`
-      }
-
-      ${emergency.dutyTel3 
-        ? `<li class="available">📞 전화번호 : ${emergency.dutyTel3}</li>` 
-        : ''
-      }
-
-
-        </ul>
+        <div class="collapsible-content open">
+          <ul class="details-list">
+            ${emergency.emergencyAddress ? `<li class="available">🏠&nbsp ${emergency.emergencyAddress}</li>` : ''}
+            ${emergency.hvec > 0 ? `<li class="available">🚑 &nbsp <span class="emergency_green"> 응급실 일반 병상 : ${emergency.hvec}석</span></li>` : `<li class="unavailable">🚑 <span class="emergency_red"> &nbsp 응급실 일반 병상 부족 : ${emergency.hvec}석</span> </li>`}
+            ${emergency.hvoc > 0 ? `<li class="available">🩺 &nbsp <span class="emergency_green"> 응급실 수술실 병상 : ${emergency.hvoc}석</span></li>` : `<li class="unavailable">🩺 <span class="emergency_red"> &nbsp 수술실 병상 부족 : ${emergency.hvoc}석</span> </li>`}
+            ${emergency.hvgc > 0 ? `<li class="available">🛏️ &nbsp <span class="emergency_green"> 일반 입원실 병상 : ${emergency.hvgc}석</span></li>` : `<li class="unavailable">🛏️ <span class="emergency_red"> &nbsp 입원실 병상 부족 : ${emergency.hvgc}석</span> </li>`}
+            ${emergency.dutyTel3 ? `<li class="available">📞&nbsp 전화번호 : ${emergency.dutyTel3}</li>` : ''}
+          </ul>
+        </div>
       </div>
+      
       <div class="info-footer">
         <a href="${googleDirectionsUrl}" target="_blank" class="emergency-google-btn" rel="noopener noreferrer">
           길찾기
         </a>
       </div>
     </div>
-  `;
+    `;
 
     const position = new window.kakao.maps.LatLng(emergency.coordinateY, emergency.coordinateX);
     const customOverlay = new window.kakao.maps.CustomOverlay({
       map: null,
       position: position,
       content: wrapper,
-      yAnchor: 1.15,
+      yAnchor: 1.12,
       xAnchor: 0.5,
       zIndex: 3,
     });
 
+    const toggleBtn = wrapper.querySelector('.toggle-btn');
+    const collapsibleContent = wrapper.querySelector('.collapsible-content');
+
+
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // 이벤트 버블링 방지
+      collapsibleContent.classList.toggle('open');
+      toggleBtn.classList.toggle('open');
+      toggleBtn.innerHTML = toggleBtn.classList.contains('open') ? '▲' : '▼';
+    });
+
     // 닫기 버튼 클릭 시 activeEmergencyId도 초기화
     wrapper.querySelector('.close-btn').onclick = () => {
-      customOverlay.setMap(null);
-      this.activeOverlay = null;
-      this.activeEmergencyId = null;
+      customOverlay.setMap(null); // 오버레이를 지도에서 제거
+      // openOverlays 객체에서도 해당 ID의 오버레이를 삭제합니다.
+      delete this.openOverlays[emergencyId];
     };
 
     return customOverlay;
@@ -252,7 +251,7 @@ export default {
         <div class="address">${address}</div>
         <ul class="details-list">
           ${pharmacyTel != null
-        ? `<li class="available">📞 전화번호 : ${pharmacyTel}</li>`
+        ? `<li class="available">📞&nbsp 전화번호 : ${pharmacyTel}</li>`
         : `<li class="unavailable">전화번호 없음</li>`
       }
      
@@ -273,7 +272,7 @@ export default {
       map: null,
       position: position,
       content: wrapper,
-      yAnchor: 1.15,
+      yAnchor: 1.12,
       xAnchor: 0.5
     });
 
@@ -382,7 +381,7 @@ export default {
 
           ${hospitalAddress != null
 
-        ? `<li class="available"> 🏠 ${hospitalAddress}</li>`
+        ? `<li class="available"> 🏠&nbsp ${hospitalAddress}</li>`
 
         : ``
 
@@ -390,7 +389,7 @@ export default {
 
           ${hospitalTel != 0 && hospitalTel != null
 
-        ? `<li class="available"> 📞 전화번호 : ${hospitalTel}  </li>`
+        ? `<li class="available"> 📞&nbsp 전화번호 : ${hospitalTel}  </li>`
 
         : `<li class="unavailable">전화번호 없음</li>`
 
@@ -399,7 +398,7 @@ export default {
 
           ${todayOpen != null && todayClose != null
 
-        ? `<li class="available"> 🕰️ 진료시간 : ${todayOpen} ~ ${todayClose}</li>`
+        ? `<li class="available"> 🕰️&nbsp 진료시간 : ${todayOpen} ~ ${todayClose}</li>`
 
         : ``
 
@@ -407,7 +406,7 @@ export default {
 
           ${weekdayLunch != 0 && weekdayLunch != null
 
-        ? `<li class="available">🕰️ 점심시간 : ${weekdayLunch}</li>`
+        ? `<li class="available">🕰️&nbsp 점심시간 : ${weekdayLunch}</li>`
 
         : ``
 
@@ -415,7 +414,7 @@ export default {
 
           ${parkingCapacity != 0 && parkingCapacity != null
         ? `<li class="available">
-          🚗 주차 가능 : ${parkingCapacity}대
+          🚗&nbsp 주차 가능 : ${parkingCapacity}대
           <span> ${parkingFee === 'Y' ? '&nbsp&nbsp유료 주차' : '&nbsp&nbsp무료 주차'} </span>
         </li>`
         : `<li class="unavailable">주차장 없음</li>`
@@ -423,7 +422,7 @@ export default {
 
           ${doctorNum != 0 && doctorNum != null
 
-        ? `<li class="available">🧑‍⚕️ 일반의 : ${doctorNum}명</li>`
+        ? `<li class="available">🧑‍⚕️&nbsp 일반의 : ${doctorNum}명</li>`
 
         : `<li class="unavailable">의사 없음</li>`
 
@@ -431,7 +430,7 @@ export default {
 
           ${professionalDoctors != 0 && professionalDoctors != null
 
-        ? `<li class="available">👩🏽‍⚕️ 전문의 : ${professionalDoctors}명</li>`
+        ? `<li class="available">👩🏽‍⚕️&nbsp 전문의 : ${professionalDoctors}명</li>`
 
         : `<li class="unavailable">전문의 없음</li>`
 
@@ -467,7 +466,7 @@ export default {
 
       content: wrapper,
 
-      yAnchor: 1.15,
+      yAnchor: 1.12,
 
       xAnchor: 0.5
 
@@ -486,13 +485,6 @@ export default {
     return customOverlay;
 
   },
-
-  // 닫기 버튼을 눌렀을 때 오버레이 닫기
-  closeOverlay() {
-    alert('닫기');
-    customOverlay.setMap(null);
-  },
-
   // 반경 표시
   loadCircle() {
     var circle = new window.kakao.maps.Circle({

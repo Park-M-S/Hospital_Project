@@ -14,11 +14,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Pretendard-Bold';
-  font-size: larger;
+  font-family: 'Pretendard-Regular';
+  font-size: 30px;
   right: 50px;
   position: absolute;
-  padding: 13px 25px;
+  padding: 5px 20px;
   border-radius: 20px;
   background-color: #e74c3c;
   color: white;
@@ -60,6 +60,10 @@
   background: #11BF7F !important;
   height: 50px !important;
   box-shadow: rgba(50, 50, 93, 0.25) 0px 6px 12px -2px, rgba(0, 0, 0, 0.3) 0px 3px 7px -3px !important;
+}
+
+.v3ti-tag-content {
+  font-family: 'Pretendard-Regular';
 }
 
 .v3ti-content {
