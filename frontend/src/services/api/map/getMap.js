@@ -418,12 +418,9 @@ export default {
     <div class="info-container">
       <div class="info-title-pharmacy">
         ${name}
-        <button class="tts-main-btn" onclick="speakPharmacyInfo(${JSON.stringify(pharmacyData).replace(/"/g, '&quot;')})" title="약국 정보 듣기">
-          <i class="fa-solid fa-volume-up"></i>
-        </button>
         <div class="close-btn" title="닫기">×</div>
       </div>
-      <div class="info-body" ondblclick="speakPharmacyInfo(${JSON.stringify(pharmacyData).replace(/"/g, '&quot;')})" title="더블클릭하면 전체 정보를 읽어드립니다">
+      <div class="info-body">
         <div class="address">${address}</div>
         <ul class="details-list">
           ${pharmacyTel != null
