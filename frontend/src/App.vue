@@ -219,7 +219,7 @@ export default {
       subsTag: [],
 
       markers: [],
-      isSideBar: true,
+      isSideBar: false,
       isBottomBar: true,
       tagButton: tagButton,
 
