@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
     
   backend:
-    build: ./hospital_main
+    image: hospital-backend:latest  # build 대신 image 사용 (GitHub Actions에서 빌드한 이미지)
     container_name: hospital-backend
     ports:
       - "8888:8888"
@@ -38,21 +38,15 @@ services:
     networks:
       - hospital-network
     restart: unless-stopped
-    
-  frontend:
-    build: ./frontend
-    container_name: hospital-frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-    networks:
-      - hospital-network
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      timeout: 30s
+      retries: 5
+      interval: 30s
+      start_period: 60s
 
 volumes:
   mariadb_data:
-
 networks:
   hospital-network:
     driver: bridge
