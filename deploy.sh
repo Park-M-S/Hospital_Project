@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hospital Project 백엔드 전용 배포 스크립트  
+# Hospital Project 백엔드 전용 배포 스크립트
 set -e
 
 echo "🚀 Hospital Project 백엔드 배포 시작..."
