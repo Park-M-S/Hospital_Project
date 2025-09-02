@@ -1,9 +1,8 @@
 #!/bin/bash
-
-# Hospital Project 자체 서명 SSL 배포 스크립트 
+# Hospital Project 백엔드 전용 배포 스크립트 
 set -e
 
-echo "🚀 Hospital Project 자체 서명 SSL 배포 시작..."
+echo "🚀 Hospital Project 백엔드 배포 시작..."
 
 # GitHub Actions가 아닌 로컬 실행 시 IP 가져오기
 if [ -z "$GITHUB_ACTIONS" ]; then
@@ -23,7 +22,8 @@ echo "📋 현재 설정:"
 echo "  서버 IP: ${SERVER_IP}"
 echo "  환경: ${ENVIRONMENT}"
 echo "  이미지 태그: ${IMAGE_TAG}"
-echo "  SSL 타입: 자체 서명 인증서"
+echo "  백엔드 포트: ${BACKEND_PORT}"
+echo "  DB 포트: ${DB_PORT}"
 
 # GitHub Actions가 아닌 로컬 실행 시 경고
 if [ -z "$GITHUB_ACTIONS" ]; then
@@ -45,9 +45,8 @@ echo "🧹 이미지 정리..."
 docker system prune -f
 
 echo "🎉 배포 완료!"
-echo "📍 HTTPS: https://${SERVER_IP} (자체 서명 인증서 - 보안 경고 발생)"
-echo "📍 HTTP:  http://${SERVER_IP} (HTTPS로 리다이렉트)"
+echo "📍 백엔드 API: http://${SERVER_IP}:8888"
 echo ""
-echo "🔐 브라우저 접속 방법:"
-echo "  1. https://${SERVER_IP} 접속"
-echo "  2. 보안 경고에서 '고급' → '안전하지 않음을 승인하고 계속'"
+echo "🔧 API 테스트:"
+echo "  curl http://${SERVER_IP}:8888/api/list"
+echo "  curl -X POST http://${SERVER_IP}:8888/api/pharmacy/save"
