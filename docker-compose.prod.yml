@@ -15,7 +15,6 @@ services:
       - "${DB_PORT:-3500}:3500"
     volumes:
       - /opt/hospital/data/mariadb:/var/lib/mysql
-      - ./mysql-config:/etc/mysql/conf.d:ro
     command: --port=3500 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     restart: unless-stopped
     networks:
@@ -38,8 +37,8 @@ services:
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      # DuckDNS 도메인을 CORS에 추가 (있는 경우에만)
-      - ALLOWED_ORIGINS=https://${DUCKDNS_DOMAIN:-localhost},http://localhost:5173
+      # CORS 설정 (필요시)
+      - ALLOWED_ORIGINS=http://localhost:5173,http://${EC2_HOST:-localhost}:8888
       
       # API 키 환경변수
       - HOSPITAL_MAIN_API_KEY=${HOSPITAL_MAIN_API_KEY}
@@ -67,71 +66,12 @@ services:
     networks:
       - hospital-network
     healthcheck:
-      # 수정된 헬스체크: /api/list 엔드포인트 사용 (실제 API + DB 연결 확인)
-      test: ["CMD", "curl", "-f", "http://localhost:8888/api/list"]
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
       timeout: 10s
       retries: 5
       interval: 30s
       start_period: 120s
 
-  # Vue.js 프론트엔드 (Caddy + DuckDNS SSL)
-  frontend:
-    image: hospital-frontend:${IMAGE_TAG:-latest}
-    container_name: hospital-frontend
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      # 기존 환경변수
-      - BACKEND_HOST=${BACKEND_HOST:-hospital-backend}
-      - BACKEND_PORT=${BACKEND_PORT:-8888}
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      
-      # DuckDNS 설정 (선택사항 - 없으면 HTTP 모드)
-      - DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-}
-      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-}
-      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-      - /opt/hospital/logs/caddy:/var/log/caddy
-    depends_on:
-      - backend
-    restart: unless-stopped
-    networks:
-      - hospital-network
-    healthcheck:
-      # 수정된 헬스체크: 더 안정적인 방식
-      test: ["CMD-SHELL", "curl -f -k https://localhost/ || curl -f http://localhost/"]
-      timeout: 10s
-      retries: 5
-      interval: 30s
-      start_period: 60s
-
-  # DuckDNS IP 자동 업데이트
-  duckdns:
-    image: linuxserver/duckdns
-    container_name: hospital-duckdns
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Asia/Seoul
-      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN:-hospitalmap}
-      - TOKEN=${DUCKDNS_TOKEN:-6828e51a-a9cd-4e03-83f6-d0362c2e4993}
-      - LOG_FILE=false
-      - UPDATE_IP=true
-    volumes:
-      - ./duckdns:/config
-    restart: unless-stopped
-    networks:
-      - hospital-network
-
 networks:
   hospital-network:
     driver: bridge
-
-volumes:
-  caddy_data:
-    driver: local
-  caddy_config:
-    driver: local
