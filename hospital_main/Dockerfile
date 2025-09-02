@@ -1,4 +1,4 @@
-# 빌드 스테이지 
+# 빌드 스테이지
 FROM openjdk:21-jdk-slim AS builder
 WORKDIR /app
 
@@ -40,8 +40,8 @@ COPY --from=builder /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 # Tomcat 포트를 8888로 변경
 RUN sed -i 's/port="8080"/port="8888"/g' /usr/local/tomcat/conf/server.xml
 
-# 환경변수 설정 (JPA DDL 모드를 update로 설정)
-ENV JAVA_OPTS="-Dhibernate.hbm2ddl.auto=update -Dspring.jpa.hibernate.ddl-auto=update"
+# 이전의 ENV JAVA_OPTS 줄을 삭제합니다.
+# Docker Compose의 환경 변수가 이제 정상적으로 적용됩니다.
 
 EXPOSE 8888
 
