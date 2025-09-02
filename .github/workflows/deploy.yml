@@ -30,8 +30,6 @@ jobs:
         docker tag hospital-backend:${{ github.sha }} hospital-backend:latest
         echo "✅ 백엔드 이미지 생성 완료"
         
-
-        
     - name: 도커 이미지 압축 및 저장
       run: |
         echo "💾 Docker 이미지 압축 중..."
@@ -63,7 +61,7 @@ jobs:
           # Docker 이미지 로드
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
-          docker load < /home/ec2-user/frontend.tar.gz
+          # docker load < /home/ec2-user/frontend.tar.gz # 프론트엔드 워크플로우가 별도로 있다면 해당 라인 제거
           
           # .env 파일 생성 (GitHub Secrets에서 환경변수 설정)
           cat > .env << EOF
