@@ -1,5 +1,6 @@
 name: 병원 프로젝트 EC2 배포 (DuckDNS SSL) 
 
+
 on:
   push:
     branches: [ main ]
