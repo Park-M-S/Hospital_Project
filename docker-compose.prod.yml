@@ -36,8 +36,10 @@ services:
       - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
+      # ⚠️ 경고: 초기 스키마 생성 및 데이터 유실을 위해 임시로 'create'로 설정.
+      # 다음 배포 시에는 반드시 'update'로 되돌려야 합니다.
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       # CORS 설정 (필요시)
       - ALLOWED_ORIGINS=http://localhost:5173,http://${EC2_HOST:-localhost}:8888
       
