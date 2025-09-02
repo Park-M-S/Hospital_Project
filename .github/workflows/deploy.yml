@@ -198,7 +198,7 @@ jobs:
           
           # 백엔드 API 확인 (포트 8888 사용)
           for i in {1..6}; do
-            if curl -f -s --connect-timeout 5 "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "http://${{ secrets.DUCKDNS_DOMAIN }}:8888/" > /dev/null 2>&1; then
               echo "✅ 백엔드 API: 정상"
               BACKEND_OK=true
               break
@@ -225,9 +225,9 @@ jobs:
           echo "📍 접속 정보:"
           # echo "  🔒 HTTPS: https://${{ secrets.DUCKDNS_DOMAIN }} (Let's Encrypt SSL)"
           # echo "  🌍 HTTP:  http://${{ secrets.DUCKDNS_DOMAIN }} (HTTPS로 자동 리다이렉트)"
-          echo "  🔧 백엔드 API: https://${{ secrets.DUCKDNS_DOMAIN }}:8888"
+          echo "  🔧 백엔드 API: http://${{ secrets.DUCKDNS_DOMAIN }}:8888"
           echo ""
-          echo "✨ DuckDNS 자동 IP 업데이트 + Let's Encrypt SSL 인증서!"
+          echo "✨ DuckDNS 자동 IP 업데이트!"
           
     - name: 배포 실패 시 롤백 처리
       if: failure()
