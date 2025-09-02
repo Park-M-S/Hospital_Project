@@ -31,31 +31,31 @@ jobs:
         docker tag hospital-backend:${{ github.sha }} hospital-backend:latest
         echo "✅ 백엔드 이미지 생성 완료"
         
-    # - name: 프론트엔드 도커 이미지 빌드 (Caddy + DuckDNS SSL)
-    #   run: |
-    #     cd frontend
-    #     echo "🔨 프론트엔드 Docker 이미지 빌드 중 (Caddy + DuckDNS SSL)..."
-    #     
-    #     # Vue.js 환경변수 파일 생성 (DuckDNS 도메인 기반)
-    #     echo "VITE_API_BASE_URL=https://${{ secrets.DUCKDNS_DOMAIN }}" > .env.production
-    #     echo "VITE_GOOGLE_TTS_API_KEY=${{ secrets.VITE_GOOGLE_TTS_API_KEY }}" >> .env.production
-    #     echo "VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }}" >> .env.production
-    #     echo "VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}" >> .env.production
-    #     
-    #     # 빌드된 환경변수 확인
-    #     echo "📋 생성된 환경변수:"
-    #     cat .env.production
-    #     
-    #     # Caddy 기반 프론트엔드 이미지 빌드
-    #     docker build -t hospital-frontend:${{ github.sha }} .
-    #     docker tag hospital-frontend:${{ github.sha }} hospital-frontend:latest
-    #     echo "✅ 프론트엔드 이미지 생성 완료 (Caddy + DuckDNS SSL)"
+    - name: 프론트엔드 도커 이미지 빌드 (Caddy + DuckDNS SSL)
+      run: |
+        cd frontend
+        echo "🔨 프론트엔드 Docker 이미지 빌드 중 (Caddy + DuckDNS SSL)..."
+        
+        # Vue.js 환경변수 파일 생성 (DuckDNS 도메인 기반)
+        echo "VITE_API_BASE_URL=https://${{ secrets.DUCKDNS_DOMAIN }}" > .env.production
+        echo "VITE_GOOGLE_TTS_API_KEY=${{ secrets.VITE_GOOGLE_TTS_API_KEY }}" >> .env.production
+        echo "VITE_KAKAO_REST_API_KEY=${{ secrets.VITE_KAKAO_REST_API_KEY }}" >> .env.production
+        echo "VITE_KAKAO_MAP_KEY=${{ secrets.VITE_KAKAO_MAP_KEY }}" >> .env.production
+        
+        # 빌드된 환경변수 확인
+        echo "📋 생성된 환경변수:"
+        cat .env.production
+        
+        # Caddy 기반 프론트엔드 이미지 빌드
+        docker build -t hospital-frontend:${{ github.sha }} .
+        docker tag hospital-frontend:${{ github.sha }} hospital-frontend:latest
+        echo "✅ 프론트엔드 이미지 생성 완료 (Caddy + DuckDNS SSL)"
         
     - name: 도커 이미지 압축 및 저장
       run: |
         echo "💾 Docker 이미지 압축 중..."
         docker save hospital-backend:latest | gzip > backend.tar.gz
-        # docker save hospital-frontend:latest | gzip > frontend.tar.gz
+        docker save hospital-frontend:latest | gzip > frontend.tar.gz
         
         # 이미지 크기 확인
         ls -lh *.tar.gz
@@ -67,19 +67,18 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
-        source: "backend.tar.gz,docker-compose.prod.yml,deploy.sh"
-        # source: "backend.tar.gz,frontend.tar.gz,docker-compose.prod.yml,deploy.sh"
+        source: "backend.tar.gz,frontend.tar.gz,docker-compose.prod.yml,deploy.sh"
         target: "/home/ec2-user/"
         
-    # - name: Caddy 설정 파일들을 EC2 서버로 전송
-    #   uses: appleboy/scp-action@v0.1.4
-    #   with:
-    #     host: ${{ secrets.EC2_HOST }}
-    #     username: ${{ secrets.EC2_USER }}
-    #     key: ${{ secrets.EC2_PRIVATE_KEY }}
-    #     source: "frontend/Caddyfile.template,frontend/docker-entrypoint.sh"
-    #     target: "/home/ec2-user/"
-    #     strip_components: 1
+    - name: Caddy 설정 파일들을 EC2 서버로 전송
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        source: "frontend/Caddyfile.template,frontend/docker-entrypoint.sh"
+        target: "/home/ec2-user/"
+        strip_components: 1
         
     - name: EC2 서버에 DuckDNS SSL로 배포
       uses: appleboy/ssh-action@v0.1.5
@@ -94,7 +93,7 @@ jobs:
           # Docker 이미지 로드
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
-          # docker load < /home/ec2-user/frontend.tar.gz
+          docker load < /home/ec2-user/frontend.tar.gz
           
           # .env 파일 생성 (GitHub Secrets에서 환경변수 설정)
           cat > .env << EOF
@@ -183,22 +182,22 @@ jobs:
           echo "🔍 DuckDNS SSL 서비스 응답 테스트 ($TARGET_URL)..."
           
           # 서비스 응답 확인 (최대 120초 대기 - SSL 인증서 발급 시간 고려)
-          # for i in {1..24}; do
-          #   echo "  시도 $i/24..."
-          #   
-          #   if curl -f -s -k --connect-timeout 10 "$TARGET_URL" > /dev/null 2>&1; then
-          #     echo "✅ 프론트엔드: 정상"
-          #     FRONTEND_OK=true
-          #     break
-          #   else
-          #     echo "⏳ 프론트엔드 시작 대기 중... (SSL 인증서 발급 대기 포함)"
-          #     sleep 5
-          #   fi
-          # done
+          for i in {1..24}; do
+            echo "  시도 $i/24..."
+            
+            if curl -f -s -k --connect-timeout 10 "$TARGET_URL" > /dev/null 2>&1; then
+              echo "✅ 프론트엔드: 정상"
+              FRONTEND_OK=true
+              break
+            else
+              echo "⏳ 프론트엔드 시작 대기 중... (SSL 인증서 발급 대기 포함)"
+              sleep 5
+            fi
+          done
           
           # 백엔드 API 확인 (포트 8888 사용)
           for i in {1..6}; do
-            if curl -f -s --connect-timeout 5 "http://${{ secrets.DUCKDNS_DOMAIN }}:8888/" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 5 "https://${{ secrets.DUCKDNS_DOMAIN }}:8888/" > /dev/null 2>&1; then
               echo "✅ 백엔드 API: 정상"
               BACKEND_OK=true
               break
@@ -223,11 +222,11 @@ jobs:
           echo "==========================================="
           echo ""
           echo "📍 접속 정보:"
-          # echo "  🔒 HTTPS: https://${{ secrets.DUCKDNS_DOMAIN }} (Let's Encrypt SSL)"
-          # echo "  🌍 HTTP:  http://${{ secrets.DUCKDNS_DOMAIN }} (HTTPS로 자동 리다이렉트)"
-          echo "  🔧 백엔드 API: http://${{ secrets.DUCKDNS_DOMAIN }}:8888"
+          echo "  🔒 HTTPS: https://${{ secrets.DUCKDNS_DOMAIN }} (Let's Encrypt SSL)"
+          echo "  🌍 HTTP:  http://${{ secrets.DUCKDNS_DOMAIN }} (HTTPS로 자동 리다이렉트)"
+          echo "  🔧 백엔드 API: https://${{ secrets.DUCKDNS_DOMAIN }}:8888"
           echo ""
-          echo "✨ DuckDNS 자동 IP 업데이트!"
+          echo "✨ DuckDNS 자동 IP 업데이트 + Let's Encrypt SSL 인증서!"
           
     - name: 배포 실패 시 롤백 처리
       if: failure()
