@@ -62,7 +62,11 @@ jobs:
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
           
-          # .env 파일 생성 (GitHub Secrets에서 환경변수 설정)
+          # DuckDNS 도메인에서 서브도메인 추출
+          DUCKDNS_FULL="${{ secrets.DUCKDNS_DOMAIN }}"
+          DUCKDNS_SUB=$(echo "$DUCKDNS_FULL" | cut -d'.' -f1)
+          
+          # .env 파일 생성
           cat > .env << EOF
           ENVIRONMENT=production
           IMAGE_TAG=latest
@@ -78,6 +82,7 @@ jobs:
           
           # DuckDNS 설정
           DUCKDNS_DOMAIN=${{ secrets.DUCKDNS_DOMAIN }}
+          DUCKDNS_SUBDOMAIN=$DUCKDNS_SUB
           DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
           
           # 병원/약국 API 키 설정
@@ -107,13 +112,10 @@ jobs:
           # 환경변수 확인
           echo "📋 배포 환경 설정:"
           echo "  환경: production"
-          echo "  접속 방식: DuckDNS 도메인"
           echo "  DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
+          echo "  DuckDNS 서브도메인: $DUCKDNS_SUB"
           echo "  백엔드 포트: 8888"
           echo "  DB 포트: 3500"
-          
-          # DuckDNS 설정 디렉토리 생성
-          mkdir -p ./duckdns
           
           # 배포 스크립트 실행 권한 부여
           chmod +x /home/ec2-user/deploy.sh
@@ -148,7 +150,7 @@ jobs:
           for i in {1..12}; do
             echo "  시도 $i/12..."
             
-            if curl -f -s --connect-timeout 10 "$TARGET_URL/" > /dev/null 2>&1; then
+            if curl -f -s --connect-timeout 10 "$TARGET_URL/api/proDoc/status" > /dev/null 2>&1; then
               echo "✅ 백엔드 API: 정상"
               BACKEND_OK=true
               break
@@ -159,7 +161,7 @@ jobs:
           done
           
           # 데이터베이스 연결 확인
-          if docker ps | grep hospital-db > /dev/null; then
+          if docker ps | grep hospital-mariadb > /dev/null; then
             echo "✅ 데이터베이스: 정상"
           else
             echo "⚠️ 데이터베이스: 확인 필요"
@@ -187,6 +189,8 @@ jobs:
           echo "🔧 API 테스트 예시:"
           echo "  curl http://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/proDoc/status"
           echo "  curl http://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/list"
+          echo ""
+          echo "✨ DuckDNS 자동 IP 업데이트로 백엔드 서버가 준비되었습니다!"
           
     - name: 배포 실패 시 롤백 처리
       if: failure()
