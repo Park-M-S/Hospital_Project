@@ -84,11 +84,11 @@ fi
 echo ""
 echo "🔧 API 테스트:"
 if [ -n "$DUCKDNS_DOMAIN" ]; then
+    echo "  curl ${DOMAIN_URL}:8888/api/proDoc/status"
     echo "  curl ${DOMAIN_URL}:8888/api/list"
-    echo "  curl -X POST ${DOMAIN_URL}:8888/api/pharmacy/save"
 else
+    echo "  curl http://${SERVER_IP}:8888/api/proDoc/status"
     echo "  curl http://${SERVER_IP}:8888/api/list"
-    echo "  curl -X POST http://${SERVER_IP}:8888/api/pharmacy/save"
 fi
 
 # DuckDNS 서비스 상태 확인
