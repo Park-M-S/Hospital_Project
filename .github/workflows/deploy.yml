@@ -78,7 +78,6 @@ jobs:
           
           # DuckDNS 설정
           DUCKDNS_DOMAIN=${{ secrets.DUCKDNS_DOMAIN }}
-          DUCKDNS_SUBDOMAIN=${{ secrets.DUCKDNS_SUBDOMAIN }}
           DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
           
           # 병원/약국 API 키 설정
