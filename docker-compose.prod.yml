@@ -36,11 +36,8 @@ services:
       - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      # ⚠️ 경고: 초기 스키마 생성 및 데이터 유실을 위해 'create'로 설정.
-      # 다음 배포 시에는 반드시 'update'로 되돌려야 합니다. 
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      # CORS 설정 (DuckDNS 도메인 포함)
       - ALLOWED_ORIGINS=http://localhost:5173,http://${DUCKDNS_DOMAIN}:8888,http://${EC2_HOST:-localhost}:8888
       
       # API 키 환경변수
@@ -79,7 +76,7 @@ services:
     image: linuxserver/duckdns:latest
     container_name: hospital-duckdns
     environment:
-      - SUBDOMAINS=${DUCKDNS_DOMAIN}
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
       - TOKEN=${DUCKDNS_TOKEN}
       - LOG_FILE=false
     restart: unless-stopped
