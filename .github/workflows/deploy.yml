@@ -1,4 +1,4 @@
-name: EC2 배포 
+name: EC2 배포
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
         source: "backend.tar.gz,docker-compose.prod.yml,deploy.sh"
         target: "/home/ec2-user/"
         
-    - name: EC2 서버에 HTTP로 배포
+    - name: EC2 서버에 DuckDNS로 배포
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -56,12 +56,11 @@ jobs:
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         envs: GITHUB_SHA
         script: |
-          echo "🚀 병원 프로젝트 HTTP 배포 시작..."
+          echo "🚀 병원 프로젝트 DuckDNS 배포 시작..."
           
           # Docker 이미지 로드
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
-          # docker load < /home/ec2-user/frontend.tar.gz # 프론트엔드 워크플로우가 별도로 있다면 해당 라인 제거
           
           # .env 파일 생성 (GitHub Secrets에서 환경변수 설정)
           cat > .env << EOF
@@ -76,6 +75,11 @@ jobs:
           # 백엔드 설정
           BACKEND_HOST=hospital-backend
           BACKEND_PORT=8888
+          
+          # DuckDNS 설정
+          DUCKDNS_DOMAIN=${{ secrets.DUCKDNS_DOMAIN }}
+          DUCKDNS_SUBDOMAIN=${{ secrets.DUCKDNS_SUBDOMAIN }}
+          DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
           
           # 병원/약국 API 키 설정
           HOSPITAL_MAIN_API_KEY=${{ secrets.HOSPITAL_MAIN_API_KEY }}
@@ -103,11 +107,14 @@ jobs:
            
           # 환경변수 확인
           echo "📋 배포 환경 설정:"
-          echo "  환경: ${{ secrets.ENVIRONMENT }}"
-          echo "  접속 방식: HTTP (IP 직접 접근)"
+          echo "  환경: production"
+          echo "  접속 방식: DuckDNS 도메인"
+          echo "  DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
           echo "  백엔드 포트: 8888"
-          echo "  프론트엔드 포트: 80"
           echo "  DB 포트: 3500"
+          
+          # DuckDNS 설정 디렉토리 생성
+          mkdir -p ./duckdns
           
           # 배포 스크립트 실행 권한 부여
           chmod +x /home/ec2-user/deploy.sh
@@ -135,8 +142,8 @@ jobs:
           echo "📊 컨테이너 상태:"
           docker-compose -f /home/ec2-user/docker-compose.prod.yml ps
           
-          # 백엔드 API 확인 (포트 8888)
-          TARGET_URL="http://${{ secrets.EC2_HOST }}:8888"
+          # DuckDNS 도메인으로 백엔드 API 확인
+          TARGET_URL="http://${{ secrets.DUCKDNS_DOMAIN }}:8888"
           echo "🔍 백엔드 API 응답 테스트 ($TARGET_URL)..."
           
           for i in {1..12}; do
@@ -159,6 +166,14 @@ jobs:
             echo "⚠️ 데이터베이스: 확인 필요"
           fi
           
+          # DuckDNS 컨테이너 확인
+          if docker ps | grep hospital-duckdns > /dev/null; then
+            echo "✅ DuckDNS 자동 업데이트: 활성화"
+            docker logs hospital-duckdns --tail=5
+          else
+            echo "⚠️ DuckDNS 자동 업데이트: 비활성화"
+          fi
+          
           # 최종 결과 출력
           echo ""
           echo "🎉 =========================================="
@@ -166,7 +181,30 @@ jobs:
           echo "==========================================="
           echo ""
           echo "📍 접속 정보:"
-          echo "  🔧 백엔드 API: http://${{ secrets.EC2_HOST }}:8888"
+          echo "  🔧 백엔드 API: http://${{ secrets.DUCKDNS_DOMAIN }}:8888"
+          echo "  🌍 DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
           echo "  📊 데이터베이스: 포트 3500 (내부 접근)"
           echo ""
-          echo "✨ 백엔드 서버가 준비되었습니다!"
+          echo "✨ DuckDNS 자동 IP 업데이트로 백엔드 서버가 준비되었습니다!"
+          
+    - name: 배포 실패 시 롤백 처리
+      if: failure()
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          echo "❌ 배포 실패! 롤백 시도..."
+          
+          # 컨테이너 중지
+          docker-compose -f /home/ec2-user/docker-compose.prod.yml down || true
+          
+          # 최근 로그 확인
+          echo "📝 최근 로그:"
+          docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=50
+          
+          # 임시 파일 정리
+          rm -f /home/ec2-user/*.tar.gz
+          
+          echo "🔄 이전 버전으로 롤백하거나 수동으로 문제를 해결하세요."
