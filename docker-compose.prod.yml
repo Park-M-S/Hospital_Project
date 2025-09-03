@@ -26,7 +26,7 @@ services:
       interval: 10s
       start_period: 30s
 
-  # Spring Boot 백엔드
+  # Spring 백엔드
   backend:
     image: hospital-backend:${IMAGE_TAG:-latest}
     container_name: hospital-backend
