@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hospital Project 백엔드 전용 배포 스크립트
+# Hospital Project 백엔드 전용 배포 스크립트 (DuckDNS 지원)
 set -e
 
 echo "🚀 Hospital Project 백엔드 배포 시작..."
@@ -21,6 +21,11 @@ export DB_PORT=${DB_PORT:-3500}
 # DuckDNS 설정 (GitHub Actions에서 전달받거나 기본값 사용)
 export DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-""}
 export DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-""}
+
+# DuckDNS 도메인에서 subdomain만 추출
+if [ -n "$DUCKDNS_DOMAIN" ]; then
+    export DUCKDNS_SUBDOMAIN=$(echo "$DUCKDNS_DOMAIN" | cut -d'.' -f1)
+fi
 
 echo "📋 현재 설정:"
 echo "  서버 IP: ${SERVER_IP}"
