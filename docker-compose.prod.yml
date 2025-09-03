@@ -40,8 +40,8 @@ services:
       # 다음 배포 시에는 반드시 'update'로 되돌려야 합니다. 
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      # CORS 설정 (필요시)
-      - ALLOWED_ORIGINS=http://localhost:5173,http://${EC2_HOST:-localhost}:8888
+      # CORS 설정 (DuckDNS 도메인 포함)
+      - ALLOWED_ORIGINS=http://localhost:5173,http://${DUCKDNS_DOMAIN}:8888,http://${EC2_HOST:-localhost}:8888
       
       # API 키 환경변수
       - HOSPITAL_MAIN_API_KEY=${HOSPITAL_MAIN_API_KEY}
@@ -59,7 +59,6 @@ services:
       - HOSPITAL_PRODOC_API_BASE_URL=${HOSPITAL_PRODOC_API_BASE_URL}
       - HOSPITAL_PHARMACY_API_BASE_URL=${HOSPITAL_PHARMACY_API_BASE_URL}
       - HOSPITAL_EMERGENCY_API_BASE_URL=${HOSPITAL_EMERGENCY_API_BASE_URL}
-
     volumes:
       - /opt/hospital/logs/backend:/app/logs
     depends_on:
@@ -74,6 +73,18 @@ services:
       retries: 5
       interval: 30s
       start_period: 120s
+
+  # DuckDNS 자동 IP 업데이트 서비스
+  duckdns:
+    image: linuxserver/duckdns:latest
+    container_name: hospital-duckdns
+    environment:
+      - SUBDOMAINS=${DUCKDNS_DOMAIN}
+      - TOKEN=${DUCKDNS_TOKEN}
+      - LOG_FILE=false
+    restart: unless-stopped
+    networks:
+      - hospital-network
 
 networks:
   hospital-network:
