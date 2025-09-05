@@ -37,10 +37,10 @@ public class ProDocApiParser {
 			String rawSubjectName = item.getSubjectName(); // 원본 진료과명
 			Integer count = item.getProDocCount(); // 전문의 수
 
-			// ✅ 설정 기반 과목명 정규화
+			// 설정 기반 과목명 정규화
 			String normalized = SubjectMappingConfig.normalizeSubjectName(rawSubjectName);
 
-			// ✅ Builder 패턴으로 엔티티 생성
+			// Builder 패턴으로 엔티티 생성
 			ProDoc doc = ProDoc.builder().hospitalCode(hospitalCode).subjectName(normalized)
 					.proDocCount(count != null ? count : 0) // null 방지
 					.build();
