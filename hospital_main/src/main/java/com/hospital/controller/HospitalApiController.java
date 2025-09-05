@@ -92,6 +92,20 @@ public class HospitalApiController {
 		log.info("병원 정보 {}개 DB 저장 완료!", savedCount);
 		return ResponseEntity.ok(response);
 	}
+	@GetMapping(value = "/main/status", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Map<String, Object>> getMainStatus() {
+	    int done = hospitalMainService.getCompletedCount();
+	    int fail = hospitalMainService.getFailedCount();
+	    
+	    Map<String, Object> response = new HashMap<>();
+	    response.put("success", true);
+	    response.put("completed", done);
+	    response.put("failed", fail);
+	    response.put("total", done + fail);
+	    response.put("timestamp", LocalDateTime.now());
+	    
+	    return ResponseEntity.ok(response);
+	}
 
 
 	//병원 상세 정보 수집 시작 - JSON 응답으로 변경
