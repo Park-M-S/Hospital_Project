@@ -69,6 +69,16 @@ public class HospitalWebService {
 				.map(hwd -> hwd.hospital) // 다시 HospitalResponseDTO만 추출
 				.collect(Collectors.toList());
 	}
+	// 전체병원 조회
+	@Cacheable(value = "allHospitals")
+	public List<HospitalWebResponse> getAllHospitals() {
+		// 모든 병원 조회
+		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findAll();
+		// DTO로 변환해서 리턴
+		return hospitalEntities.stream()
+			.map(hospitalConverter::convertToDTO)
+			.collect(Collectors.toList());
+	}
 
 	// 거리와 함께 임시로 저장하는 내부 클래스
 	private static class HospitalWithDistance {
