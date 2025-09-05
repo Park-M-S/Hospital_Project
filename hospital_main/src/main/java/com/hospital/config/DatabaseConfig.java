@@ -45,8 +45,8 @@ public class DatabaseConfig {
 
         java.util.Properties jpaProperties = new java.util.Properties();
         // 운영 환경에서는 validate 사용 권장
-        jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate");
-        //jpaProperties.setProperty("hibernate.hbm2ddl.auto", "update");
+        //jpaProperties.setProperty("hibernate.hbm2ddl.auto", "validate");
+        jpaProperties.setProperty("hibernate.hbm2ddl.auto", "update");
         jpaProperties.setProperty("hibernate.dialect", "org.hibernate.dialect.MariaDBDialect");
         jpaProperties.setProperty("hibernate.show_sql", "false");
         jpaProperties.setProperty("hibernate.format_sql", "false");
