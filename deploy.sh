@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hospital Project 배포 스크립트  (DuckDNS 지원)
+# Hospital Project 배포 스크립트 (DuckDNS 지원)
 set -e
 
 echo "🚀 Hospital Project 백엔드 배포 시작..."
