@@ -61,4 +61,8 @@ public class HospitalController {
     ) {
         return hospitalService.searchHospitalsByName(hospitalName);
     }
+    @GetMapping(value = "/hospitals/all", produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<HospitalWebResponse> getAllHospitals() {
+        return hospitalService.getAllHospitals();
+    }
 }
