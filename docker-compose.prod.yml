@@ -73,12 +73,18 @@ services:
 
   # DuckDNS 자동 IP 업데이트 서비스
   duckdns:
-    image: linuxserver/duckdns:latest
+    image: lscr.io/linuxserver/duckdns:latest
     container_name: hospital-duckdns
     environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
       - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
       - TOKEN=${DUCKDNS_TOKEN}
       - LOG_FILE=false
+      - UPDATE_FREQUENCY=5
+    volumes:
+      - /opt/hospital/config/duckdns:/config
     restart: unless-stopped
     networks:
       - hospital-network
