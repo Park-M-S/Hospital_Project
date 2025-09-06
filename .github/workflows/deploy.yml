@@ -62,6 +62,10 @@ jobs:
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
           
+          # 필요한 디렉토리 생성
+          sudo mkdir -p /opt/hospital/config/duckdns
+          sudo chown -R ec2-user:ec2-user /opt/hospital/
+          
           # .env 파일 생성
           cat > .env << EOF
           ENVIRONMENT=production
