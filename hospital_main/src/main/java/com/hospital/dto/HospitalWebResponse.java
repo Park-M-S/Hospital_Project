@@ -2,6 +2,9 @@ package com.hospital.dto;
 
 
 
+import java.util.List;
+import java.util.Set;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,19 +32,18 @@ public class HospitalWebResponse {
     private Double coordinateY;
     
     // 운영 정보
-    private String emergencyDayAvailable;    // Y/N
-    private String emergencyNightAvailable;  // Y/N
+    private Boolean emergencyDayAvailable;    // Y/N
+    private Boolean emergencyNightAvailable;  // Y/N
     private String weekdayLunch;
     private Integer parkingCapacity;
-    private String parkingFee;
+    private Boolean parkingFee;
    
     private String todayOpen;
     private String todayClose;
     
-    private String medicalSubject;
+    private List<String> medicalSubject;
     
-    // 전문의 정보 (JSON 문자열로 저장)
-    private String professionalDoctors;  // "안과:1|이비인후과:1|비뇨의학과:1" 형태
+  
+    private Set<String> professionalDoctors; 
 }
-
 
