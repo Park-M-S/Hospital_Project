@@ -62,10 +62,6 @@ jobs:
           echo "📦 Docker 이미지 로드 중..."
           docker load < /home/ec2-user/backend.tar.gz
           
-          # DuckDNS 도메인에서 서브도메인 추출
-          DUCKDNS_FULL="${{ secrets.DUCKDNS_DOMAIN }}"
-          DUCKDNS_SUB=$(echo "$DUCKDNS_FULL" | cut -d'.' -f1)
-          
           # .env 파일 생성
           cat > .env << EOF
           ENVIRONMENT=production
@@ -82,7 +78,7 @@ jobs:
           
           # DuckDNS 설정
           DUCKDNS_DOMAIN=${{ secrets.DUCKDNS_DOMAIN }}
-          DUCKDNS_SUBDOMAIN=$DUCKDNS_SUB
+          DUCKDNS_SUBDOMAIN=${{ secrets.DUCKDNS_SUBDOMAIN }}
           DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
           
           # 병원/약국 API 키 설정
@@ -113,7 +109,7 @@ jobs:
           echo "📋 배포 환경 설정:"
           echo "  환경: production"
           echo "  DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
-          echo "  DuckDNS 서브도메인: $DUCKDNS_SUB"
+          echo "  DuckDNS 서브도메인: ${{ secrets.DUCKDNS_SUBDOMAIN }}"
           echo "  백엔드 포트: 8888"
           echo "  DB 포트: 3500"
           
