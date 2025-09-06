@@ -1,9 +1,12 @@
 package com.hospital.async;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.scheduling.annotation.Async;
@@ -21,6 +24,8 @@ public class HospitalMainAsyncRunner {
 	private final RateLimiter rateLimiter = RateLimiter.create(2.0);
 	private final AtomicInteger completedCount = new AtomicInteger(0);
 	private final AtomicInteger failedCount = new AtomicInteger(0);
+	private final AtomicInteger updatedCount = new AtomicInteger(0);
+	private final AtomicInteger insertedCount = new AtomicInteger(0);
 	private int totalCount = 0;
 
 	private final HospitalMainApiCaller apiCaller;
@@ -65,10 +70,16 @@ public class HospitalMainAsyncRunner {
 
 					break;
 				}
-				hospitalMainApiRepository.saveAll(hospitals);
-				totalSaved += hospitals.size();
-
-				log.info("지역 {} 페이지 {}: {}건 저장", regionConfig.getDistrictName(sgguCd), pageNo, hospitals.size());
+				UpsertResult result = upsertHospital(hospitals);
+				totalSaved += result.inserted + result.updated;
+				
+				insertedCount.addAndGet(result.inserted);
+			    updatedCount.addAndGet(result.updated);
+			    
+			    log.info("지역 {} 페이지 {}: {}건 처리 (신규:{}, 수정:{})", 
+			        regionConfig.getDistrictName(sgguCd), pageNo, 
+			        result.inserted + result.updated, result.inserted, result.updated);
+			        
 				hasMorePages = hospitals.size() >= numOfRows;
 				pageNo++;
 
@@ -85,6 +96,57 @@ public class HospitalMainAsyncRunner {
 
 	}
 
+	@Transactional
+	public UpsertResult upsertHospital(List<HospitalMain> hospitals) {
+		int updated = 0;
+		int inserted = 0;
+
+		for (HospitalMain newHospital : hospitals) {
+			try {
+				Optional<HospitalMain> existingOpt = hospitalMainApiRepository
+						.findByHospitalCode(newHospital.getHospitalCode());
+
+				if (existingOpt.isPresent()) {
+					HospitalMain existing = existingOpt.get();
+					updateHospital(existing,newHospital);
+						hospitalMainApiRepository.save(existing);
+						updated++;
+					
+
+				} else {
+					hospitalMainApiRepository.save(newHospital);
+					inserted++;
+				}
+			} catch (Exception e) {
+				log.warn("병원 {} UPSERT 실패", newHospital.getHospitalCode(), e.getMessage());
+			}
+		}
+		return new UpsertResult(inserted, updated);
+	}
+	
+	private void updateHospital(HospitalMain existing, HospitalMain newData) {
+		existing.setHospitalName(newData.getHospitalName());
+		existing.setProvinceName(newData.getProvinceName());
+		existing.setDistrictName(newData.getDistrictName());
+		existing.setHospitalAddress(newData.getHospitalAddress());
+		existing.setHospitalTel(newData.getHospitalTel());
+		existing.setHospitalHomepage(newData.getHospitalHomepage());
+		existing.setDoctorNum(newData.getDoctorNum());
+		existing.setCoordinateX(newData.getCoordinateX());
+		existing.setCoordinateY(newData.getCoordinateY());
+		
+	}
+
+	private static class UpsertResult {
+		final int inserted; // 신규 추가된 수
+		final int updated; // 수정된 수
+
+		UpsertResult(int inserted, int updated) {
+			this.inserted = inserted;
+			this.updated = updated;
+		}
+	}
+
 	public int getCompletedCount() {
 		return completedCount.get();
 	}
@@ -97,11 +159,21 @@ public class HospitalMainAsyncRunner {
 		completedCount.set(0);
 		failedCount.set(0);
 	}
+	
+	public int getInsertedCount() {
+	    return insertedCount.get();
+	}
+
+	public int getUpdatedCount() {
+	    return updatedCount.get();
+	}
 
 	public void setTotalCount(int totalCount) {
 		this.totalCount = totalCount;
 		completedCount.set(0);
 		failedCount.set(0);
+		insertedCount.set(0); 
+		updatedCount.set(0);
 	}
 
 }
