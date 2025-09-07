@@ -3,6 +3,7 @@ package com.hospital.dto;
 
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import lombok.AllArgsConstructor;
@@ -44,6 +45,6 @@ public class HospitalWebResponse {
     private List<String> medicalSubject;
     
   
-    private Set<String> professionalDoctors; 
+    private Map<String, Integer> professionalDoctors; 
 }
 
