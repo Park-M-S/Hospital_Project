@@ -46,6 +46,7 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@Override
 	List<HospitalMain> findAll();
 	
-	//@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
+	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
+	List<HospitalMain> findByHospitalCodeIn(List<String> hospitalCodes);
 	
 }
