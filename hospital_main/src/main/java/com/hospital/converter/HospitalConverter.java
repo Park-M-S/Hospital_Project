@@ -10,8 +10,10 @@ import com.hospital.util.TodayOperatingTimeCalculator;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -52,7 +54,7 @@ public class HospitalConverter {
 				.medicalSubject(convertMedicalSubjectsToList(hospitalMain.getMedicalSubjects()))
 
 				// 전문의 정보를 문자열로 변환
-				.professionalDoctors(convertProDocsToSet(hospitalMain.getProDocs())).build();
+				.professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs())).build();
 	}
 
 	private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
@@ -88,15 +90,17 @@ public class HospitalConverter {
 
 		return hospitals.stream().map(this::convertToDTO).collect(Collectors.toList());
 	}
+	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
+	    if (set == null || set.isEmpty()) {
+	        return new HashMap<>();
+	    }
 
-	private Set<String> convertProDocsToSet(Set<ProDoc> set) {
-		if (set == null || set.isEmpty()) {
-			return new HashSet<>();
-		}
-		
-		return set.stream()
-				.map(proDoc -> proDoc.getSubjectName() + ": " + proDoc.getProDocCount())
-				.collect(Collectors.toSet());
+	    return set.stream()
+	            .collect(Collectors.toMap(
+	                ProDoc::getSubjectName,
+	                ProDoc::getProDocCount,
+	                Integer::sum              // 중복 시 합산
+	            ));
 	}
 	private Boolean convertParkingFeeToBoolean(String parkXpnsYn) {
 	    if (parkXpnsYn == null) {
