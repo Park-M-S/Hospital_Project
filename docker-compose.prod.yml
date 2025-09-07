@@ -79,7 +79,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Seoul
-      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN:-hospitalmap}  # 기본값 추가
       - TOKEN=${DUCKDNS_TOKEN}
       - LOG_FILE=false
       - UPDATE_FREQUENCY=5
