@@ -1,8 +1,18 @@
 #!/bin/bash
 # Hospital Project 배포 스크립트 (DuckDNS 지원)
 set -e
-
 echo "🚀 Hospital Project 백엔드 배포 시작..."
+
+# .env 파일이 있으면 로드
+if [ -f ".env" ]; then
+    echo "📄 .env 파일 로드 중..."
+    set -a  # 모든 변수를 자동으로 export
+    source .env
+    set +a
+    echo "✅ .env 파일 로드 완료"
+else
+    echo "⚠️ .env 파일을 찾을 수 없습니다."
+fi
 
 # 환경 변수 기본값 설정
 export IMAGE_TAG=${IMAGE_TAG:-latest}
@@ -12,7 +22,7 @@ export ENVIRONMENT=${ENVIRONMENT:-production}
 export BACKEND_PORT=${BACKEND_PORT:-8888}
 export DB_PORT=${DB_PORT:-3500}
 
-# DuckDNS 설정
+# DuckDNS 설정 (.env에서 로드된 값 사용)
 export DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-""}
 export DUCKDNS_SUBDOMAIN=${DUCKDNS_SUBDOMAIN:-""}
 export DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-""}
@@ -29,14 +39,20 @@ echo "  이미지 태그: ${IMAGE_TAG}"
 echo "  백엔드 포트: ${BACKEND_PORT}"
 echo "  DB 포트: ${DB_PORT}"
 
-# DuckDNS 설정 확인 및 표시
-if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_SUBDOMAIN" ]; then
+# DuckDNS 설정 확인 및 표시 (토큰은 마스킹)
+if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_SUBDOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
     echo "  🦆 DuckDNS 도메인: ${DUCKDNS_DOMAIN}"
     echo "  🦆 DuckDNS 서브도메인: ${DUCKDNS_SUBDOMAIN}"
+    TOKEN_MASKED="${DUCKDNS_TOKEN:0:8}...${DUCKDNS_TOKEN: -4}"
+    echo "  🦆 DuckDNS 토큰: ${TOKEN_MASKED}"
     echo "  🦆 DuckDNS 자동 업데이트: 활성화"
     DOMAIN_URL="http://${DUCKDNS_DOMAIN}"
 else
     echo "  🔗 접속 방식: 직접 IP 접근"
+    echo "  ⚠️ DuckDNS 설정이 불완전합니다:"
+    echo "    - DOMAIN: '${DUCKDNS_DOMAIN}'"
+    echo "    - SUBDOMAIN: '${DUCKDNS_SUBDOMAIN}'"
+    echo "    - TOKEN: '$([ -n "$DUCKDNS_TOKEN" ] && echo "설정됨" || echo "비어있음")'"
     DOMAIN_URL="http://${SERVER_IP:-localhost}"
 fi
 
@@ -66,11 +82,19 @@ echo "📊 서비스 상태 확인:"
 docker-compose -f docker-compose.prod.yml ps
 
 # DuckDNS 서비스 상태 확인
-if [ -n "$DUCKDNS_DOMAIN" ]; then
+if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
     echo ""
     echo "🦆 DuckDNS 상태 확인:"
     if docker ps | grep hospital-duckdns > /dev/null; then
         echo "  ✅ DuckDNS 자동 업데이트 서비스: 실행 중"
+        
+        # DuckDNS 환경변수 확인
+        echo "  🔍 DuckDNS 환경변수 확인:"
+        CONTAINER_SUBDOMAIN=$(docker exec hospital-duckdns printenv SUBDOMAINS 2>/dev/null || echo "없음")
+        CONTAINER_TOKEN=$(docker exec hospital-duckdns printenv TOKEN 2>/dev/null || echo "없음")
+        echo "    - SUBDOMAINS: ${CONTAINER_SUBDOMAIN}"
+        echo "    - TOKEN: $([ "$CONTAINER_TOKEN" != "없음" ] && [ -n "$CONTAINER_TOKEN" ] && echo "설정됨" || echo "비어있음")"
+        
         sleep 5  # DuckDNS 초기화 대기
         echo "  📝 DuckDNS 로그 (최근 10줄):"
         docker logs hospital-duckdns --tail=10 | sed 's/^/    /'
