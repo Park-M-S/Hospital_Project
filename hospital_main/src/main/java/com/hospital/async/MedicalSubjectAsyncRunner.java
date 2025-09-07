@@ -87,4 +87,7 @@ public class MedicalSubjectAsyncRunner {
             log.error("병원코드 {} 처리 실패: {}", hospitalCode, e.getMessage());
         }
     }
+    public void UpdateSubject() {
+    	
+    }
 }
