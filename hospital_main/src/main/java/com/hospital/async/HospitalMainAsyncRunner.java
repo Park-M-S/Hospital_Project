@@ -5,9 +5,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import com.google.common.util.concurrent.RateLimiter;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +37,7 @@ public class HospitalMainAsyncRunner {
 	private final HospitalMainApiParser parser;
 	private final HospitalMainApiRepository hospitalMainApiRepository;
 	private final RegionConfig regionConfig;
+	private static final int BATCH_SIZE = 100;
 
 	@Autowired
 	public HospitalMainAsyncRunner(HospitalMainApiCaller apiCaller, HospitalMainApiParser parser,
@@ -58,6 +64,8 @@ public class HospitalMainAsyncRunner {
 			int numOfRows = 1000;
 			boolean hasMorePages = true;
 
+			List<HospitalMain> batchList = new ArrayList<>();
+
 			while (hasMorePages) {
 
 				String queryParams = String.format("sgguCd=%s&pageNo=%s&numOfRows=%s", sgguCd, pageNo, numOfRows);
@@ -70,22 +78,42 @@ public class HospitalMainAsyncRunner {
 
 					break;
 				}
-				UpsertResult result = upsertHospital(hospitals);
-				totalSaved += result.inserted + result.updated;
-				
-				insertedCount.addAndGet(result.inserted);
-			    updatedCount.addAndGet(result.updated);
-			    
-			    log.info("지역 {} 페이지 {}: {}건 처리 (신규:{}, 수정:{})", 
-			        regionConfig.getDistrictName(sgguCd), pageNo, 
-			        result.inserted + result.updated, result.inserted, result.updated);
-			        
+				batchList.addAll(hospitals);
+				log.info("지역 {} 페이지 {}: {}건 수집 (총 누적: {}건)", regionConfig.getDistrictName(sgguCd), pageNo,
+						hospitals.size(), batchList.size());
+
+				if (batchList.size() >= BATCH_SIZE) {
+					UpsertResult result = upsertHospital(batchList);
+					totalSaved += result.inserted + result.updated;
+
+					insertedCount.addAndGet(result.inserted);
+					updatedCount.addAndGet(result.updated);
+
+					log.info("지역 {} 중간 배치 처리: {}건 처리 (신규:{}, 수정:{})", regionConfig.getDistrictName(sgguCd),
+							result.inserted + result.updated, result.inserted, result.updated);
+
+					batchList = new ArrayList<>();
+				}
+
 				hasMorePages = hospitals.size() >= numOfRows;
 				pageNo++;
 
 				// 페이지 간 대기
 				Thread.sleep(1000);
 			}
+
+			if (!batchList.isEmpty()) {
+				log.info("지역 {} 데이터 수집완료. 총 {} 건 일괄 처리 시작", regionConfig.getDistrictName(sgguCd), batchList.size());
+				UpsertResult result = upsertHospital(batchList);
+				totalSaved += result.inserted + result.updated;
+
+				insertedCount.addAndGet(result.inserted);
+				updatedCount.addAndGet(result.updated);
+
+				log.info("지역 {} 일괄 처리 완료: {}건 처리 (신규:{}, 수정:{})", regionConfig.getDistrictName(sgguCd),
+						result.inserted + result.updated, result.inserted, result.updated);
+			}
+
 			completedCount.incrementAndGet();
 			log.info("지역 {} 처리 완료: 총 {}건 저장", regionConfig.getDistrictName(sgguCd), totalSaved);
 
@@ -98,32 +126,39 @@ public class HospitalMainAsyncRunner {
 
 	@Transactional
 	public UpsertResult upsertHospital(List<HospitalMain> hospitals) {
-		int updated = 0;
-		int inserted = 0;
+	    int updated = 0;
+	    int inserted = 0;
 
-		for (HospitalMain newHospital : hospitals) {
-			try {
-				Optional<HospitalMain> existingOpt = hospitalMainApiRepository
-						.findByHospitalCode(newHospital.getHospitalCode());
+	    // 배치 조회: 모든 병원 코드를 한 번에 조회
+	    List<String> hospitalCodes = hospitals.stream()
+	        .map(HospitalMain::getHospitalCode)
+	        .collect(Collectors.toList());
+	        
+	    Map<String, HospitalMain> existingMap = hospitalMainApiRepository
+	        .findByHospitalCodeIn(hospitalCodes)
+	        .stream()
+	        .collect(Collectors.toMap(HospitalMain::getHospitalCode, Function.identity()));
 
-				if (existingOpt.isPresent()) {
-					HospitalMain existing = existingOpt.get();
-					updateHospital(existing,newHospital);
-						hospitalMainApiRepository.save(existing);
-						updated++;
-					
-
-				} else {
-					hospitalMainApiRepository.save(newHospital);
-					inserted++;
-				}
-			} catch (Exception e) {
-				log.warn("병원 {} UPSERT 실패", newHospital.getHospitalCode(), e.getMessage());
-			}
-		}
-		return new UpsertResult(inserted, updated);
+	    // 개별 처리 (이제 DB 조회 없이 Map에서 조회)
+	    for (HospitalMain newHospital : hospitals) {
+	        try {
+	            HospitalMain existing = existingMap.get(newHospital.getHospitalCode());
+	            
+	            if (existing != null) {
+	                updateHospital(existing, newHospital);
+	                hospitalMainApiRepository.save(existing);
+	                updated++;
+	            } else {
+	                hospitalMainApiRepository.save(newHospital);
+	                inserted++;
+	            }
+	        } catch (Exception e) {
+	            log.warn("병원 {} UPSERT 실패", newHospital.getHospitalCode(), e.getMessage());
+	        }
+	    }
+	    return new UpsertResult(inserted, updated);
 	}
-	
+
 	private void updateHospital(HospitalMain existing, HospitalMain newData) {
 		existing.setHospitalName(newData.getHospitalName());
 		existing.setProvinceName(newData.getProvinceName());
@@ -134,7 +169,7 @@ public class HospitalMainAsyncRunner {
 		existing.setDoctorNum(newData.getDoctorNum());
 		existing.setCoordinateX(newData.getCoordinateX());
 		existing.setCoordinateY(newData.getCoordinateY());
-		
+
 	}
 
 	private static class UpsertResult {
@@ -159,20 +194,20 @@ public class HospitalMainAsyncRunner {
 		completedCount.set(0);
 		failedCount.set(0);
 	}
-	
+
 	public int getInsertedCount() {
-	    return insertedCount.get();
+		return insertedCount.get();
 	}
 
 	public int getUpdatedCount() {
-	    return updatedCount.get();
+		return updatedCount.get();
 	}
 
 	public void setTotalCount(int totalCount) {
 		this.totalCount = totalCount;
 		completedCount.set(0);
 		failedCount.set(0);
-		insertedCount.set(0); 
+		insertedCount.set(0);
 		updatedCount.set(0);
 	}
 
