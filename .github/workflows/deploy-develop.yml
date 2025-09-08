@@ -1,0 +1,216 @@
+name: EC2 배포 (DuckDNS) - Develop
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  # 개발 환경용 환경변수
+  EC2_HOST: ${{ secrets.DEV_EC2_HOST }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+
+jobs:
+  build-and-deploy:
+    name: 빌드 및 배포 (개발환경)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 소스코드 체크아웃
+      uses: actions/checkout@v3
+      
+    - name: Docker Buildx 설정
+      uses: docker/setup-buildx-action@v2
+      
+    - name: 백엔드 도커 이미지 빌드
+      run: |
+        cd hospital_main
+        echo "🔨 백엔드 Docker 이미지 빌드 중... (개발환경)"
+        docker build --no-cache -t hospital-backend-dev:${{ github.sha }} .
+        docker tag hospital-backend-dev:${{ github.sha }} hospital-backend-dev:latest
+        echo "✅ 백엔드 이미지 생성 완료 (개발환경)"
+        
+    - name: 도커 이미지 압축 및 저장
+      run: |
+        echo "💾 Docker 이미지 압축 중..."
+        docker save hospital-backend-dev:latest | gzip > backend-dev.tar.gz
+        
+        # 이미지 크기 확인
+        ls -lh *.tar.gz
+        echo "✅ 이미지 압축 완료"
+        
+    - name: 배포 파일들을 EC2 서버로 전송
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.DEV_EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        source: "backend-dev.tar.gz,docker-compose.dev.yml,deploy-dev.sh"
+        target: "/home/ec2-user/"
+        
+    - name: EC2 서버에 DuckDNS로 배포 (개발환경)
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.DEV_EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        envs: GITHUB_SHA
+        script: |
+          echo "🚀 병원 프로젝트 DuckDNS 배포 시작... (개발환경)"
+          
+          # Docker 이미지 로드
+          echo "📦 Docker 이미지 로드 중..."
+          docker load < /home/ec2-user/backend-dev.tar.gz
+          
+          # 필요한 디렉토리 생성
+          sudo mkdir -p /opt/hospital/config/duckdns
+          sudo chown -R ec2-user:ec2-user /opt/hospital/
+          
+          # .env 파일 생성 (개발환경)
+          cat > .env << EOF
+          ENVIRONMENT=development
+          IMAGE_TAG=latest
+          
+          # 데이터베이스 설정
+          DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_PORT=3501
+          
+          # 백엔드 설정
+          BACKEND_HOST=hospital-backend-dev
+          BACKEND_PORT=8889
+          
+          # DuckDNS 설정 (개발환경)
+          DUCKDNS_DOMAIN=${{ secrets.DEV_DUCKDNS_DOMAIN }}
+          DUCKDNS_SUBDOMAIN=${{ secrets.DEV_DUCKDNS_SUBDOMAIN }}
+          DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
+          
+          # 병원/약국 API 키 설정
+          HOSPITAL_MAIN_API_KEY=${{ secrets.HOSPITAL_MAIN_API_KEY }}
+          HOSPITAL_DETAIL_API_KEY=${{ secrets.HOSPITAL_DETAIL_API_KEY }}
+          HOSPITAL_MEDICAL_SUBJECT_API_KEY=${{ secrets.HOSPITAL_MEDICAL_SUBJECT_API_KEY }}
+          HOSPITAL_PRODOC_API_KEY=${{ secrets.HOSPITAL_PRODOC_API_KEY }}
+          HOSPITAL_PHARMACY_API_KEY=${{ secrets.HOSPITAL_PHARMACY_API_KEY }}
+          HOSPITAL_EMERGENCY_API_KEY=${{ secrets.HOSPITAL_EMERGENCY_API_KEY }}
+          API_ADMIN_KEY=${{ secrets.API_ADMIN_KEY }}
+          
+          # 병원/약국 API Base URL 설정
+          HOSPITAL_MAIN_API_BASE_URL=${{ secrets.HOSPITAL_MAIN_API_BASE_URL }}
+          HOSPITAL_DETAIL_API_BASE_URL=${{ secrets.HOSPITAL_DETAIL_API_BASE_URL }}
+          HOSPITAL_MEDICAL_SUBJECT_API_BASE_URL=${{ secrets.HOSPITAL_MEDICAL_SUBJECT_API_BASE_URL }}
+          HOSPITAL_PRODOC_API_BASE_URL=${{ secrets.HOSPITAL_PRODOC_API_BASE_URL }}
+          HOSPITAL_PHARMACY_API_BASE_URL=${{ secrets.HOSPITAL_PHARMACY_API_BASE_URL }}
+          HOSPITAL_EMERGENCY_API_BASE_URL=${{ secrets.HOSPITAL_EMERGENCY_API_BASE_URL }}
+          
+          # 데이터베이스 설정
+          DB_URL=${{ secrets.DB_URL }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          
+          EOF
+           
+          # 환경변수 확인
+          echo "📋 배포 환경 설정:"
+          echo "  환경: development"
+          echo "  DuckDNS 도메인: ${{ secrets.DEV_DUCKDNS_DOMAIN }}"
+          echo "  DuckDNS 서브도메인: ${{ secrets.DEV_DUCKDNS_SUBDOMAIN }}"
+          echo "  백엔드 포트: 8889"
+          echo "  DB 포트: 3501"
+          
+          # 배포 스크립트 실행 권한 부여
+          chmod +x /home/ec2-user/deploy-dev.sh
+          
+          # 배포 실행
+          echo "▶️ 배포 스크립트 실행..."
+          /home/ec2-user/deploy-dev.sh
+          
+          # 임시 파일 정리
+          echo "🧹 임시 파일 정리..."
+          rm -f /home/ec2-user/*.tar.gz
+          
+          echo "✅ 개발환경 배포 완료!"
+          
+    - name: 서비스 상태 확인 및 헬스체크
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.DEV_EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          echo "🏥 서비스 헬스체크 시작... (개발환경)"
+          
+          # 컨테이너 상태 확인
+          echo "📊 컨테이너 상태:"
+          docker-compose -f /home/ec2-user/docker-compose.dev.yml ps
+          
+          # DuckDNS 도메인으로 백엔드 API 확인
+          TARGET_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8889"
+          echo "🔍 백엔드 API 응답 테스트 ($TARGET_URL)..."
+          
+          for i in {1..12}; do
+            echo "  시도 $i/12..."
+            
+            if curl -f -s --connect-timeout 10 "$TARGET_URL/api/proDoc/status" > /dev/null 2>&1; then
+              echo "✅ 백엔드 API: 정상"
+              BACKEND_OK=true
+              break
+            else
+              echo "⏳ 백엔드 시작 대기 중..."
+              sleep 10
+            fi
+          done
+          
+          # 데이터베이스 연결 확인
+          if docker ps | grep hospital-mariadb-dev > /dev/null; then
+            echo "✅ 데이터베이스: 정상"
+          else
+            echo "⚠️ 데이터베이스: 확인 필요"
+          fi
+          
+          # DuckDNS 컨테이너 확인
+          if docker ps | grep hospital-duckdns-dev > /dev/null; then
+            echo "✅ DuckDNS 자동 업데이트: 활성화"
+            docker logs hospital-duckdns-dev --tail=5
+          else
+            echo "⚠️ DuckDNS 자동 업데이트: 비활성화"
+          fi
+          
+          # 최종 결과 출력
+          echo ""
+          echo "🎉 =========================================="
+          echo "    개발환경 배포 및 헬스체크 완료!"
+          echo "==========================================="
+          echo ""
+          echo "📍 접속 정보:"
+          echo "  🔧 백엔드 API: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8889"
+          echo "  🌍 DuckDNS 도메인: ${{ secrets.DEV_DUCKDNS_DOMAIN }}"
+          echo "  📊 데이터베이스: 포트 3501 (내부 접근)"
+          echo ""
+          echo "🔧 API 테스트 예시:"
+          echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8889/api/proDoc/status"
+          echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8889/api/list"
+          echo ""
+          echo "✨ 개발환경 DuckDNS 자동 IP 업데이트로 백엔드 서버가 준비되었습니다!"
+          
+    - name: 배포 실패 시 롤백 처리
+      if: failure()
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.DEV_EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          echo "❌ 개발환경 배포 실패! 롤백 시도..."
+          
+          # 컨테이너 중지
+          docker-compose -f /home/ec2-user/docker-compose.dev.yml down || true
+          
+          # 최근 로그 확인
+          echo "📝 최근 로그:"
+          docker-compose -f /home/ec2-user/docker-compose.dev.yml logs --tail=50
+          
+          # 임시 파일 정리
+          rm -f /home/ec2-user/*.tar.gz
+          
+          echo "🔄 이전 버전으로 롤백하거나 수동으로 문제를 해결하세요."
