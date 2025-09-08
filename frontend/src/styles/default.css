@@ -1,0 +1,31 @@
+body {
+  font-family: 'Pretendard-Regular';
+  margin: 0;
+  padding: 0;
+  color: #253140;
+}
+
+a {
+  text-decoration: none !important;
+  color: inherit;  
+}
+
+div {
+  line-height: 1.4;
+}
+
+input {
+  all: unset;
+}
+
+li {
+  list-style: none;
+}
+
+button {
+  font-family: 'Pretendard-Regular';
+}
+
+select {
+  font-family: 'Pretendard-Regular';
+}
