@@ -48,3 +48,4 @@ public class HospitalWebResponse {
     private Map<String, Integer> professionalDoctors; 
 }
 
+

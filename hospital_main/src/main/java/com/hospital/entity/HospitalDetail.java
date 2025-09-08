@@ -15,7 +15,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
+@ToString(exclude = "hospital")
 public class HospitalDetail {
 
     @Id
@@ -32,7 +32,7 @@ public class HospitalDetail {
     private Integer parkQty;
 
     @Column(name = "park_xpns_yn")
-    private String parkXpnsYn;
+    private Boolean parkXpnsYn;
 
     @Column(name = "weekday_lunch", length = 50)
     private String lunchWeek;
@@ -97,9 +97,9 @@ public class HospitalDetail {
     }
 
     //무료주차 가능 여부
-    public boolean isFreeParking() {
-        return "N".equals(this.parkXpnsYn);
-    }
+    //public boolean isFreeParking() {
+        //return "N".equals(this.parkXpnsYn);
+    //}
 
     
     //토요일 진료 가능 여부 
@@ -115,7 +115,10 @@ public class HospitalDetail {
     
     //유효한 시간 값인지 체크
     public static boolean isValidTime(String timeStr) {
-        if (timeStr == null || 
+        if (timeStr == null) {
+        	return false;
+        }
+        if(
             timeStr.trim().isEmpty() || 
             "(NULL)".equals(timeStr) || 
             !timeStr.matches("\\d{4}")) {

@@ -46,7 +46,7 @@ public class HospitalConverter {
 				.emergencyNightAvailable(detail != null ? convertYnToBoolean(detail.getEmyNightYn()) : null)
 				.weekdayLunch(detail != null ? detail.getLunchWeek() : null)
 				.parkingCapacity(detail != null ? detail.getParkQty() : null)
-				.parkingFee(detail != null ? convertParkingFeeToBoolean(detail.getParkXpnsYn()) : null)
+				.parkingFee(detail != null ? detail.getParkXpnsYn() : null)
 
 				// 운영 시간
 				.todayOpen(formatTime(todayTime.getOpenTime())).todayClose(formatTime(todayTime.getCloseTime()))
@@ -57,13 +57,6 @@ public class HospitalConverter {
 				.professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs())).build();
 	}
 
-	private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
-		if (set == null || set.isEmpty()) {
-			return List.of(); // 비어있는 리스트 반환
-		}
-		return set.stream().map(MedicalSubject::getSubjectName).filter(name -> name != null && !name.trim().isEmpty())
-				.distinct().sorted().collect(Collectors.toList());
-	}
 
 	private String formatTime(String timeStr) {
 		// null이거나 4자리가 아니면 원본값 그대로 반환
@@ -75,13 +68,7 @@ public class HospitalConverter {
 		return timeStr.substring(0, 2) + ":" + timeStr.substring(2, 4);
 	}
 	
-	private Boolean convertYnToBoolean(String ynValue) {
-		if (ynValue == null) {
-			return null;
-		}
-		return "Y".equalsIgnoreCase(ynValue.trim());
-	}
-
+	
 	// Hospital 엔티티 리스트를 DTO 리스트로 변환
 	public List<HospitalWebResponse> convertToDtos(List<HospitalMain> hospitals) {
 		if (hospitals == null) {
@@ -102,10 +89,20 @@ public class HospitalConverter {
 	                Integer::sum              // 중복 시 합산
 	            ));
 	}
-	private Boolean convertParkingFeeToBoolean(String parkXpnsYn) {
-	    if (parkXpnsYn == null) {
-	        return null;
-	    }
-	    return "Y".equalsIgnoreCase(parkXpnsYn.trim());
+	
+	
+	private Boolean convertYnToBoolean(String ynValue) {
+		if (ynValue == null) {
+			return null;
+		}
+		return "Y".equalsIgnoreCase(ynValue.trim());
 	}
+	private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
+		if (set == null || set.isEmpty()) {
+			return List.of(); // 비어있는 리스트 반환
+		}
+		return set.stream().map(MedicalSubject::getSubjectName).filter(name -> name != null && !name.trim().isEmpty())
+				.distinct().sorted().collect(Collectors.toList());
+	}
+
 }

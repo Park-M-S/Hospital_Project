@@ -37,12 +37,12 @@ public class HospitalTagFilter {
                     return false;
                 }
                 break;
-            case "무료주차":
-                if (Objects.isNull(hospital.getHospitalDetail()) || !hospital.getHospitalDetail().hasParkingSpace()
-                        || !hospital.getHospitalDetail().isFreeParking()) {
-                    return false;
-                }
-                break;
+            //case "무료주차":
+                //if (Objects.isNull(hospital.getHospitalDetail()) || !hospital.getHospitalDetail().hasParkingSpace()
+                        //|| !hospital.getHospitalDetail().isFreeParking()) {
+                    //return false;
+                //}
+                //break;
             case "토요일진료":
                 if (Objects.isNull(hospital.getHospitalDetail())
                         || !hospital.getHospitalDetail().isSaturdayAvailable()) {
