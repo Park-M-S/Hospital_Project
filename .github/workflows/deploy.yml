@@ -1,4 +1,4 @@
-name: EC2 배포 (DuckDNS) - Production
+name: EC2 배포 (DuckDNS)
 
 on:
   push:
