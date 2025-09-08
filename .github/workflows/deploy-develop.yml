@@ -132,7 +132,7 @@ jobs:
             
             - job_name: 'hospital-backend'
               static_configs:
-                - targets: ['localhost:8889']
+                - targets: ['localhost:8888']
               metrics_path: '/actuator/prometheus'
               scrape_interval: 10s
           EOF
@@ -346,7 +346,7 @@ jobs:
           
           # 백엔드 설정
           BACKEND_HOST=hospital-backend-dev
-          BACKEND_PORT=8889
+          BACKEND_PORT=8888
           
           # DuckDNS 설정 (개발환경)
           DUCKDNS_DOMAIN=${{ secrets.DEV_DUCKDNS_DOMAIN }}
@@ -419,7 +419,7 @@ jobs:
           echo "  Promtail: $(sudo systemctl is-active promtail) - http://localhost:9080"
           
           # DuckDNS 도메인으로 백엔드 API 확인
-          TARGET_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8889"
+          TARGET_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888"
           echo "🔍 백엔드 API 응답 테스트 ($TARGET_URL)..."
           
           for i in {1..12}; do
