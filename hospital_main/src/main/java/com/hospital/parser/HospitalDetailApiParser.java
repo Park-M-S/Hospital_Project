@@ -100,7 +100,7 @@ public class HospitalDetailApiParser {
                 .emyDayYn(safeGetString(dto.getEmyDayYn()))
                 .emyNightYn(safeGetString(dto.getEmyNgtYn())) 
                 .parkQty(parseInteger(dto.getParkQty())) // 
-                .parkXpnsYn(safeGetString(dto.getParkXpnsYn()))  
+                .parkXpnsYn(convertParkingFeeToBoolean(safeGetString(dto.getParkXpnsYn())))  
                 .lunchWeek(safeGetString(dto.getLunchWeek()))
                 .rcvWeek(safeGetString(dto.getRcvWeek()))
                 .rcvSat(safeGetString(dto.getRcvSat()))
@@ -123,7 +123,7 @@ public class HospitalDetailApiParser {
                 .build();
     }
 
-   
+  
     private Integer parseInteger(String value) {
         if (value == null || value.trim().isEmpty()) {
             return null;
@@ -143,4 +143,10 @@ public class HospitalDetailApiParser {
         }
         return value.trim();
     }
+    private Boolean convertParkingFeeToBoolean(String parkXpnsYn) {
+	    if (parkXpnsYn == null) {
+	        return null;
+	    }
+	    return "Y".equalsIgnoreCase(parkXpnsYn.trim());
+	}
 }

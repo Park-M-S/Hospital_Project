@@ -59,4 +59,5 @@ public class MedicalSubjectApiParser {
             return List.of();
         }
     }
+    
 }
