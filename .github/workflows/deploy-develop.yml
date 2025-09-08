@@ -23,22 +23,89 @@ jobs:
     - name: Docker Buildx 설정
       uses: docker/setup-buildx-action@v2
       
+    # 디버깅을 위한 디렉토리 구조 확인
+    - name: 디렉토리 구조 및 필요 파일 확인
+      run: |
+        echo "🔍 현재 디렉토리 구조:"
+        ls -la
+        echo ""
+        echo "🔍 hospital_main 디렉토리 확인:"
+        if [ -d "hospital_main" ]; then
+          ls -la hospital_main/
+          echo "✅ hospital_main 디렉토리 존재"
+        else
+          echo "❌ hospital_main 디렉토리가 없습니다!"
+          exit 1
+        fi
+        
+        echo ""
+        echo "🔍 필요한 파일들 확인:"
+        required_files=("docker-compose.yml" "deploy-dev.sh" "hospital_main/Dockerfile")
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file 존재"
+          else
+            echo "❌ $file 누락!"
+            exit 1
+          fi
+        done
+        
     - name: 백엔드 도커 이미지 빌드
       run: |
         cd hospital_main
         echo "🔨 백엔드 Docker 이미지 빌드 중... (개발환경)"
-        docker build --no-cache -t hospital-backend-dev:${{ github.sha }} .
-        docker tag hospital-backend-dev:${{ github.sha }} hospital-backend-dev:latest
-        echo "✅ 백엔드 이미지 생성 완료 (개발환경)"
+        
+        # Dockerfile 존재 확인
+        if [ ! -f "Dockerfile" ]; then
+          echo "❌ Dockerfile이 존재하지 않습니다!"
+          exit 1
+        fi
+        
+        # 빌드 시 더 자세한 로그 출력
+        docker build --no-cache --progress=plain -t hospital-backend-dev:${{ github.sha }} . 2>&1 | tee build.log
+        
+        # 빌드 결과 확인
+        if [ $? -eq 0 ]; then
+          docker tag hospital-backend-dev:${{ github.sha }} hospital-backend-dev:latest
+          echo "✅ 백엔드 이미지 생성 완료 (개발환경)"
+          docker images | grep hospital-backend-dev
+        else
+          echo "❌ Docker 빌드 실패!"
+          echo "빌드 로그:"
+          cat build.log
+          exit 1
+        fi
         
     - name: 도커 이미지 압축 및 저장
       run: |
         echo "💾 Docker 이미지 압축 중..."
-        docker save hospital-backend-dev:latest | gzip > backend-dev.tar.gz
         
-        # 이미지 크기 확인
-        ls -lh *.tar.gz
-        echo "✅ 이미지 압축 완료"
+        # 이미지 존재 확인
+        if docker images | grep -q hospital-backend-dev:latest; then
+          docker save hospital-backend-dev:latest | gzip > backend-dev.tar.gz
+          
+          # 이미지 크기 확인
+          ls -lh *.tar.gz
+          echo "✅ 이미지 압축 완료"
+        else
+          echo "❌ hospital-backend-dev:latest 이미지가 존재하지 않습니다!"
+          docker images
+          exit 1
+        fi
+        
+    - name: 전송할 파일들 존재 확인
+      run: |
+        echo "📋 전송할 파일들 확인:"
+        required_files=("backend-dev.tar.gz" "docker-compose.yml" "deploy-dev.sh")
+        
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file 존재 ($(ls -lh $file | awk '{print $5}'))"
+          else
+            echo "❌ $file 누락!"
+            exit 1
+          fi
+        done
         
     - name: 배포 파일들을 EC2 서버로 전송
       uses: appleboy/scp-action@v0.1.4
@@ -46,326 +113,46 @@ jobs:
         host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
-        source: "backend-dev.tar.gz,docker-compose.dev.yml,deploy-dev.sh"
+        source: "backend-dev.tar.gz,docker-compose.yml,deploy-dev.sh"
         target: "/home/ec2-user/"
+        timeout: 300s
 
-    - name: EC2 서버 시스템 업데이트 및 필수 도구 설치
+    - name: EC2 서버 기본 환경 확인 및 설정
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
+        timeout: 300s
         script: |
-          echo "🔄 시스템 업데이트 및 필수 도구 설치 시작..."
+          echo "🔍 기본 환경 확인..."
           
-          # 시스템 업데이트
-          echo "📦 시스템 패키지 업데이트 중..."
-          sudo yum update -y
+          # 전송된 파일들 확인
+          echo "📋 전송된 파일 확인:"
+          ls -la /home/ec2-user/
           
-          # 기본 패키지 설치
-          sudo yum install -y wget curl git unzip
-          
-          # 기존 Docker 제거 (깔끔한 설치를 위해)
-          echo "🧹 기존 Docker 제거 중..."
-          sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine docker-ce docker-ce-cli containerd.io
-          
-          # Docker 최신 버전 설치
-          echo "🐳 Docker 최신 버전 설치 중..."
-          
-          # Docker 공식 저장소 추가
-          sudo yum install -y yum-utils
-          sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-          
-          # Docker CE 최신 버전 설치
-          sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          
-          # Docker 서비스 시작
-          sudo systemctl start docker
-          sudo systemctl enable docker
-          
-          # 현재 사용자를 docker 그룹에 추가
-          sudo usermod -a -G docker ec2-user
-          
-          # Docker 버전 확인
-          echo "✅ Docker 설치 완료"
-          docker --version
-          
-          # Docker Compose 최신 버전 설치
-          echo "🔧 Docker Compose 최신 버전 설치 중..."
-          
-          # 기존 Docker Compose 제거
-          sudo rm -f /usr/local/bin/docker-compose /usr/bin/docker-compose
-          
-          # 최신 Docker Compose 다운로드 및 설치
-          DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\" -f4)
-          echo "최신 Docker Compose 버전: $DOCKER_COMPOSE_VERSION"
-          
-          sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-          sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-          
-          # Docker Compose 버전 확인
-          echo "✅ Docker Compose 설치 완료"
-          docker-compose --version
-          
-          # 모니터링 도구 디렉토리 생성
-          sudo mkdir -p /opt/monitoring/{grafana,prometheus,loki}
-          sudo chown -R ec2-user:ec2-user /opt/monitoring/
-          
-          # Grafana 최신 버전 설치
-          if ! systemctl is-active --quiet grafana-server; then
-            echo "📊 Grafana 최신 버전 설치 중..."
-            
-            # Grafana 공식 저장소 추가
-            sudo tee /etc/yum.repos.d/grafana.repo > /dev/null << EOF
-          [grafana]
-          name=grafana
-          baseurl=https://rpm.grafana.com
-          repo_gpgcheck=1
-          enabled=1
-          gpgcheck=1
-          gpgkey=https://rpm.grafana.com/gpg.key
-          sslverify=1
-          sslcacert=/etc/pki/tls/certs/ca-bundle.crt
-          EOF
-            
-            # Grafana 설치
-            sudo yum install -y grafana
-            sudo systemctl daemon-reload
-            sudo systemctl enable grafana-server
-            sudo systemctl start grafana-server
-            echo "✅ Grafana 설치 완료 (포트: 3000)"
+          # Docker 설치 확인
+          if ! command -v docker &> /dev/null; then
+            echo "📦 Docker 설치 중..."
+            sudo yum update -y
+            sudo yum install -y docker
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sudo usermod -a -G docker ec2-user
+            echo "✅ Docker 설치 완료"
           else
-            echo "✅ Grafana 이미 실행 중"
+            echo "✅ Docker 이미 설치됨: $(docker --version)"
           fi
           
-          # Prometheus 최신 버전 설치
-          if [ ! -d "/opt/prometheus" ]; then
-            echo "📈 Prometheus 최신 버전 설치 중..."
-            cd /tmp
-            
-            # 최신 Prometheus 버전 확인 및 다운로드
-            PROMETHEUS_VERSION=$(curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | grep 'tag_name' | cut -d\" -f4 | sed 's/v//')
-            echo "최신 Prometheus 버전: $PROMETHEUS_VERSION"
-            
-            wget https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
-            tar xvfz prometheus-*.tar.gz
-            sudo mv prometheus-${PROMETHEUS_VERSION}.linux-amd64 /opt/prometheus
-            sudo chown -R ec2-user:ec2-user /opt/prometheus
-            
-            # Prometheus 설정 파일 생성
-            cat > /opt/prometheus/prometheus.yml << EOF
-          global:
-            scrape_interval: 15s
-            evaluation_interval: 15s
-          
-          rule_files:
-            # - "first_rules.yml"
-            # - "second_rules.yml"
-          
-          scrape_configs:
-            - job_name: 'prometheus'
-              static_configs:
-                - targets: ['localhost:9090']
-            
-            - job_name: 'hospital-backend'
-              static_configs:
-                - targets: ['localhost:8888']
-              metrics_path: '/actuator/prometheus'
-              scrape_interval: 10s
-          EOF
-            
-            # Prometheus 서비스 파일 생성
-            sudo tee /etc/systemd/system/prometheus.service > /dev/null << EOF
-          [Unit]
-          Description=Prometheus Server
-          Documentation=https://prometheus.io/docs/
-          After=network-online.target
-          
-          [Service]
-          User=ec2-user
-          Restart=on-failure
-          ExecStart=/opt/prometheus/prometheus --config.file=/opt/prometheus/prometheus.yml --storage.tsdb.path=/opt/prometheus/data --web.console.templates=/opt/prometheus/consoles --web.console.libraries=/opt/prometheus/console_libraries --web.listen-address=0.0.0.0:9090 --web.enable-lifecycle
-          
-          [Install]
-          WantedBy=multi-user.target
-          EOF
-            
-            sudo systemctl daemon-reload
-            sudo systemctl enable prometheus
-            sudo systemctl start prometheus
-            echo "✅ Prometheus 설치 완료 (포트: 9090)"
+          # Docker Compose 설치 확인
+          if ! command -v docker-compose &> /dev/null; then
+            echo "📦 Docker Compose 설치 중..."
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            echo "✅ Docker Compose 설치 완료"
           else
-            echo "✅ Prometheus 이미 설치됨"
+            echo "✅ Docker Compose 이미 설치됨: $(docker-compose --version)"
           fi
-          
-          # Loki 최신 버전 설치
-          if [ ! -d "/opt/loki" ]; then
-            echo "📋 Loki 최신 버전 설치 중..."
-            cd /tmp
-            
-            # 최신 Loki 버전 확인 및 다운로드
-            LOKI_VERSION=$(curl -s https://api.github.com/repos/grafana/loki/releases/latest | grep 'tag_name' | cut -d\" -f4 | sed 's/v//')
-            echo "최신 Loki 버전: $LOKI_VERSION"
-            
-            wget https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip
-            unzip loki-linux-amd64.zip
-            sudo mkdir -p /opt/loki
-            sudo mv loki-linux-amd64 /opt/loki/loki
-            sudo chmod +x /opt/loki/loki
-            sudo chown -R ec2-user:ec2-user /opt/loki
-            
-            # Loki 설정 파일 생성
-            cat > /opt/loki/loki-local-config.yaml << EOF
-          auth_enabled: false
-          
-          server:
-            http_listen_port: 3100
-            grpc_listen_port: 9096
-          
-          common:
-            path_prefix: /opt/loki
-            storage:
-              filesystem:
-                chunks_directory: /opt/loki/chunks
-                rules_directory: /opt/loki/rules
-            replication_factor: 1
-            ring:
-              instance_addr: 127.0.0.1
-              kvstore:
-                store: inmemory
-          
-          query_range:
-            results_cache:
-              cache:
-                embedded_cache:
-                  enabled: true
-                  max_size_mb: 100
-          
-          schema_config:
-            configs:
-              - from: 2020-10-24
-                store: boltdb-shipper
-                object_store: filesystem
-                schema: v11
-                index:
-                  prefix: index_
-                  period: 24h
-          
-          ruler:
-            alertmanager_url: http://localhost:9093
-          EOF
-            
-            # Loki 서비스 파일 생성
-            sudo tee /etc/systemd/system/loki.service > /dev/null << EOF
-          [Unit]
-          Description=Loki service
-          After=network.target
-          
-          [Service]
-          Type=simple
-          User=ec2-user
-          ExecStart=/opt/loki/loki -config.file /opt/loki/loki-local-config.yaml
-          Restart=on-failure
-          RestartSec=20
-          StandardOutput=journal
-          StandardError=journal
-          SyslogIdentifier=loki
-          
-          [Install]
-          WantedBy=multi-user.target
-          EOF
-            
-            sudo systemctl daemon-reload
-            sudo systemctl enable loki
-            sudo systemctl start loki
-            echo "✅ Loki 설치 완료 (포트: 3100)"
-          else
-            echo "✅ Loki 이미 설치됨"
-          fi
-          
-          # Promtail 최신 버전 설치
-          if [ ! -f "/opt/loki/promtail" ]; then
-            echo "📤 Promtail 최신 버전 설치 중..."
-            cd /tmp
-            
-            # Loki와 동일한 버전으로 설정 (이미 위에서 확인함)
-            wget https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/promtail-linux-amd64.zip
-            unzip promtail-linux-amd64.zip
-            sudo mv promtail-linux-amd64 /opt/loki/promtail
-            sudo chmod +x /opt/loki/promtail
-            
-            # Promtail 설정 파일 생성
-            cat > /opt/loki/promtail-local-config.yaml << EOF
-          server:
-            http_listen_port: 9080
-            grpc_listen_port: 0
-          
-          positions:
-            filename: /opt/loki/positions.yaml
-          
-          clients:
-            - url: http://localhost:3100/loki/api/v1/push
-          
-          scrape_configs:
-            - job_name: system
-              static_configs:
-                - targets:
-                    - localhost
-                  labels:
-                    job: varlogs
-                    __path__: /var/log/*log
-            
-            - job_name: docker
-              static_configs:
-                - targets:
-                    - localhost
-                  labels:
-                    job: docker
-                    __path__: /var/lib/docker/containers/*/*log
-          EOF
-            
-            # Promtail 서비스 파일 생성
-            sudo tee /etc/systemd/system/promtail.service > /dev/null << EOF
-          [Unit]
-          Description=Promtail service
-          After=network.target
-          
-          [Service]
-          Type=simple
-          User=ec2-user
-          ExecStart=/opt/loki/promtail -config.file /opt/loki/promtail-local-config.yaml
-          Restart=on-failure
-          RestartSec=20
-          StandardOutput=journal
-          StandardError=journal
-          SyslogIdentifier=promtail
-          
-          [Install]
-          WantedBy=multi-user.target
-          EOF
-            
-            sudo systemctl daemon-reload
-            sudo systemctl enable promtail
-            sudo systemctl start promtail
-            echo "✅ Promtail 설치 완료 (포트: 9080)"
-          fi
-          
-          # 설치된 버전 정보 출력
-          echo "🔍 설치된 도구 버전 정보:"
-          echo "  Docker: $(docker --version)"
-          echo "  Docker Compose: $(docker-compose --version)"
-          echo "  Grafana: $(grafana-server -v | head -1)"
-          
-          # 서비스 상태 확인
-          echo "🔍 설치된 서비스 상태 확인:"
-          echo "  Docker: $(sudo systemctl is-active docker)"
-          echo "  Grafana: $(sudo systemctl is-active grafana-server)"
-          echo "  Prometheus: $(sudo systemctl is-active prometheus)"
-          echo "  Loki: $(sudo systemctl is-active loki)"
-          echo "  Promtail: $(sudo systemctl is-active promtail)"
-          
-          echo "✅ 시스템 업데이트 및 최신 모니터링 도구 설치 완료!"
         
     - name: EC2 서버에 DuckDNS로 배포 (개발환경)
       uses: appleboy/ssh-action@v0.1.5
@@ -374,30 +161,51 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         envs: GITHUB_SHA
+        timeout: 300s
         script: |
           echo "🚀 병원 프로젝트 DuckDNS 배포 시작... (개발환경)"
           
+          # 필수 파일 존재 확인
+          required_files=("/home/ec2-user/backend-dev.tar.gz" "/home/ec2-user/docker-compose.yml" "/home/ec2-user/deploy-dev.sh")
+          
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ $file 존재"
+            else
+              echo "❌ $file 누락!"
+              exit 1
+            fi
+          done
+          
           # Docker 이미지 로드
           echo "📦 Docker 이미지 로드 중..."
-          docker load < /home/ec2-user/backend-dev.tar.gz
+          if docker load < /home/ec2-user/backend-dev.tar.gz; then
+            echo "✅ Docker 이미지 로드 완료"
+            docker images | grep hospital-backend-dev
+          else
+            echo "❌ Docker 이미지 로드 실패"
+            exit 1
+          fi
           
           # 필요한 디렉토리 생성
           sudo mkdir -p /opt/hospital/config/duckdns
           sudo chown -R ec2-user:ec2-user /opt/hospital/
           
-          # .env 파일 생성 (개발환경)
+          # .env 파일 생성 (개발환경) - 중복 제거
           cat > .env << EOF
           ENVIRONMENT=development
           IMAGE_TAG=latest
+          
+          # 백엔드 설정
+          BACKEND_HOST=hospital-backend-dev
+          BACKEND_PORT=8888
           
           # 데이터베이스 설정
           DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_PORT=3501
-          
-          # 백엔드 설정
-          BACKEND_HOST=hospital-backend-dev
-          BACKEND_PORT=8888
+          DB_URL=${{ secrets.DB_URL }}
+          DB_USERNAME=${{ secrets.DB_USERNAME }}
           
           # DuckDNS 설정 (개발환경)
           DUCKDNS_DOMAIN=${{ secrets.DEV_DUCKDNS_DOMAIN }}
@@ -421,11 +229,6 @@ jobs:
           HOSPITAL_PHARMACY_API_BASE_URL=${{ secrets.HOSPITAL_PHARMACY_API_BASE_URL }}
           HOSPITAL_EMERGENCY_API_BASE_URL=${{ secrets.HOSPITAL_EMERGENCY_API_BASE_URL }}
           
-          # 데이터베이스 설정
-          DB_URL=${{ secrets.DB_URL }}
-          DB_USERNAME=${{ secrets.DB_USERNAME }}
-          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-          
           EOF
            
           # 환경변수 확인
@@ -434,18 +237,27 @@ jobs:
           echo "  DuckDNS 도메인: ${{ secrets.DEV_DUCKDNS_DOMAIN }}"
           echo "  DuckDNS 서브도메인: ${{ secrets.DEV_DUCKDNS_SUBDOMAIN }}"
           echo "  백엔드 포트: 8888"
-          echo "  DB 포트: 3500"
+          echo "  DB 포트: 3501"
           
-          # 배포 스크립트 실행 권한 부여
+          # 배포 스크립트 실행 권한 부여 및 내용 확인
           chmod +x /home/ec2-user/deploy-dev.sh
+          
+          # 스크립트 내용 일부 확인 (디버깅용)
+          echo "📝 배포 스크립트 첫 10줄:"
+          head -10 /home/ec2-user/deploy-dev.sh
           
           # 배포 실행
           echo "▶️ 배포 스크립트 실행..."
-          /home/ec2-user/deploy-dev.sh
+          if /home/ec2-user/deploy-dev.sh; then
+            echo "✅ 배포 스크립트 실행 성공"
+          else
+            echo "❌ 배포 스크립트 실행 실패"
+            exit 1
+          fi
           
           # 임시 파일 정리
           echo "🧹 임시 파일 정리..."
-          rm -f /home/ec2-user/*.tar.gz
+          rm -f /home/ec2-user/backend-dev.tar.gz
           
           echo "✅ 개발환경 배포 완료!"
           
@@ -455,24 +267,24 @@ jobs:
         host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
+        timeout: 180s
         script: |
           echo "🏥 서비스 헬스체크 시작... (개발환경)"
           
-          # 컨테이너 상태 확인
+          # 컨테이너 상태 확인 (올바른 파일명 사용)
           echo "📊 컨테이너 상태:"
-          docker-compose -f /home/ec2-user/docker-compose.dev.yml ps
-          
-          # 모니터링 서비스 상태 확인
-          echo "📈 모니터링 서비스 상태:"
-          echo "  Grafana: $(sudo systemctl is-active grafana-server) - http://localhost:3000"
-          echo "  Prometheus: $(sudo systemctl is-active prometheus) - http://localhost:9090"
-          echo "  Loki: $(sudo systemctl is-active loki) - http://localhost:3100"
-          echo "  Promtail: $(sudo systemctl is-active promtail) - http://localhost:9080"
+          if [ -f /home/ec2-user/docker-compose.yml ]; then
+            docker-compose -f /home/ec2-user/docker-compose.yml ps
+          else
+            echo "❌ docker-compose.yml 파일이 없습니다!"
+            docker ps
+          fi
           
           # DuckDNS 도메인으로 백엔드 API 확인
           TARGET_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888"
           echo "🔍 백엔드 API 응답 테스트 ($TARGET_URL)..."
           
+          BACKEND_OK=false
           for i in {1..12}; do
             echo "  시도 $i/12..."
             
@@ -486,17 +298,21 @@ jobs:
             fi
           done
           
+          if [ "$BACKEND_OK" = false ]; then
+            echo "⚠️ 백엔드 API 응답 확인 실패"
+          fi
+          
           # 데이터베이스 연결 확인
-          if docker ps | grep hospital-mariadb-dev > /dev/null; then
+          if docker ps | grep hospital-mariadb > /dev/null; then
             echo "✅ 데이터베이스: 정상"
           else
             echo "⚠️ 데이터베이스: 확인 필요"
           fi
           
           # DuckDNS 컨테이너 확인
-          if docker ps | grep hospital-duckdns-dev > /dev/null; then
+          if docker ps | grep hospital-duckdns > /dev/null; then
             echo "✅ DuckDNS 자동 업데이트: 활성화"
-            docker logs hospital-duckdns-dev --tail=5
+            docker logs $(docker ps --filter "name=hospital-duckdns" --format "{{.Names}}") --tail=5
           else
             echo "⚠️ DuckDNS 자동 업데이트: 비활성화"
           fi
@@ -510,18 +326,13 @@ jobs:
           echo "📍 접속 정보:"
           echo "  🔧 백엔드 API: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888"
           echo "  🌍 DuckDNS 도메인: ${{ secrets.DEV_DUCKDNS_DOMAIN }}"
-          echo "  📊 데이터베이스: 포트 3500 (내부 접근)"
-          echo ""
-          echo "📈 모니터링 대시보드:"
-          echo "  📊 Grafana: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:3000 (admin/커스텀비밀번호)"
-          echo "  📈 Prometheus: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:9090"
-          echo "  📋 Loki: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:3100"
+          echo "  📊 데이터베이스: 포트 3501 (내부 접근)"
           echo ""
           echo "🔧 API 테스트 예시:"
           echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888/api/proDoc/status"
           echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888/api/list"
           echo ""
-          echo "✨ 개발환경 DuckDNS 자동 IP 업데이트 및 모니터링이 준비되었습니다!"
+          echo "✨ 개발환경 DuckDNS 자동 IP 업데이트가 준비되었습니다!"
           
     - name: 배포 실패 시 롤백 처리
       if: failure()
@@ -533,12 +344,12 @@ jobs:
         script: |
           echo "❌ 개발환경 배포 실패! 롤백 시도..."
           
-          # 컨테이너 중지
-          docker-compose -f /home/ec2-user/docker-compose.dev.yml down || true
+          # 컨테이너 중지 (올바른 파일명 사용)
+          docker-compose -f /home/ec2-user/docker-compose.yml down || true
           
           # 최근 로그 확인
           echo "📝 최근 로그:"
-          docker-compose -f /home/ec2-user/docker-compose.dev.yml logs --tail=50
+          docker-compose -f /home/ec2-user/docker-compose.yml logs --tail=50 || true
           
           # 임시 파일 정리
           rm -f /home/ec2-user/*.tar.gz
