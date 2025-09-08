@@ -65,39 +65,72 @@ jobs:
           # 기본 패키지 설치
           sudo yum install -y wget curl git unzip
           
-          # Docker 설치 확인 및 설치
-          if ! command -v docker &> /dev/null; then
-            echo "🐳 Docker 설치 중..."
-            sudo yum install -y docker
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            sudo usermod -a -G docker ec2-user
-            echo "✅ Docker 설치 완료"
-          else
-            echo "✅ Docker 이미 설치됨"
-            docker --version
-          fi
+          # 기존 Docker 제거 (깔끔한 설치를 위해)
+          echo "🧹 기존 Docker 제거 중..."
+          sudo yum remove -y docker docker-client docker-client-latest docker-common docker-latest docker-latest-logrotate docker-logrotate docker-engine docker-ce docker-ce-cli containerd.io
           
-          # Docker Compose 설치 확인 및 설치
-          if ! command -v docker-compose &> /dev/null; then
-            echo "🔧 Docker Compose 설치 중..."
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
-            echo "✅ Docker Compose 설치 완료"
-          else
-            echo "✅ Docker Compose 이미 설치됨"
-            docker-compose --version
-          fi
+          # Docker 최신 버전 설치
+          echo "🐳 Docker 최신 버전 설치 중..."
+          
+          # Docker 공식 저장소 추가
+          sudo yum install -y yum-utils
+          sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+          
+          # Docker CE 최신 버전 설치
+          sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          
+          # Docker 서비스 시작
+          sudo systemctl start docker
+          sudo systemctl enable docker
+          
+          # 현재 사용자를 docker 그룹에 추가
+          sudo usermod -a -G docker ec2-user
+          
+          # Docker 버전 확인
+          echo "✅ Docker 설치 완료"
+          docker --version
+          
+          # Docker Compose 최신 버전 설치
+          echo "🔧 Docker Compose 최신 버전 설치 중..."
+          
+          # 기존 Docker Compose 제거
+          sudo rm -f /usr/local/bin/docker-compose /usr/bin/docker-compose
+          
+          # 최신 Docker Compose 다운로드 및 설치
+          DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\" -f4)
+          echo "최신 Docker Compose 버전: $DOCKER_COMPOSE_VERSION"
+          
+          sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+          
+          # Docker Compose 버전 확인
+          echo "✅ Docker Compose 설치 완료"
+          docker-compose --version
           
           # 모니터링 도구 디렉토리 생성
           sudo mkdir -p /opt/monitoring/{grafana,prometheus,loki}
           sudo chown -R ec2-user:ec2-user /opt/monitoring/
           
-          # Grafana 설치 확인 및 설치
+          # Grafana 최신 버전 설치
           if ! systemctl is-active --quiet grafana-server; then
-            echo "📊 Grafana 설치 중..."
-            sudo yum install -y https://dl.grafana.com/oss/release/grafana-10.2.2-1.x86_64.rpm
+            echo "📊 Grafana 최신 버전 설치 중..."
+            
+            # Grafana 공식 저장소 추가
+            sudo tee /etc/yum.repos.d/grafana.repo > /dev/null << EOF
+          [grafana]
+          name=grafana
+          baseurl=https://rpm.grafana.com
+          repo_gpgcheck=1
+          enabled=1
+          gpgcheck=1
+          gpgkey=https://rpm.grafana.com/gpg.key
+          sslverify=1
+          sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+          EOF
+            
+            # Grafana 설치
+            sudo yum install -y grafana
             sudo systemctl daemon-reload
             sudo systemctl enable grafana-server
             sudo systemctl start grafana-server
@@ -106,13 +139,18 @@ jobs:
             echo "✅ Grafana 이미 실행 중"
           fi
           
-          # Prometheus 설치 확인 및 설치
+          # Prometheus 최신 버전 설치
           if [ ! -d "/opt/prometheus" ]; then
-            echo "📈 Prometheus 설치 중..."
+            echo "📈 Prometheus 최신 버전 설치 중..."
             cd /tmp
-            wget https://github.com/prometheus/prometheus/releases/download/v2.47.2/prometheus-2.47.2.linux-amd64.tar.gz
+            
+            # 최신 Prometheus 버전 확인 및 다운로드
+            PROMETHEUS_VERSION=$(curl -s https://api.github.com/repos/prometheus/prometheus/releases/latest | grep 'tag_name' | cut -d\" -f4 | sed 's/v//')
+            echo "최신 Prometheus 버전: $PROMETHEUS_VERSION"
+            
+            wget https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
             tar xvfz prometheus-*.tar.gz
-            sudo mv prometheus-2.47.2.linux-amd64 /opt/prometheus
+            sudo mv prometheus-${PROMETHEUS_VERSION}.linux-amd64 /opt/prometheus
             sudo chown -R ec2-user:ec2-user /opt/prometheus
             
             # Prometheus 설정 파일 생성
@@ -161,11 +199,16 @@ jobs:
             echo "✅ Prometheus 이미 설치됨"
           fi
           
-          # Loki 설치 확인 및 설치
+          # Loki 최신 버전 설치
           if [ ! -d "/opt/loki" ]; then
-            echo "📋 Loki 설치 중..."
+            echo "📋 Loki 최신 버전 설치 중..."
             cd /tmp
-            wget https://github.com/grafana/loki/releases/download/v2.9.2/loki-linux-amd64.zip
+            
+            # 최신 Loki 버전 확인 및 다운로드
+            LOKI_VERSION=$(curl -s https://api.github.com/repos/grafana/loki/releases/latest | grep 'tag_name' | cut -d\" -f4 | sed 's/v//')
+            echo "최신 Loki 버전: $LOKI_VERSION"
+            
+            wget https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip
             unzip loki-linux-amd64.zip
             sudo mkdir -p /opt/loki
             sudo mv loki-linux-amd64 /opt/loki/loki
@@ -241,11 +284,13 @@ jobs:
             echo "✅ Loki 이미 설치됨"
           fi
           
-          # Promtail 설치 (Loki용 로그 수집기)
+          # Promtail 최신 버전 설치
           if [ ! -f "/opt/loki/promtail" ]; then
-            echo "📤 Promtail 설치 중..."
+            echo "📤 Promtail 최신 버전 설치 중..."
             cd /tmp
-            wget https://github.com/grafana/loki/releases/download/v2.9.2/promtail-linux-amd64.zip
+            
+            # Loki와 동일한 버전으로 설정 (이미 위에서 확인함)
+            wget https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/promtail-linux-amd64.zip
             unzip promtail-linux-amd64.zip
             sudo mv promtail-linux-amd64 /opt/loki/promtail
             sudo chmod +x /opt/loki/promtail
@@ -306,6 +351,12 @@ jobs:
             echo "✅ Promtail 설치 완료 (포트: 9080)"
           fi
           
+          # 설치된 버전 정보 출력
+          echo "🔍 설치된 도구 버전 정보:"
+          echo "  Docker: $(docker --version)"
+          echo "  Docker Compose: $(docker-compose --version)"
+          echo "  Grafana: $(grafana-server -v | head -1)"
+          
           # 서비스 상태 확인
           echo "🔍 설치된 서비스 상태 확인:"
           echo "  Docker: $(sudo systemctl is-active docker)"
@@ -314,7 +365,7 @@ jobs:
           echo "  Loki: $(sudo systemctl is-active loki)"
           echo "  Promtail: $(sudo systemctl is-active promtail)"
           
-          echo "✅ 시스템 업데이트 및 모니터링 도구 설치 완료!"
+          echo "✅ 시스템 업데이트 및 최신 모니터링 도구 설치 완료!"
         
     - name: EC2 서버에 DuckDNS로 배포 (개발환경)
       uses: appleboy/ssh-action@v0.1.5
