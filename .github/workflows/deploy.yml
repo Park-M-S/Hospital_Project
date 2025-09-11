@@ -64,6 +64,7 @@ jobs:
           
           # 필요한 디렉토리 생성
           sudo mkdir -p /opt/hospital/config/duckdns
+          sudo mkdir -p /opt/hospital/config/prometheus
           sudo mkdir -p /opt/hospital/monitoring/prometheus/config
           sudo mkdir -p /opt/hospital/monitoring/prometheus/data
           sudo mkdir -p /opt/hospital/monitoring/grafana/data
@@ -120,7 +121,48 @@ jobs:
           
           EOF
           
-          # 프로메테우스 설정 파일 생성
+          # Docker Compose용 Prometheus 설정 파일 생성 (새로 추가)
+          cat > /opt/hospital/config/prometheus/prometheus.yml << 'EOF'
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+            external_labels:
+              cluster: 'hospital-production'
+              environment: 'prod'
+          
+          rule_files:
+            - "alert_rules.yml"
+          
+          alerting:
+            alertmanagers:
+              - static_configs:
+                  - targets: []
+          
+          scrape_configs:
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+              scrape_interval: 15s
+          
+            - job_name: 'hospital-backend'
+              static_configs:
+                - targets: ['backend:8888']
+              metrics_path: '/actuator/prometheus'
+              scrape_interval: 15s
+              scrape_timeout: 10s
+          
+            - job_name: 'node-exporter'
+              static_configs:
+                - targets: ['node-exporter:9100']
+              scrape_interval: 15s
+          
+            - job_name: 'cadvisor'
+              static_configs:
+                - targets: ['cadvisor:8080']
+              scrape_interval: 15s
+          EOF
+          
+          # 기존 모니터링 스택용 프로메테우스 설정 파일 생성 (기존 코드 유지)
           cat > /opt/hospital/monitoring/prometheus/config/prometheus.yml << 'PROMETHEUS_CONFIG'
           global:
             scrape_interval: 15s
@@ -374,7 +416,7 @@ jobs:
           echo "🔍 백엔드 API 응답 테스트 ($TARGET_URL)..."
           
           BACKEND_OK=false
-          for i in {1..12}; do
+          for i in {1..2}; do
             echo "  시도 $i/12..."
             
             if curl -f -s --connect-timeout 10 "$TARGET_URL/api/proDoc/status" > /dev/null 2>&1; then
@@ -392,7 +434,7 @@ jobs:
           echo "🔍 프로메테우스 헬스체크 ($PROMETHEUS_URL)..."
           
           PROMETHEUS_OK=false
-          for i in {1..6}; do
+          for i in {1..3}; do
             if curl -f -s --connect-timeout 10 "$PROMETHEUS_URL/-/healthy" > /dev/null 2>&1; then
               echo "✅ 프로메테우스: 정상"
               PROMETHEUS_OK=true
@@ -408,7 +450,7 @@ jobs:
           echo "🔍 그라파나 헬스체크 ($GRAFANA_URL)..."
           
           GRAFANA_OK=false
-          for i in {1..6}; do
+          for i in {1..3}; do
             if curl -f -s --connect-timeout 10 "$GRAFANA_URL/api/health" > /dev/null 2>&1; then
               echo "✅ 그라파나: 정상"
               GRAFANA_OK=true
