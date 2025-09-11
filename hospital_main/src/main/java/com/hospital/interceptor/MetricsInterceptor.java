@@ -246,57 +246,6 @@ public class MetricsInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 요청에서 예약 타입 추출
-     */
-    private String extractAppointmentTypeFromRequest(HttpServletRequest request) {
-        String type = request.getParameter("type");
-        if (type != null && !type.trim().isEmpty()) {
-            return type.trim();
-        }
-        
-        type = request.getHeader("X-Appointment-Type");
-        if (type != null && !type.trim().isEmpty()) {
-            return type.trim();
-        }
-        
-        return "consultation";
-    }
-
-    /**
-     * 요청에서 의사 ID 추출
-     */
-    private String extractDoctorIdFromRequest(HttpServletRequest request) {
-        String doctorId = request.getParameter("doctorId");
-        if (doctorId != null && !doctorId.trim().isEmpty()) {
-            return doctorId.trim();
-        }
-        
-        doctorId = request.getHeader("X-Doctor-ID");
-        if (doctorId != null && !doctorId.trim().isEmpty()) {
-            return doctorId.trim();
-        }
-        
-        return "unknown";
-    }
-
-    /**
-     * 요청에서 응급 심각도 추출
-     */
-    private String extractEmergencySeverityFromRequest(HttpServletRequest request) {
-        String severity = request.getParameter("severity");
-        if (severity != null && !severity.trim().isEmpty()) {
-            return severity.trim();
-        }
-        
-        severity = request.getHeader("X-Emergency-Severity");
-        if (severity != null && !severity.trim().isEmpty()) {
-            return severity.trim();
-        }
-        
-        return "medium";
-    }
-
-    /**
      * 현재 큐 사이즈 계산 (간단한 시뮬레이션)
      * 실제 환경에서는 비즈니스 로직에서 실제 큐 사이즈를 제공해야 함
      */
