@@ -132,7 +132,7 @@ public class MonitoringController {
      * 메트릭 엔드포인트 (간단한 JSON 형태)
      * GET /actuator/metrics
      */
-    @GetMapping("/metrics")
+    @GetMapping(value = "/metrics", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Map<String, Object>> metrics() {
         Map<String, Object> metrics = new LinkedHashMap<>();
         
