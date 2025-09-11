@@ -74,6 +74,21 @@ public class WebConfig implements WebMvcConfigurer {
         
         System.out.println("✅ 메트릭 인터셉터 등록 완료");
     }
+
+    /**
+     * 콘텐츠 협상 설정 - JSON 우선
+     */
+    @Override
+    public void configureContentNegotiation(org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer configurer) {
+        configurer
+                .favorPathExtension(false)
+                .favorParameter(false)
+                .ignoreAcceptHeader(false)
+                .useRegisteredExtensionsOnly(false)
+                .defaultContentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .mediaType("json", org.springframework.http.MediaType.APPLICATION_JSON)
+                .mediaType("xml", org.springframework.http.MediaType.APPLICATION_XML);
+    }
     
     /**
      * RestTemplate Bean 설정 - 외부 API 호출용
