@@ -93,6 +93,23 @@
 			<version>1.4.14</version>
 		</dependency>
 
+		<!-- Spring Boot Actuator for monitoring -->
+		<dependency>
+    		<groupId>org.springframework.boot</groupId>
+    		<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+
+		<!-- Micrometer Prometheus registry -->
+		<dependency>
+    		<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+
+		<!-- Database connection pool metrics -->
+		<dependency>
+    	<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-core</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjrt</artifactId>
@@ -293,4 +310,5 @@
 		</plugins>
 	</build>
 </project>
+
 
