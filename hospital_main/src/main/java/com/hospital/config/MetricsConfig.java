@@ -37,11 +37,12 @@ public class MetricsConfig {
         new DiskSpaceMetrics(new File("/")).bindTo(registry);
         
         // 애플리케이션 정보 메트릭
-        registry.gauge("hospital.application.info", 1.0,
-            "version", "1.0.0",
-            "framework", "Spring Framework 6.0.13",
-            "java_version", System.getProperty("java.version")
-        );
+        Gauge.builder("hospital.application.info")
+            .description("Application information")
+            .tag("version", "1.0.0")
+            .tag("framework", "Spring Framework 6.0.13")
+            .tag("java_version", System.getProperty("java.version"))
+            .register(registry, 1.0);
         
         return registry;
     }
