@@ -150,8 +150,6 @@ jobs:
               metrics_path: '/actuator/prometheus'
               scrape_interval: 15s
               scrape_timeout: 10s
-              headers:
-                Accept: ['text/plain']
           
             - job_name: 'node-exporter'
               static_configs:
@@ -193,22 +191,6 @@ jobs:
               metrics_path: '/actuator/prometheus'
               scrape_interval: 15s
               scrape_timeout: 10s
-              headers:
-                Accept: ['text/plain']
-          
-            - job_name: 'hospital-backend-health'
-              static_configs:
-                - targets: ['hospital-backend:8888']
-              metrics_path: '/actuator/health'
-              scrape_interval: 30s
-              scrape_timeout: 10s
-              headers:
-                Accept: ['application/json']
-              metrics_relabel_configs:
-                - source_labels: [__name__]
-                  regex: 'up'
-                  target_label: health_status
-                  replacement: 'endpoint_health'
           
             - job_name: 'node-exporter'
               static_configs:
