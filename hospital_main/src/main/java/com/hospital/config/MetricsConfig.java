@@ -9,6 +9,8 @@ import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
 import io.micrometer.core.instrument.binder.system.DiskSpaceMetrics;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -36,13 +38,15 @@ public class MetricsConfig {
         // 디스크 공간 메트릭 (루트 디렉토리)
         new DiskSpaceMetrics(new File("/")).bindTo(registry);
         
-        // 애플리케이션 정보 메트릭
-        Gauge.builder("hospital.application.info")
+        // 애플리케이션 정보 메트릭 - 수정된 부분
+        Gauge.builder("app.info")
             .description("Application information")
-            .tag("version", "1.0.0")
-            .tag("framework", "Spring Framework 6.0.13")
-            .tag("java_version", System.getProperty("java.version"))
-            .register(registry, 1.0);
+            .tags(Tags.of(
+                "version", "1.0.0",
+                "framework", "Spring Framework 6.0.13",
+                "java_version", System.getProperty("java.version")
+            ))
+            .register(registry, () -> 1.0);
         
         return registry;
     }
