@@ -4,31 +4,27 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Tags;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeUnit;
 
 /**
- * 병원 시스템 커스텀 메트릭 관리 클래스
+ * 커스텀 메트릭 관리 클래스
  */
 @Component
 public class CustomMetrics {
 
     private final MeterRegistry meterRegistry;
     
-    // 기본 메트릭들
+    // 기본 API 메트릭들
     private final Timer apiResponseTime;
     private final Counter apiRequestCount;
     private final Counter apiErrorCount;
     private final Counter apiSuccessCount;
-    
-    // 병원 특화 메트릭들
-    private final Counter patientRegistrationCount;
-    private final Counter appointmentCount;
-    private final Counter prescriptionCount;
-    private final Counter emergencyCallCount;
     
     // 실시간 상태 메트릭을 위한 AtomicLong
     private final AtomicLong activeUsers = new AtomicLong(0);
@@ -40,54 +36,37 @@ public class CustomMetrics {
         this.meterRegistry = meterRegistry;
         
         // 기본 API 메트릭 초기화
-        this.apiResponseTime = Timer.builder("hospital.api.response.time")
+        this.apiResponseTime = Timer.builder("api.response.time")
                 .description("API response time in seconds")
                 .register(meterRegistry);
                 
-        this.apiRequestCount = Counter.builder("hospital.api.requests.total")
+        this.apiRequestCount = Counter.builder("api.requests.total")
                 .description("Total number of API requests")
                 .register(meterRegistry);
                 
-        this.apiErrorCount = Counter.builder("hospital.api.errors.total")
+        this.apiErrorCount = Counter.builder("api.errors.total")
                 .description("Total number of API errors")
                 .register(meterRegistry);
                 
-        this.apiSuccessCount = Counter.builder("hospital.api.success.total")
+        this.apiSuccessCount = Counter.builder("api.success.total")
                 .description("Total number of successful API requests")
-                .register(meterRegistry);
-        
-        // 병원 특화 메트릭 초기화
-        this.patientRegistrationCount = Counter.builder("hospital.patients.registrations.total")
-                .description("Total number of patient registrations")
-                .register(meterRegistry);
-                
-        this.appointmentCount = Counter.builder("hospital.appointments.total")
-                .description("Total number of appointments scheduled")
-                .register(meterRegistry);
-                
-        this.prescriptionCount = Counter.builder("hospital.prescriptions.total")
-                .description("Total number of prescriptions issued")
-                .register(meterRegistry);
-                
-        this.emergencyCallCount = Counter.builder("hospital.emergency.calls.total")
-                .description("Total number of emergency calls")
                 .register(meterRegistry);
     }
 
     @PostConstruct
     public void initGauges() {
         // 실시간 상태 게이지 등록
-        Gauge.builder("hospital.users.active")
+        Gauge.builder("app.users.active")
                 .description("Number of currently active users")
-                .register(meterRegistry, activeUsers, AtomicLong::get);
+                .register(meterRegistry, activeUsers, AtomicLong::doubleValue);
                 
-        Gauge.builder("hospital.connections.active")
+        Gauge.builder("app.connections.active")
                 .description("Number of currently active database connections")
-                .register(meterRegistry, activeConnections, AtomicLong::get);
+                .register(meterRegistry, activeConnections, AtomicLong::doubleValue);
                 
-        Gauge.builder("hospital.queue.size")
+        Gauge.builder("app.queue.size")
                 .description("Current queue size for processing")
-                .register(meterRegistry, queueSize, AtomicLong::get);
+                .register(meterRegistry, queueSize, AtomicLong::doubleValue);
     }
 
     // === 기본 API 메트릭 메소드들 ===
@@ -103,7 +82,7 @@ public class CustomMetrics {
      * API 응답 시간 기록
      */
     public void recordResponseTime(Timer.Sample sample, String endpoint, String method) {
-        sample.stop(Timer.builder("hospital.api.response.time")
+        sample.stop(Timer.builder("api.response.time")
                 .tag("endpoint", endpoint)
                 .tag("method", method)
                 .register(meterRegistry));
@@ -113,7 +92,7 @@ public class CustomMetrics {
      * API 요청 수 증가
      */
     public void incrementRequestCount(String endpoint, String method) {
-        Counter.builder("hospital.api.requests.total")
+        Counter.builder("api.requests.total")
                 .tag("endpoint", endpoint)
                 .tag("method", method)
                 .register(meterRegistry)
@@ -124,7 +103,7 @@ public class CustomMetrics {
      * API 에러 수 증가
      */
     public void incrementErrorCount(String endpoint, String method, String errorType) {
-        Counter.builder("hospital.api.errors.total")
+        Counter.builder("api.errors.total")
                 .tag("endpoint", endpoint)
                 .tag("method", method)
                 .tag("error_type", errorType)
@@ -136,54 +115,10 @@ public class CustomMetrics {
      * API 성공 수 증가
      */
     public void incrementSuccessCount(String endpoint, String method, int statusCode) {
-        Counter.builder("hospital.api.success.total")
+        Counter.builder("api.success.total")
                 .tag("endpoint", endpoint)
                 .tag("method", method)
                 .tag("status", String.valueOf(statusCode))
-                .register(meterRegistry)
-                .increment();
-    }
-
-    // === 병원 특화 메트릭 메소드들 ===
-    
-    /**
-     * 환자 등록 수 증가
-     */
-    public void incrementPatientRegistration(String department) {
-        Counter.builder("hospital.patients.registrations.total")
-                .tag("department", department)
-                .register(meterRegistry)
-                .increment();
-    }
-
-    /**
-     * 예약 수 증가
-     */
-    public void incrementAppointment(String appointmentType, String department) {
-        Counter.builder("hospital.appointments.total")
-                .tag("type", appointmentType)
-                .tag("department", department)
-                .register(meterRegistry)
-                .increment();
-    }
-
-    /**
-     * 처방전 발행 수 증가
-     */
-    public void incrementPrescription(String doctorId, String department) {
-        Counter.builder("hospital.prescriptions.total")
-                .tag("doctor_id", doctorId)
-                .tag("department", department)
-                .register(meterRegistry)
-                .increment();
-    }
-
-    /**
-     * 응급 호출 수 증가
-     */
-    public void incrementEmergencyCall(String severity) {
-        Counter.builder("hospital.emergency.calls.total")
-                .tag("severity", severity)
                 .register(meterRegistry)
                 .increment();
     }
@@ -244,13 +179,17 @@ public class CustomMetrics {
      * 커스텀 게이지 기록
      */
     public void recordCustomGauge(String name, double value, String... tags) {
-        Gauge.Builder<?> builder = Gauge.builder(name);
+        Tags tagList = Tags.empty();
         for (int i = 0; i < tags.length; i += 2) {
             if (i + 1 < tags.length) {
-                builder.tag(tags[i], tags[i + 1]);
+                tagList = tagList.and(tags[i], tags[i + 1]);
             }
         }
-        builder.register(meterRegistry, value);
+        
+        Gauge.builder(name)
+                .description("Custom gauge metric")
+                .tags(tagList)
+                .register(meterRegistry, () -> value);
     }
 
     /**
@@ -263,7 +202,7 @@ public class CustomMetrics {
                 builder.tag(tags[i], tags[i + 1]);
             }
         }
-        builder.register(meterRegistry).record(duration, java.util.concurrent.TimeUnit.MILLISECONDS);
+        builder.register(meterRegistry).record(duration, TimeUnit.MILLISECONDS);
     }
 
     // === 통계 조회 메소드들 ===
