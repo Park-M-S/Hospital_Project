@@ -186,10 +186,8 @@ public class CustomMetrics {
             }
         }
         
-        Gauge.builder(name)
-                .description("Custom gauge metric")
-                .tags(tagList)
-                .register(meterRegistry, () -> value);
+        // registry.gauge() 방식으로 단순화
+        meterRegistry.gauge(name, tagList, value);
     }
 
     /**
