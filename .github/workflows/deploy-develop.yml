@@ -1,4 +1,4 @@
-name: EC2 배포 (DuckDNS + 모니터링) 
+name: EC2 배포 (DuckDNS + 모니터링) Develop 
 
 on:
   push:
