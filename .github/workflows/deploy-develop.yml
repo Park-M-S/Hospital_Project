@@ -1,4 +1,4 @@
-name: EC2 배포 (DuckDNS + 모니터링) 
+name: EC2 배포 (DuckDNS + 모니터링) Develop 
 
 on:
   push:
@@ -42,7 +42,7 @@ jobs:
     - name: 배포 파일들을 EC2 서버로 전송
       uses: appleboy/scp-action@v0.1.4
       with:
-        host: ${{ secrets.DEV_EC2_HOST }}
+        host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         source: "backend.tar.gz,docker-compose.prod.yml,deploy.sh"
@@ -51,7 +51,7 @@ jobs:
     - name: EC2 서버에 DuckDNS로 배포
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ secrets.DEV_EC2_HOST }}
+        host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         envs: GITHUB_SHA
@@ -87,7 +87,7 @@ jobs:
           
           # DuckDNS 설정
           DEV_DUCKDNS_DOMAIN=${{ secrets.DEV_DUCKDNS_DOMAIN }}
-          DEV_DUCKDNS_SUBDOMAIN=${{ secrets. }}
+          DEV_DUCKDNS_SUBDOMAIN=${{ secrets.DEV_DUCKDNS_SUBDOMAIN }}
           DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
           
           # 모니터링 설정
@@ -266,7 +266,7 @@ jobs:
     - name: 서비스 상태 확인 및 헬스체크
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ secrets.DEV_EC2_HOST }}
+        host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
@@ -363,8 +363,14 @@ jobs:
           echo "  📊 데이터베이스: 포트 3500 (내부 접근)"
           echo ""
           echo "🔧 API 테스트 예시:"
-          echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888/api/proDoc/status"
-          echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888/api/list"
+          echo "  curl http://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/proDoc/status"
+          echo "  curl http://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/list"
+          echo ""
+          echo "📊 모니터링 접속 정보:"
+          echo "  프로메테우스: http://${{ secrets.DUCKDNS_DOMAIN }}:9090"
+          echo "  그라파나: http://${{ secrets.DUCKDNS_DOMAIN }}:3000"
+          echo "    - 사용자: admin"
+          echo "    - 비밀번호: \$GRAFANA_ADMIN_PASSWORD"
           echo ""
           echo "📊 모니터링 접속 정보:"
           echo "  프로메테우스: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:9090"
@@ -372,13 +378,12 @@ jobs:
           echo "    - 사용자: admin"
           echo "    - 비밀번호: \$GRAFANA_ADMIN_PASSWORD"
           echo ""
-          echo "✨ DuckDNS 자동 IP 업데이트와 모니터링이 준비되었습니다!"
           
     - name: 배포 실패 시 롤백 처리
       if: failure()
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ secrets.DEV_EC2_HOST }}
+        host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
