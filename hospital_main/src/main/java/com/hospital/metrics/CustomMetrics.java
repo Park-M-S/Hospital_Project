@@ -244,13 +244,13 @@ public class CustomMetrics {
      * 커스텀 게이지 기록
      */
     public void recordCustomGauge(String name, double value, String... tags) {
-        Gauge.Builder builder = Gauge.builder(name);
+        Gauge.Builder<?> builder = Gauge.builder(name);
         for (int i = 0; i < tags.length; i += 2) {
             if (i + 1 < tags.length) {
                 builder.tag(tags[i], tags[i + 1]);
             }
         }
-        builder.register(meterRegistry, value, v -> v);
+        builder.register(meterRegistry, value);
     }
 
     /**
