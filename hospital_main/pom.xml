@@ -93,22 +93,24 @@
 			<version>1.4.14</version>
 		</dependency>
 
-		<!-- Spring Boot Actuator for monitoring -->
+		<!-- Spring Framework용 모니터링 의존성 추가 -->
 		<dependency>
-    		<groupId>org.springframework.boot</groupId>
-    		<artifactId>spring-boot-starter-actuator</artifactId>
+    		<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-core</artifactId>
+    		<version>1.12.0</version>
 		</dependency>
 
-		<!-- Micrometer Prometheus registry -->
 		<dependency>
     		<groupId>io.micrometer</groupId>
     		<artifactId>micrometer-registry-prometheus</artifactId>
+    		<version>1.12.0</version>
 		</dependency>
 
-		<!-- Database connection pool metrics -->
+		<!-- 순수 Quartz 스케줄러 (Spring Boot 제거) -->
 		<dependency>
-    	<groupId>io.micrometer</groupId>
-    		<artifactId>micrometer-core</artifactId>
+    		<groupId>org.quartz-scheduler</groupId>
+    		<artifactId>quartz</artifactId>
+    		<version>2.4.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.aspectj</groupId>
@@ -310,5 +312,6 @@
 		</plugins>
 	</build>
 </project>
+
 
 
