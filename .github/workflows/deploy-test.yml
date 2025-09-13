@@ -45,7 +45,7 @@ jobs:
         host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
-        source: "backend.tar.gz,docker-compose.prod.yml,deploy.sh"
+        source: "backend.tar.gz,docker-compose.yml,deploy-test.sh"
         target: "/home/ec2-user/"
         
     - name: EC2 서버에 DuckDNS + 모니터링 배포
@@ -296,11 +296,11 @@ jobs:
           echo "  그라파나 포트: 3000"
           
           # 배포 스크립트 실행 권한 부여
-          chmod +x /home/ec2-user/deploy.sh
+          chmod +x /home/ec2-user/deploy-test.sh
           
           # 배포 실행
           echo "▶️ 배포 스크립트 실행..."
-          /home/ec2-user/deploy.sh
+          /home/ec2-user/deploy-test.sh
           
           # 모니터링 스택 설치
           echo "📊 모니터링 스택 설치 중..."
@@ -396,7 +396,7 @@ jobs:
           
           # 컨테이너 상태 확인
           echo "📊 메인 애플리케이션 컨테이너 상태:"
-          docker-compose -f /home/ec2-user/docker-compose.prod.yml ps
+          docker-compose -f /home/ec2-user/docker-compose.yml ps
           
           echo ""
           echo "📊 모니터링 컨테이너 상태:"
@@ -523,7 +523,7 @@ jobs:
           echo "❌ 배포 실패! 롤백 시도..."
           
           # 메인 애플리케이션 컨테이너 중지
-          docker-compose -f /home/ec2-user/docker-compose.prod.yml down || true
+          docker-compose -f /home/ec2-user/docker-compose.yml down || true
           
           # 모니터링 컨테이너 중지
           docker stop prometheus grafana node-exporter cadvisor 2>/dev/null || true
@@ -531,7 +531,7 @@ jobs:
           
           # 최근 로그 확인
           echo "📝 최근 로그:"
-          docker-compose -f /home/ec2-user/docker-compose.prod.yml logs --tail=50 || echo "docker-compose 로그 확인 불가"
+          docker-compose -f /home/ec2-user/docker-compose.yml logs --tail=50 || echo "docker-compose 로그 확인 불가"
           
           # 개별 컨테이너 로그 확인
           echo "📝 개별 컨테이너 로그:"
