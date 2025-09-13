@@ -1,12 +1,12 @@
-name: EC2 배포 (DuckDNS + 모니터링) Develop
+name: EC2 배포 (DuckDNS + 모니터링) test
 
 on:
   push:
-    branches: [ Develop ]
+    branches: [ test ]
   workflow_dispatch:
 
 env:
-  EC2_HOST: ${{ secrets.EC2_HOST }}
+  DEV_EC2_HOST: ${{ secrets.DEV_EC2_HOST }}
   EC2_USER: ${{ secrets.EC2_USER }}
   EC2_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
 
@@ -42,7 +42,7 @@ jobs:
     - name: 배포 파일들을 EC2 서버로 전송
       uses: appleboy/scp-action@v0.1.4
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         source: "backend.tar.gz,docker-compose.prod.yml,deploy.sh"
@@ -51,7 +51,7 @@ jobs:
     - name: EC2 서버에 DuckDNS + 모니터링 배포
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         envs: GITHUB_SHA
@@ -87,8 +87,8 @@ jobs:
           BACKEND_PORT=8888
           
           # DuckDNS 설정
-          DUCKDNS_DOMAIN=${{ secrets.DUCKDNS_DOMAIN }}
-          DUCKDNS_SUBDOMAIN=${{ secrets.DUCKDNS_SUBDOMAIN }}
+          DEV_DUCKDNS_DOMAIN=${{ secrets.DEV_DUCKDNS_DOMAIN }}
+          DEV_DUCKDNS_SUBDOMAIN=${{ secrets.DEV_DUCKDNS_SUBDOMAIN }}
           DUCKDNS_TOKEN=${{ secrets.DUCKDNS_TOKEN }}
           
           # 모니터링 설정
@@ -162,7 +162,7 @@ jobs:
               scrape_interval: 15s
           EOF
           
-          # 기존 모니터링 스택용 프로메테우스 설정 파일 생성 (기존 코드 유지)
+          # 기존 모니터링 스택용 프로메테우스 설정 파일 생성 (수정된 버전)
           cat > /opt/hospital/monitoring/prometheus/config/prometheus.yml << 'PROMETHEUS_CONFIG'
           global:
             scrape_interval: 15s
@@ -191,15 +191,6 @@ jobs:
               metrics_path: '/actuator/prometheus'
               scrape_interval: 15s
               scrape_timeout: 10s
-              honor_labels: true
-              params:
-                format: ['prometheus']
-          
-            - job_name: 'hospital-backend-health'
-              static_configs:
-                - targets: ['hospital-backend:8888']
-              metrics_path: '/actuator/health'
-              scrape_interval: 30s
           
             - job_name: 'node-exporter'
               static_configs:
@@ -297,8 +288,8 @@ jobs:
           # 환경변수 확인
           echo "📋 배포 환경 설정:"
           echo "  환경: production"
-          echo "  DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
-          echo "  DuckDNS 서브도메인: ${{ secrets.DUCKDNS_SUBDOMAIN }}"
+          echo "  DuckDNS 도메인: ${{ secrets.DEV_DUCKDNS_DOMAIN }}"
+          echo "  DuckDNS 서브도메인: ${{ secrets.DEV_DUCKDNS_SUBDOMAIN }}"
           echo "  백엔드 포트: 8888"
           echo "  DB 포트: 3500"
           echo "  프로메테우스 포트: 9090"
@@ -397,7 +388,7 @@ jobs:
     - name: 서비스 상태 확인 및 헬스체크
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
@@ -412,7 +403,7 @@ jobs:
           docker ps --filter name=prometheus --filter name=grafana --filter name=node-exporter --filter name=cadvisor
           
           # DuckDNS 도메인으로 백엔드 API 확인
-          TARGET_URL="http://${{ secrets.DUCKDNS_DOMAIN }}:8888"
+          TARGET_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888"
           echo "🔍 백엔드 API 응답 테스트 ($TARGET_URL)..."
           
           BACKEND_OK=false
@@ -430,7 +421,7 @@ jobs:
           done
           
           # 모니터링 헬스체크
-          PROMETHEUS_URL="http://${{ secrets.DUCKDNS_DOMAIN }}:9090"
+          PROMETHEUS_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:9090"
           echo "🔍 프로메테우스 헬스체크 ($PROMETHEUS_URL)..."
           
           PROMETHEUS_OK=false
@@ -446,7 +437,7 @@ jobs:
           done
           
           # 그라파나 헬스체크
-          GRAFANA_URL="http://${{ secrets.DUCKDNS_DOMAIN }}:3000"
+          GRAFANA_URL="http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:3000"
           echo "🔍 그라파나 헬스체크 ($GRAFANA_URL)..."
           
           GRAFANA_OK=false
@@ -501,21 +492,21 @@ jobs:
           echo "==========================================="
           echo ""
           echo "📍 접속 정보:"
-          echo "  🔧 백엔드 API: http://${{ secrets.DUCKDNS_DOMAIN }}:8888"
-          echo "  📊 프로메테우스: http://${{ secrets.DUCKDNS_DOMAIN }}:9090"
-          echo "  📈 그라파나: http://${{ secrets.DUCKDNS_DOMAIN }}:3000"
-          echo "  🖥️ Node Exporter: http://${{ secrets.DUCKDNS_DOMAIN }}:9100"
-          echo "  📦 cAdvisor: http://${{ secrets.DUCKDNS_DOMAIN }}:8080"
-          echo "  🌍 DuckDNS 도메인: ${{ secrets.DUCKDNS_DOMAIN }}"
+          echo "  🔧 백엔드 API: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888"
+          echo "  📊 프로메테우스: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:9090"
+          echo "  📈 그라파나: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:3000"
+          echo "  🖥️ Node Exporter: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:9100"
+          echo "  📦 cAdvisor: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8080"
+          echo "  🌍 DuckDNS 도메인: ${{ secrets.DEV_DUCKDNS_DOMAIN }}"
           echo "  📊 데이터베이스: 포트 3500 (내부 접근)"
           echo ""
           echo "🔧 API 테스트 예시:"
-          echo "  curl http://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/proDoc/status"
-          echo "  curl http://${{ secrets.DUCKDNS_DOMAIN }}:8888/api/list"
+          echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888/api/proDoc/status"
+          echo "  curl http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:8888/api/list"
           echo ""
           echo "📊 모니터링 접속 정보:"
-          echo "  프로메테우스: http://${{ secrets.DUCKDNS_DOMAIN }}:9090"
-          echo "  그라파나: http://${{ secrets.DUCKDNS_DOMAIN }}:3000"
+          echo "  프로메테우스: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:9090"
+          echo "  그라파나: http://${{ secrets.DEV_DUCKDNS_DOMAIN }}:3000"
           echo "    - 사용자: admin"
           echo "    - 비밀번호: \${GRAFANA_ADMIN_PASSWORD} (설정된 값)"
           echo ""
@@ -525,7 +516,7 @@ jobs:
       if: failure()
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ secrets.EC2_HOST }}
+        host: ${{ secrets.DEV_EC2_HOST }}
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_PRIVATE_KEY }}
         script: |
