@@ -26,7 +26,7 @@ services:
       interval: 10s
       start_period: 30s
 
-  # Spring Boot 백엔드
+  # Spring 백엔드
   backend:
     image: hospital-backend:${IMAGE_TAG:-latest}
     container_name: hospital-backend
@@ -36,12 +36,9 @@ services:
       - DB_URL=${DB_URL}
       - DB_USERNAME=${DB_USERNAME}
       - DB_PASSWORD=${DB_PASSWORD}
-      # ⚠️ 경고: 초기 스키마 생성 및 데이터 유실을 위해 'create'로 설정.
-      # 다음 배포 시에는 반드시 'update'로 되돌려야 합니다. 
-      - SPRING_JPA_HIBERNATE_DDL_AUTO=create
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      # CORS 설정 (필요시)
-      - ALLOWED_ORIGINS=http://localhost:5173,http://${EC2_HOST:-localhost}:8888
+      - ALLOWED_ORIGINS=http://localhost:5173,http://${DUCKDNS_DOMAIN}:8888,http://${EC2_HOST:-localhost}:8888
       
       # API 키 환경변수
       - HOSPITAL_MAIN_API_KEY=${HOSPITAL_MAIN_API_KEY}
@@ -59,7 +56,6 @@ services:
       - HOSPITAL_PRODOC_API_BASE_URL=${HOSPITAL_PRODOC_API_BASE_URL}
       - HOSPITAL_PHARMACY_API_BASE_URL=${HOSPITAL_PHARMACY_API_BASE_URL}
       - HOSPITAL_EMERGENCY_API_BASE_URL=${HOSPITAL_EMERGENCY_API_BASE_URL}
-
     volumes:
       - /opt/hospital/logs/backend:/app/logs
     depends_on:
@@ -69,12 +65,112 @@ services:
     networks:
       - hospital-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8888/api/proDoc/status"]
       timeout: 10s
       retries: 5
       interval: 30s
       start_period: 120s
 
+  # DuckDNS 자동 IP 업데이트 서비스
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: hospital-duckdns
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Seoul
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN:-hospitalmap}
+      - TOKEN=${DUCKDNS_TOKEN}
+      - LOG_FILE=false
+      - UPDATE_FREQUENCY=5
+    volumes:
+      - /opt/hospital/config/duckdns:/config
+    restart: unless-stopped
+    networks:
+      - hospital-network
+
+  # 모니터링 시스템
+  # cAdvisor - 컨테이너 리소스 모니터링
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: hospital-cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    restart: unless-stopped
+    networks:
+      - hospital-network
+    command:
+      - '--housekeeping_interval=30s'
+      - '--docker_only=true'
+
+  # Node Exporter - 시스템 메트릭 수집
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: hospital-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - hospital-network
+
+  # Prometheus - 메트릭 수집 및 저장
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: hospital-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - /opt/hospital/config/prometheus:/etc/prometheus
+      - /opt/hospital/data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - hospital-network
+    depends_on:
+      - cadvisor
+      - node-exporter
+
+  # Grafana - 대시보드 및 시각화
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hospital-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - /opt/hospital/data/grafana:/var/lib/grafana
+      - /opt/hospital/config/grafana:/etc/grafana/provisioning
+    restart: unless-stopped
+    networks:
+      - hospital-network
+    depends_on:
+      - prometheus
+
 networks:
   hospital-network:
+    name: hospital-network  # 네트워크 이름을 명시적으로 지정
     driver: bridge
