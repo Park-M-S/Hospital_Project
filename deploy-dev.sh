@@ -23,8 +23,8 @@ export BACKEND_PORT=${BACKEND_PORT:-8888}
 export DB_PORT=${DB_PORT:-3500}
 
 # DuckDNS 설정 (.env에서 로드된 값 사용)
-export DUCKDNS_DOMAIN=${DUCKDNS_DOMAIN:-""}
-export DUCKDNS_SUBDOMAIN=${DUCKDNS_SUBDOMAIN:-""}
+export DEV_DUCKDNS_DOMAIN=${DEV_DUCKDNS_DOMAIN:-""}
+export DEV_DUCKDNS_SUBDOMAIN=${DEV_DUCKDNS_SUBDOMAIN:-""}
 export DUCKDNS_TOKEN=${DUCKDNS_TOKEN:-""}
 
 # GitHub Actions가 아닌 로컬 실행 시 IP 가져오기
@@ -40,18 +40,18 @@ echo "  백엔드 포트: ${BACKEND_PORT}"
 echo "  DB 포트: ${DB_PORT}"
 
 # DuckDNS 설정 확인 및 표시 (토큰은 마스킹)
-if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_SUBDOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
-    echo "  🦆 DuckDNS 도메인: ${DUCKDNS_DOMAIN}"
-    echo "  🦆 DuckDNS 서브도메인: ${DUCKDNS_SUBDOMAIN}"
+if [ -n "$DEV_DUCKDNS_DOMAIN" ] && [ -n "$DEV_DUCKDNS_SUBDOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
+    echo "  🦆 DuckDNS 도메인: ${DEV_DUCKDNS_DOMAIN}"
+    echo "  🦆 DuckDNS 서브도메인: ${DEV_DUCKDNS_SUBDOMAIN}"
     TOKEN_MASKED="${DUCKDNS_TOKEN:0:8}...${DUCKDNS_TOKEN: -4}"
     echo "  🦆 DuckDNS 토큰: ${TOKEN_MASKED}"
     echo "  🦆 DuckDNS 자동 업데이트: 활성화"
-    DOMAIN_URL="http://${DUCKDNS_DOMAIN}"
+    DOMAIN_URL="http://${DEV_DUCKDNS_DOMAIN}"
 else
     echo "  🔗 접속 방식: 직접 IP 접근"
     echo "  ⚠️ DuckDNS 설정이 불완전합니다:"
-    echo "    - DOMAIN: '${DUCKDNS_DOMAIN}'"
-    echo "    - SUBDOMAIN: '${DUCKDNS_SUBDOMAIN}'"
+    echo "    - DOMAIN: '${DEV_DUCKDNS_DOMAIN}'"
+    echo "    - SUBDOMAIN: '${DEV_DUCKDNS_SUBDOMAIN}'"
     echo "    - TOKEN: '$([ -n "$DUCKDNS_TOKEN" ] && echo "설정됨" || echo "비어있음")'"
     DOMAIN_URL="http://${SERVER_IP:-localhost}"
 fi
@@ -63,7 +63,7 @@ if [ -z "$GITHUB_ACTIONS" ]; then
 fi
 
 echo "⏹️ 기존 컨테이너 중지..."
-docker-compose -f docker-compose.prod.yml down || true
+docker-compose -f docker-compose.yml down || true
 
 # 필요한 디렉토리 생성
 sudo mkdir -p /opt/hospital/data/mariadb
@@ -82,7 +82,7 @@ echo "📊 서비스 상태 확인:"
 docker-compose -f docker-compose.prod.yml ps
 
 # DuckDNS 서비스 상태 확인
-if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
+if [ -n "$DEV_DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
     echo ""
     echo "🦆 DuckDNS 상태 확인:"
     if docker ps | grep hospital-duckdns > /dev/null; then
@@ -110,15 +110,15 @@ echo ""
 echo "🎉 배포 완료!"
 echo ""
 echo "📍 접속 정보:"
-if [ -n "$DUCKDNS_DOMAIN" ]; then
+if [ -n "$DEV_DUCKDNS_DOMAIN" ]; then
     echo "  🦆 DuckDNS 백엔드 API: ${DOMAIN_URL}:8888"
-    echo "  🌍 도메인: ${DUCKDNS_DOMAIN}"
+    echo "  🌍 도메인: ${DEV_DUCKDNS_DOMAIN}"
 else
     echo "  🔗 백엔드 API: ${DOMAIN_URL}:8888"
 fi
 echo ""
 echo "🔧 API 테스트:"
-if [ -n "$DUCKDNS_DOMAIN" ]; then
+if [ -n "$DEV_DUCKDNS_DOMAIN" ]; then
     echo "  curl ${DOMAIN_URL}:8888/api/proDoc/status"
     echo "  curl ${DOMAIN_URL}:8888/api/list"
 else
