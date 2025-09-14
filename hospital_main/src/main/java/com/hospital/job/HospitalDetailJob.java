@@ -20,7 +20,7 @@ public class HospitalDetailJob implements Job {
     public void execute(JobExecutionContext context) {
         try {
             log.info("병원 상세정보 수집 시작");
-            int count = hospitalDetailApiService.updateAllHospitalDetails();
+            int count = hospitalDetailApiService.updateHospitalDetails();
             log.info("병원 상세정보 수집 시작: {}건 처리 예정", count);
         } catch (Exception e) {
             log.error("병원 상세정보 수집 실패", e);

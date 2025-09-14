@@ -33,13 +33,13 @@ public class HospitalController {
     //병원 검색 
     @GetMapping(value = "/hospitalsData", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<HospitalWebResponse> getHospitals(
-            @RequestParam List<String> subs,      // 진료과목 리스트 (예: ["내과", "외과"])
+            //@RequestParam(required = false) List<String> subs,      // 진료과목 리스트 (예: ["내과", "외과"])
             @RequestParam double userLat,         // 사용자 위도
             @RequestParam double userLng,         // 사용자 경도
             @RequestParam double radius,          // 검색 반경 (km)
             @RequestParam(required = false) List<String> tags // 추가 필터 (선택사항)
     ) {
-        return hospitalService.getHospitals(subs, userLat, userLng, radius, tags);
+        return hospitalService.getHospitals(userLat, userLng, radius, tags);
     }
     
     

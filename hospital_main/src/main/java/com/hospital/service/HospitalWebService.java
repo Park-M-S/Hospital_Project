@@ -34,11 +34,16 @@ public class HospitalWebService {
 	}
 
 	// 기존 메서드: 진료과목으로 병원 검색
-	@Cacheable(value = "hospitals", key = "#subs.toString() + '_' + #userLat + '_' + #userLng + '_' + #radius + '_' + (#tags != null ? #tags.toString() : 'null')")
-	public List<HospitalWebResponse> getHospitals(List<String> subs, double userLat, double userLng, double radius,
-			List<String> tags) {
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsBySubjects(subs);
-		return applyFiltersAndSort(hospitalEntities, userLat, userLng, radius, tags);
+	@Cacheable(value = "hospitals", key = "(#subs != null ? #subs.toString() : 'all') + '_' + #userLat + '_' + #userLng + '_' + #radius + '_' + (#tags != null ? #tags.toString() : 'null')")
+	public List<HospitalWebResponse> getHospitals(double userLat, double userLng, double radius, List<String> tags) {
+		List<HospitalMain> hospitalEntities;
+
+		hospitalEntities = hospitalMainApiRepository.findHospitalsWithinRadius(userLat, userLng, radius);
+
+		hospitalEntities = hospitalEntities.stream()
+				.filter(h -> h.getCoordinateX() != null && h.getCoordinateY() != null).toList();
+
+		return applyFiltersAndSort(hospitalEntities, tags);
 	}
 
 	// ✅ 병원명 검색
@@ -55,33 +60,25 @@ public class HospitalWebService {
 	}
 
 	// ✅ 공통 로직: 필터링 + 정렬 (거리 계산 중복 제거)
-	private List<HospitalWebResponse> applyFiltersAndSort(List<HospitalMain> hospitalEntities, double userLat,
-			double userLng, double radius, List<String> tags) {
+	private List<HospitalWebResponse> applyFiltersAndSort(List<HospitalMain> hospitalEntities, List<String> tags) {
 
 		return hospitalEntities.stream().filter(hospital -> HospitalTagFilter.matchesAllTags(hospital, tags))
-				.map(hospitalConverter::convertToDTO).map(dto -> {
-					// 거리 계산을 한 번만 수행
-					double distance = distanceCalculator.calculateDistance(userLat, userLng, dto.getCoordinateY(),
-							dto.getCoordinateX());
-					return new HospitalWithDistance(dto, distance);
-				}).filter(hwd -> hwd.distance <= radius) // 반경 필터링
-				.sorted((h1, h2) -> Double.compare(h1.distance, h2.distance)) // 거리순 정렬
-				.map(hwd -> hwd.hospital) // 다시 HospitalResponseDTO만 추출
+				.map(hospitalConverter::convertToDTO)
+				// 거리 계산을 한 번만 수행
 				.collect(Collectors.toList());
 	}
+
 	// 전체병원 조회
 	@Cacheable(value = "allHospitals")
 	public List<HospitalWebResponse> getAllHospitals() {
 		// 모든 병원 조회
 		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findAll();
 		// DTO로 변환해서 리턴
-		return hospitalEntities.stream()
-			.map(hospitalConverter::convertToDTO)
-			.collect(Collectors.toList());
+		return hospitalEntities.stream().map(hospitalConverter::convertToDTO).collect(Collectors.toList());
 	}
 
 	// 거리와 함께 임시로 저장하는 내부 클래스
-	private static class HospitalWithDistance {
+	/*private static class HospitalWithDistance {
 		final HospitalWebResponse hospital;
 		final double distance;
 
@@ -89,5 +86,5 @@ public class HospitalWebService {
 			this.hospital = hospital;
 			this.distance = distance;
 		}
-	}
+	}*/
 }
