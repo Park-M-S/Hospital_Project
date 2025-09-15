@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	
+	
 	<modelVersion>4.0.0</modelVersion>
-
-
 	<groupId>com.hospital</groupId>
 	<artifactId>hospital_main</artifactId>
 	<version>1.0-SNAPSHOT</version>
@@ -13,6 +14,9 @@
 		<java.version>21</java.version>
 		<spring.version>6.0.13</spring.version>
 		<spring-data.version>3.0.11</spring-data.version>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<dependencies>
@@ -22,8 +26,13 @@
 			<artifactId>spring-webmvc</artifactId>
 			<version>${spring.version}</version>
 		</dependency>
-
-
+		<!-- https://mvnrepository.com/artifact/junit/junit -->
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13</version>
+			<scope>test</scope>
+		</dependency>
 		<!-- JSTL -->
 		<dependency>
 			<groupId>jakarta.servlet.jsp.jstl</groupId>
@@ -57,21 +66,18 @@
 			<version>3.3.1</version>
 		</dependency>
 
-
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-dbcp2</artifactId>
 			<version>2.9.0</version>
 		</dependency>
 
-
 		<!-- Jakarta Persistence API -->
 		<dependency>
 			<groupId>jakarta.persistence</groupId>
 			<artifactId>jakarta.persistence-api</artifactId>
-			<version>3.1.0</version>  <!-- 최신 버전 확인 -->
+			<version>3.1.0</version>
 		</dependency>
-
 
 		<!-- SLF4J API -->
 		<dependency>
@@ -87,6 +93,25 @@
 			<version>1.4.14</version>
 		</dependency>
 
+		<!-- Spring Framework용 모니터링 의존성 추가 -->
+		<dependency>
+    		<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-core</artifactId>
+    		<version>1.12.0</version>
+		</dependency>
+
+		<dependency>
+    		<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-registry-prometheus</artifactId>
+    		<version>1.12.0</version>
+		</dependency>
+
+		<!-- 순수 Quartz 스케줄러 (Spring Boot 제거) -->
+		<dependency>
+    		<groupId>org.quartz-scheduler</groupId>
+    		<artifactId>quartz</artifactId>
+    		<version>2.4.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.aspectj</groupId>
 			<artifactId>aspectjrt</artifactId>
@@ -141,7 +166,7 @@
 		<dependency>
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-core</artifactId>
-			<version>6.2.7.Final</version> <!-- Hibernate 최신 버전 -->
+			<version>6.2.7.Final</version>
 		</dependency>
 
 		<dependency>
@@ -164,12 +189,12 @@
 		<dependency>
 			<groupId>org.apache.httpcomponents.client5</groupId>
 			<artifactId>httpclient5</artifactId>
-			<version>5.2.1</version> <!-- 최신 안정 버전 확인 -->
+			<version>5.2.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webflux</artifactId>
-			<version>${spring.version}</version> <!-- 또는 사용 중인 스프링 버전 맞게 -->
+			<version>${spring.version}</version>
 		</dependency>
 		<!-- Reactor Netty (기본 HTTP connector 제공) -->
 		<dependency>
@@ -191,7 +216,7 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>32.1.2-jre</version> <!-- 최신 버전 확인 권장 -->
+			<version>32.1.2-jre</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
@@ -218,7 +243,7 @@
 			<artifactId>tomcat-embed-websocket</artifactId>
 			<version>10.1.15</version>
 		</dependency>
-
+		
 		<dependency>
 			<groupId>org.quartz-scheduler</groupId>
 			<artifactId>quartz</artifactId>
@@ -231,6 +256,13 @@
 			<version>${spring.version}</version>
 		</dependency>
 
+		<!-- Spring Boot Quartz -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-quartz</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>com.github.ben-manes.caffeine</groupId>
 			<artifactId>caffeine</artifactId>
@@ -238,24 +270,27 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.fasterxml.jackson.datatype</groupId>
-			<artifactId>jackson-datatype-jsr310</artifactId>
-			<version>2.15.2</version>
-		</dependency>
+            		<groupId>com.fasterxml.jackson.datatype</groupId>
+            		<artifactId>jackson-datatype-jsr310</artifactId>
+            		<version>2.15.2</version>
+        	</dependency>
 
 	</dependencies>
-
 
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.10.1</version>
+				<version>3.11.0</version>
 				<configuration>
 					<source>${java.version}</source>
 					<target>${java.version}</target>
 					<release>${java.version}</release>
+					<parameters>true</parameters>
+					<compilerArgs>
+						<arg>-parameters</arg>
+					</compilerArgs>
 					<annotationProcessorPaths>
 						<path>
 							<groupId>org.projectlombok</groupId>
@@ -271,12 +306,11 @@
 				<artifactId>maven-war-plugin</artifactId>
 				<version>3.3.2</version>
 				<configuration>
-					<!-- web.xml 파일 경로 설정 -->
 					<webXml>src/main/webapp/WEB-INF/web.xml</webXml>
-					<!-- 추가적인 설정이 필요할 경우 여기에 추가 -->
 				</configuration>
 			</plugin>
 		</plugins>
 	</build>
 </project>
+
 
