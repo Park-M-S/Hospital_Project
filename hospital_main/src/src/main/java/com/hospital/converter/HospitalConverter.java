@@ -131,10 +131,10 @@ public class HospitalConverter {
 					Map.Entry::getValue,
 					Integer::sum // 중복 시 합산
 				));
-	}
+	}*/
 
 	//문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
-	private Map<String, Integer> convertStringToSubjectMap(String subjectDetails) {
+	/*private Map<String, Integer> convertStringToSubjectMap(String subjectDetails) {
 		Map<String, Integer> result = new HashMap<>();
 		if (subjectDetails == null || subjectDetails.trim().isEmpty()) {
 			return result;
@@ -156,6 +156,7 @@ public class HospitalConverter {
 		}
 		return result;
 	}*/
+	
 	private Boolean convertYnToBoolean(String ynValue) {
         if (ynValue == null) {
             return null;
@@ -164,11 +165,6 @@ public class HospitalConverter {
     }
 	
 	
-	//private Boolean convertYnToBoolean(String ynValue) {
-		//if (ynValue == null) {
-			//return null;
-		//}
-		//return "Y".equalsIgnoreCase(ynValue.trim());
-	//}
+
 
 }
