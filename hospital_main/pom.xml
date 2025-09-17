@@ -171,7 +171,21 @@
 			<artifactId>spring-webflux</artifactId>
 			<version>${spring.version}</version> <!-- 또는 사용 중인 스프링 버전 맞게 -->
 		</dependency>
-		<!-- Prometheus Java Client - 메트릭 수집 및 노출 -->
+		<!-- Micrometer Core - 메트릭 수집 라이브러리 -->
+		<dependency>
+    		<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-core</artifactId>
+    		<version>1.10.5</version>
+		</dependency>
+
+		<!-- Micrometer Prometheus Registry - Prometheus 형식으로 메트릭 노출 -->
+		<dependency>
+    		<groupId>io.micrometer</groupId>
+    		<artifactId>micrometer-registry-prometheus</artifactId>
+    		<version>1.10.5</version>
+		</dependency>
+
+		<!-- Prometheus Java Client - 메트릭 수집 및 노출 (micrometer와 함께 사용) -->
 		<dependency>
     		<groupId>io.prometheus</groupId>
     		<artifactId>simpleclient</artifactId>
@@ -305,5 +319,6 @@
 		</plugins>
 	</build>
 </project>
+
 
 
