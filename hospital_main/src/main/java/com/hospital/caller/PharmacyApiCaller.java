@@ -2,6 +2,8 @@ package com.hospital.caller;
 
 import com.hospital.config.RegionConfig;
 import com.hospital.dto.OpenApiWrapper;
+import com.hospital.dto.PharmacyApiItem;
+import com.hospital.dto.PharmacyApiResponse;
 
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
@@ -18,6 +20,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -35,16 +38,17 @@ public class PharmacyApiCaller {
         this.regionConfig = regionConfig;
     }
     
-    public OpenApiWrapper.Body callApiByDistrict(String sgguCd) {
+    public List<PharmacyApiItem>  callApiByDistrict(String sgguCd) {
         String fullUrl = null;
         
         try {
             fullUrl = baseUrl 
                     + "?serviceKey=" + serviceKey
+                    + "&pageNo=1"
                     + "&sidoCd=" + regionConfig.getSidoCode() 
                     + "&sgguCd=" + sgguCd
-                    + "&numOfRows=1000"
-                    + "&_type=xml";
+                    + "&numOfRows=1000";
+                    
 
             // URL 연결
             URL url = new URL(fullUrl);
@@ -57,21 +61,21 @@ public class PharmacyApiCaller {
             }
 
             // UTF-8로 명시적 디코딩
-            JAXBContext context = JAXBContext.newInstance(OpenApiWrapper.class);
+            JAXBContext context = JAXBContext.newInstance(PharmacyApiResponse.class);
             Unmarshaller unmarshaller = context.createUnmarshaller();
             InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
 
             // XML → 객체 변환
-            OpenApiWrapper result = (OpenApiWrapper) unmarshaller.unmarshal(reader);
+            PharmacyApiResponse result = (PharmacyApiResponse) unmarshaller.unmarshal(reader);
             
             if (result == null || result.getBody() == null) {
                 log.warn("API 응답 파싱 결과가 비어있음");
-                return null;
+                return List.of();  // 빈 리스트 반환
             }
 
             log.debug("약국 API 응답 파싱 성공");
-            return result.getBody();
-
+            return result.getBody().getItems();  // List<PharmacyApiItem> 반환
+        
         } catch (MalformedURLException e) {
             // URL 형식 오류
             log.error("잘못된 URL 형식: {}", fullUrl);

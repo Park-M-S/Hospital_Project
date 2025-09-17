@@ -20,22 +20,20 @@ import lombok.extern.slf4j.Slf4j;
 public class ProDocApiService {
 
 	private final HospitalMainApiRepository hospitalMainApiRepository;
-	private final ProDocAsyncRunner proDocasyncRunner;
+	private final ProDocAsyncRunner proDocAsyncRunner;
 	private final ProDocApiRepository proDocRepository;
 
 	@Autowired
-	public ProDocApiService(HospitalMainApiRepository hospitalMainApiRepository, ProDocAsyncRunner proDocasyncRunner,
+	public ProDocApiService(HospitalMainApiRepository hospitalMainApiRepository, ProDocAsyncRunner proDocAsyncRunner,
 			ProDocApiRepository proDocRepository) {
 		this.hospitalMainApiRepository = hospitalMainApiRepository;
-		this.proDocasyncRunner = proDocasyncRunner;
+		this.proDocAsyncRunner = proDocAsyncRunner;
 		this.proDocRepository = proDocRepository;
 	}
 
-	public int fetchParseAndSaveProDocs() {
+	public int updateProDocs() {
 		try {
-			// 기존 데이터 전체 삭제
-			proDocRepository.deleteAllProDocs();
-			proDocRepository.resetAutoIncrement();
+			
 
 			// 병원 코드 리스트 불러오기
 			List<String> hospitalCodes = hospitalMainApiRepository.findAllHospitalCodes();
@@ -44,15 +42,11 @@ public class ProDocApiService {
 			}
 
 			// 비동기 상태 초기화
-			proDocasyncRunner.resetCounter();
-			proDocasyncRunner.setTotalCount(hospitalCodes.size());
-
-			// 병원 코드별 API 호출
-			for (String hospitalCode : hospitalCodes) {
-				proDocasyncRunner.runAsync(hospitalCode);
-			}
-
-			return hospitalCodes.size();
+			proDocAsyncRunner.resetCounter();
+			
+			proDocAsyncRunner.runBatchAsync(hospitalCodes);
+			
+			 return hospitalCodes.size();
 			
 		} catch (Exception e) {
 			log.error("전문의 정보 수집 실패", e);
@@ -61,10 +55,10 @@ public class ProDocApiService {
 	}
 
 	public int getCompletedCount() {
-		return proDocasyncRunner.getCompletedCount();
+		return proDocAsyncRunner.getCompletedCount();
 	}
 
 	public int getFailedCount() {
-		return proDocasyncRunner.getFailedCount();
+		return proDocAsyncRunner.getFailedCount();
 	}
 }

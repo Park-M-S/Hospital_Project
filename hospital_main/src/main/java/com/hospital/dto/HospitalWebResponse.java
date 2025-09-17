@@ -42,9 +42,10 @@ public class HospitalWebResponse {
     private String todayOpen;
     private String todayClose;
     
-    private List<String> medicalSubject;
+    private List<String> medicalSubjects;
     
   
     private Map<String, Integer> professionalDoctors; 
 }
+
 
