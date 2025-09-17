@@ -54,6 +54,12 @@
 		</dependency>
 
 		<dependency>
+    		<groupId>org.springframework.ai</groupId>
+    		<artifactId>spring-ai-openai-spring-boot-starter</artifactId>
+    		<version>0.8.1</version>
+		</dependency>
+
+		<dependency>
 			<groupId>jakarta.servlet.jsp</groupId>
 			<artifactId>jakarta.servlet.jsp-api</artifactId>
 			<version>3.0.0</version>
@@ -312,5 +318,6 @@
 		</plugins>
 	</build>
 </project>
+
 
 
