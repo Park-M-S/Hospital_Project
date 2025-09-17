@@ -133,6 +133,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: hospital-prometheus
+    user: "65534:65534"
     ports:
       - "9090:9090"
     volumes:
@@ -156,6 +157,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: hospital-grafana
+    user: "472:0"
     ports:
       - "3000:3000"
     environment:
