@@ -38,7 +38,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
       - SPRING_PROFILES_ACTIVE=${ENVIRONMENT:-production}
-      - ALLOWED_ORIGINS=http://localhost:5173,http://${DUCKDNS_DOMAIN}:8888,http://${EC2_HOST:-localhost}:8888
+      - ALLOWED_ORIGINS=http://localhost:5173,http://${DEV_DUCKDNS_DOMAIN}:8888,http://${EC2_HOST:-localhost}:8888
       
       # API 키 환경변수
       - HOSPITAL_MAIN_API_KEY=${HOSPITAL_MAIN_API_KEY}
@@ -79,7 +79,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Seoul
-      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN:-hospitalmap}
+      - SUBDOMAINS=${DEV_DUCKDNS_SUBDOMAIN:-hospitalmaptest}
       - TOKEN=${DUCKDNS_TOKEN}
       - LOG_FILE=false
       - UPDATE_FREQUENCY=5
