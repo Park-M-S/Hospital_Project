@@ -3,7 +3,6 @@ target/
 *.class
 *.jar
 *.war
-pom.xml
 
 # Node modules
 node_modules/
@@ -39,9 +38,6 @@ logs/
 .env
 .env.local
 .env.*.local
-
-# Configuration files
-*.properties
 
 # Temporary files
 *.tmp
