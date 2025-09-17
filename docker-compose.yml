@@ -173,4 +173,5 @@ services:
 networks:
   hospital-network:
     name: hospital-network  # 네트워크 이름을 명시적으로 지정
+    external: true
     driver: bridge
