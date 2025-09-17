@@ -211,9 +211,9 @@ public class ProDocAsyncRunner {
         boolean hasChanges = false;
 
         // subjectDetails 필드만 비교
-        if (!Objects.equals(existing.getSubjectDetails(), newData.getSubjectDetails())) {
-            existing.setSubjectDetails(newData.getSubjectDetails());
-            hasChanges = true;
+        if (!Objects.equals(existing.getSubjectName(), newData.getSubjectName())) {
+            existing.setSubjectName(newData.getSubjectName());
+            hasChanges = true; // setSubjectDetails-> getSubjectName
         }
 
         return hasChanges;

@@ -34,8 +34,8 @@ public class ProDocApiParser {
 
         ProDoc record = ProDoc.builder()
                 .hospitalCode(hospitalCode)
-                .subjectDetails(subjectDetails)
-                .build();
+                .subjectName(subjectDetails)
+                .build(); // subjectDetails -> subjectName
 
         log.debug("병원 {} 전문의 정보 통합: {}", hospitalCode, subjectDetails);
 

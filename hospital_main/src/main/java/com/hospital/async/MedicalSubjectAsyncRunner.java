@@ -207,10 +207,10 @@ public class MedicalSubjectAsyncRunner {
     private boolean updateFields(MedicalSubject existing, MedicalSubject newData) {
         boolean hasChanges = false;
 
-        if (!Objects.equals(existing.getSubjects(), newData.getSubjects())) {
-            existing.setSubjects(newData.getSubjects());
+        if (!Objects.equals(existing.getSubjectName(), newData.getSubjectName())) {
+            existing.setSubjectName(newData.getSubjectName());
             hasChanges = true;
-        }
+        }// setSubjects -> getSubjectName
 
         return hasChanges;
     }

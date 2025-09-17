@@ -48,8 +48,8 @@ public class MedicalSubjectApiParser {
 
             MedicalSubject record = MedicalSubject.builder()
                     .hospitalCode(hospitalCode)
-                    .subjects(subjectStr) // String 필드에 저장
-                    .build();
+                    .subjectName(subjectStr) // String 필드에 저장
+                    .build();// subjects -> subjectName
 
             return List.of(record);
 
