@@ -79,7 +79,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Asia/Seoul
-      - SUBDOMAINS=${DEV_DUCKDNS_SUBDOMAIN:-hospitalmaptest}
+      - SUBDOMAINS=${DEV_DUCKDNS_SUBDOMAIN:-hospitalmap}
       - TOKEN=${DUCKDNS_TOKEN}
       - LOG_FILE=false
       - UPDATE_FREQUENCY=5
@@ -173,5 +173,4 @@ services:
 networks:
   hospital-network:
     name: hospital-network  # 네트워크 이름을 명시적으로 지정
-    external: true
     driver: bridge
