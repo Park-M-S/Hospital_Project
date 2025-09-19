@@ -43,7 +43,7 @@ public class HospitalDetailAsyncRunner {
 	private int totalCount = 0;
 
 	private static final int BATCH_SIZE = 100;
-	private static final int CHUNK_SIZE = 200; // 병원코드 청크 단위
+	private static final int CHUNK_SIZE = 100; // 병원코드 청크 단위
 
 	@Autowired
 	public HospitalDetailAsyncRunner(HospitalDetailApiCaller apiCaller, HospitalDetailApiParser parser,

@@ -30,7 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class ProDocAsyncRunner {
-    private final RateLimiter rateLimiter = RateLimiter.create(15.0);
+    private final RateLimiter rateLimiter = RateLimiter.create(10.0);
     private final Executor executor;
 
     private final ProDocApiCaller apiCaller;
@@ -44,7 +44,7 @@ public class ProDocAsyncRunner {
     private final AtomicInteger deletedCount = new AtomicInteger(0);
 
     private static final int BATCH_SIZE = 100;
-    private static final int CHUNK_SIZE = 200;
+    private static final int CHUNK_SIZE = 100;
 
     @Autowired
     public ProDocAsyncRunner(ProDocApiCaller apiCaller, ProDocApiParser parser,
@@ -211,8 +211,8 @@ public class ProDocAsyncRunner {
         boolean hasChanges = false;
 
         // subjectDetails 필드만 비교
-        if (!Objects.equals(existing.getSubjectName(), newData.getSubjectName())) {
-            existing.setSubjectName(newData.getSubjectName());
+        if (!Objects.equals(existing.getProDocList(), newData.getProDocList())) {
+            existing.setProDocList(newData.getProDocList());
             hasChanges = true; // setSubjectDetails-> getSubjectName
         }
 

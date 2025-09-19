@@ -40,12 +40,10 @@ public class MedicalSubject {
     @Column(name = "hospital_code", nullable = false)
     private String hospitalCode;
 
-    // 진료과목명 (ex. 내과, 치과, 한의과 등)
-    @Column(name = "subject_name")
-    private String subjectName;
+   
     
-    //@Column(name = "subjects")
-    //private String subjects;
+    @Column(name = "subjects")
+    private String subjects;
     
     
 

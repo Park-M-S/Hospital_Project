@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,7 +57,7 @@ public class HospitalConverter {
 				.professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs())).build();
 	}
 	
-	 /*private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> subjects) {
+	 private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> subjects) {
 	        if (subjects == null || subjects.isEmpty()) {
 	            return List.of();
 	        }
@@ -72,7 +71,20 @@ public class HospitalConverter {
 	                .distinct()
 	                .sorted()
 	                .collect(Collectors.toList());
+	    }
+	
+	 /* private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
+	        if (set == null || set.isEmpty()) {
+	            return List.of();
+	        }
+	        return set.stream()
+	                .map(MedicalSubject::getSubjectName)
+	                .filter(name -> name != null && !name.trim().isEmpty())
+	                .distinct()
+	                .sorted()
+	                .collect(Collectors.toList());
 	    }*/
+	
 
 
 	private String formatTime(String timeStr) {
@@ -92,76 +104,39 @@ public class HospitalConverter {
 			return List.of();
 		}
 
-		return hospitals.stream()
-				.filter(Objects::nonNull)  // null 병원 객체 필터링
-				.map(this::convertToDTO)
-				.filter(Objects::nonNull)  // 변환 실패한 DTO 필터링
-				.collect(Collectors.toList());
+		return hospitals.stream().map(this::convertToDTO).collect(Collectors.toList());
 	}
 	
-	/**
-	 * ProDoc Set을 Map으로 변환 (NullPointerException 방지)
-	 * @param set ProDoc Set
-	 * @return subjectName을 key로, proDocCount를 value로 하는 Map
-	 */
+	 /*private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
+	        if (set == null || set.isEmpty()) {
+	            return new HashMap<>();
+	        }
+	        return set.stream()
+	                .collect(Collectors.toMap(
+	                    ProDoc::getSubjectName,
+	                    ProDoc::getProDocCount,
+	                    Integer::sum  // 중복 시 합산
+	                ));
+	    }*/
+	
+	//ProDoc의 subjectDetails 문자열을 Map으로 변환
 	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
 		if (set == null || set.isEmpty()) {
 			return new HashMap<>();
 		}
-		
-		return set.stream()
-				.filter(Objects::nonNull)                           // null 객체 필터링
-				.filter(proDoc -> proDoc.getSubjectName() != null)   // null subjectName 필터링
-				.filter(proDoc -> !proDoc.getSubjectName().trim().isEmpty())  // 빈 문자열 필터링
-				.filter(proDoc -> proDoc.getProDocCount() != null)   // null proDocCount 필터링
-				.filter(proDoc -> proDoc.getProDocCount() >= 0)      // 음수 필터링
-				.collect(Collectors.toMap(
-					proDoc -> proDoc.getSubjectName().trim(),        // key: 공백 제거된 과목명
-					ProDoc::getProDocCount,                          // value: 전문의 수
-					Integer::sum,                                    // 중복 시 합산
-					HashMap::new                                     // HashMap 사용
-				));
-	}
-
-	/**
-	 * MedicalSubject Set을 List로 변환 (안전성 강화)
-	 * @param set MedicalSubject Set
-	 * @return 중복 제거되고 정렬된 과목명 리스트
-	 */
-	private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
-		if (set == null || set.isEmpty()) {
-			return List.of();
-		}
-		
-		return set.stream()
-				.filter(Objects::nonNull)                          // null 객체 필터링
-				.map(MedicalSubject::getSubjectName)               // 과목명 추출
-				.filter(Objects::nonNull)                          // null 과목명 필터링
-				.map(String::trim)                                 // 공백 제거
-				.filter(name -> !name.isEmpty())                   // 빈 문자열 필터링
-				.distinct()                                        // 중복 제거
-				.sorted()                                          // 정렬
-				.collect(Collectors.toList());
-	}
-	
-	//ProDoc의 subjectDetails 문자열을 Map으로 변환
-	/*private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-		if (set == null || set.isEmpty()) {
-			return new HashMap<>();
-		}
 
 		return set.stream()
-				.filter(proDoc -> proDoc.getSubjectDetails() != null)
-				.flatMap(proDoc -> convertStringToSubjectMap(proDoc.getSubjectDetails()).entrySet().stream())
+				.filter(proDoc -> proDoc.getProDocList() != null)
+				.flatMap(proDoc ->  convertStringToSubjectMap(proDoc.getProDocList()).entrySet().stream())
 				.collect(Collectors.toMap(
 					Map.Entry::getKey,
 					Map.Entry::getValue,
 					Integer::sum // 중복 시 합산
 				));
-	}*/
+	}
 
 	//문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
-	/*private Map<String, Integer> convertStringToSubjectMap(String subjectDetails) {
+	private Map<String, Integer> convertStringToSubjectMap(String subjectDetails) {
 		Map<String, Integer> result = new HashMap<>();
 		if (subjectDetails == null || subjectDetails.trim().isEmpty()) {
 			return result;
@@ -182,17 +157,16 @@ public class HospitalConverter {
 			}
 		}
 		return result;
-	}*/
+	}
 	
-	/**
-	 * Y/N 문자열을 Boolean으로 변환
-	 * @param ynValue Y/N 문자열
-	 * @return Boolean 값 (null 안전)
-	 */
 	private Boolean convertYnToBoolean(String ynValue) {
-        if (ynValue == null || ynValue.trim().isEmpty()) {
+        if (ynValue == null) {
             return null;
         }
         return "Y".equalsIgnoreCase(ynValue.trim());
     }
+	
+	
+
+
 }

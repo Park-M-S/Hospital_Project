@@ -20,7 +20,7 @@ public class AsyncConfig {
     public Executor apiExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(8);           // 기본 스레드 수
-        executor.setMaxPoolSize(16);           // 최대 스레드 수
+        executor.setMaxPoolSize(10);           // 최대 스레드 수
         executor.setQueueCapacity(100);        // 큐 용량
         executor.setThreadNamePrefix("Api-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());

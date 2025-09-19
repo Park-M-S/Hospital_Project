@@ -28,16 +28,16 @@ public class ProDocApiParser {
             return List.of();
         }
 
-        String subjectDetails = items.stream()
+        String proDocList = items.stream()
                 .map(item -> item.getSubjectName() + "(" + item.getProDocCount() + "명)")
                 .collect(Collectors.joining(", "));
 
         ProDoc record = ProDoc.builder()
                 .hospitalCode(hospitalCode)
-                .subjectName(subjectDetails)
+                .proDocList(proDocList)
                 .build(); // subjectDetails -> subjectName
 
-        log.debug("병원 {} 전문의 정보 통합: {}", hospitalCode, subjectDetails);
+        log.debug("병원 {} 전문의 정보 통합: {}", hospitalCode, proDocList);
 
         return List.of(record);
     }
