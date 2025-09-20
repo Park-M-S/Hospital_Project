@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class HospitalDetailAsyncRunner {
-	private final RateLimiter rateLimiter = RateLimiter.create(15.0); // 초당 15건 제한
+	private final RateLimiter rateLimiter = RateLimiter.create(10.0); // 초당 10건 제한
 	private final Executor executor; // 병렬 실행을 위한 스레드풀
 
 	private final HospitalDetailApiCaller apiCaller;
