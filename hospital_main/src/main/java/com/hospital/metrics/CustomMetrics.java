@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.Counter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -24,16 +25,20 @@ public class CustomMetrics {
     private final AtomicLong queueSize = new AtomicLong(0);
 
     @Autowired
-    public CustomMetrics(MeterRegistry meterRegistry) {
+    public CustomMetrics(@Qualifier("prometheusMeterRegistry") MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
     }
 
     @PostConstruct
     public void initGauges() {
-        // 가장 안전한 Gauge 등록 방식
-        meterRegistry.gauge("app.users.active", activeUsers, AtomicLong::doubleValue);
-        meterRegistry.gauge("app.connections.active", activeConnections, AtomicLong::doubleValue);
-        meterRegistry.gauge("app.queue.size", queueSize, AtomicLong::doubleValue);
+        try {
+            // 가장 안전한 Gauge 등록 방식
+            meterRegistry.gauge("app.users.active", activeUsers, AtomicLong::doubleValue);
+            meterRegistry.gauge("app.connections.active", activeConnections, AtomicLong::doubleValue);
+            meterRegistry.gauge("app.queue.size", queueSize, AtomicLong::doubleValue);
+        } catch (Exception e) {
+            System.err.println("Gauge initialization failed: " + e.getMessage());
+        }
     }
 
     // === 기본 API 메트릭 메소드들 ===

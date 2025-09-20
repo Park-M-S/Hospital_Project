@@ -20,7 +20,7 @@ public class MedicalSubjectJob implements Job {
     public void execute(JobExecutionContext context) {
         try {
             log.info("진료과목 정보 수집 시작");
-            int count = medicalSubjectApiService.fetchParseAndSaveMedicalSubjects();
+            int count = medicalSubjectApiService.updateSubjects();
             log.info("진료과목 정보 수집 시작: {}건 처리 예정", count);
         } catch (Exception e) {
             log.error("진료과목 정보 수집 실패", e);

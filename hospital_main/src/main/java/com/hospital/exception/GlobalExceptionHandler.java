@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-
+//전역처리 예외
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {

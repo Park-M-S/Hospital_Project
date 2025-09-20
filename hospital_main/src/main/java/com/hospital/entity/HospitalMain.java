@@ -2,6 +2,8 @@ package com.hospital.entity;
 
 import java.util.Set;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.CascadeType;
 // JPA 관련 임포트 추가
 import jakarta.persistence.Column;
@@ -29,6 +31,7 @@ import lombok.ToString;
 @Builder
 @ToString(exclude = { "hospitalDetail", "medicalSubjects", "proDocs" })
 @Entity
+@DynamicUpdate
 @Table(name = "hospital_main")
 @NamedEntityGraphs({
 		@NamedEntityGraph(name = "hospital-with-detail", attributeNodes = @NamedAttributeNode("hospitalDetail")),

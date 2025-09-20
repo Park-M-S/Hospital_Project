@@ -34,21 +34,17 @@ public class MedicalSubjectApiService {
 		this.medicalSubjectAsyncRunner = medicalSubjectAsyncRunner;
 	}
 
-	public int fetchParseAndSaveMedicalSubjects() {
+	public int updateSubjects() {
 		try {
-			medicalSubjectApiRepository.deleteAllSubjects();
-			medicalSubjectApiRepository.resetAutoIncrement();
+			
 
 			List<String> hospitalCodes = hospitalMainApiRepository.findAllHospitalCodes();
 			if (hospitalCodes.isEmpty()) {
 				throw new IllegalStateException("병원 기본정보가 없어 진료과목을 수집할 수 없습니다");
 			}
 
-			medicalSubjectAsyncRunner.setTotalCount(hospitalCodes.size());
 
-			for (String code : hospitalCodes) {
-				medicalSubjectAsyncRunner.runAsync(code);
-			}
+			medicalSubjectAsyncRunner.runBatchAsync(hospitalCodes);
 
 			return hospitalCodes.size();
 			

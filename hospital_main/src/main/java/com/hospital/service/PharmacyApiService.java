@@ -35,41 +35,39 @@ public class PharmacyApiService {
 		this.regionConfig = regionConfig;
 	}
 
-	public int fetchAndSaveSeongnamPharmacies() {
-		log.info("{} 전체 약국 데이터 수집 시작", regionConfig.getCityName());
+	 public int fetchAndSaveSeongnamPharmacies() {
+	        log.info("{} 전체 약국 데이터 수집 시작", regionConfig.getCityName());
 
-		try {
-			// 1. 기존 데이터 삭제
-			pharmacyApiRepository.deleteAllPharmacies();
-			log.info("기존 약국 데이터 전체 삭제 완료");
+	        try {
+	            // 1. 기존 데이터 삭제
+	            pharmacyApiRepository.deleteAllPharmacies();
+	            log.info("기존 약국 데이터 전체 삭제 완료");
+	            pharmacyApiRepository.resetAutoIncrement();
 
-			pharmacyApiRepository.resetAutoIncrement();
+	            List<Pharmacy> allPharmacies = new ArrayList<>();
+	            Set<String> processedYkihos = new HashSet<>();
+	            List<String> sigunguCodes = regionConfig.getSigunguCodes();
 
-			List<Pharmacy> allPharmacies = new ArrayList<>();
-			Set<String> processedYkihos = new HashSet<>();
-			List<String> sigunguCodes = regionConfig.getSigunguCodes();
+	            // 2. 각 구별로 데이터 수집
+	            for (String sgguCd : sigunguCodes) {
+	                String districtName = regionConfig.getDistrictName(sgguCd);
+	                try {
+	                    log.info("[{}] 지역 약국 데이터 수집 중...", districtName);
 
-			// 2. 각 구별로 데이터 수집
-			for (String sgguCd : sigunguCodes) {
-				String districtName = regionConfig.getDistrictName(sgguCd);
-				try {
-					log.info("[{}] 지역 약국 데이터 수집 중...", districtName);
+	                    List<PharmacyApiItem> apiItems = pharmacyApiCaller.callApiByDistrict(sgguCd);
 
-					OpenApiWrapper.Body body = pharmacyApiCaller.callApiByDistrict(sgguCd);
+	                    if (apiItems == null || apiItems.isEmpty()) {
+	                        log.warn("[{}] 지역에 저장할 약국 정보 없음", districtName);
+	                        continue;
+	                    }
 
-					if (body == null || body.getItems() == null || body.getItems().isEmpty()) {
-						log.warn("[{}] 지역에 저장할 약국 정보 없음", districtName);
-						continue;
-					}
+	                    log.info("[{}] 지역 파싱된 약국 수: {}", districtName, apiItems.size());
 
-					List<PharmacyApiItem> apiItems = body.getItems();
-					log.info("[{}] 지역 파싱된 약국 수: {}", districtName, apiItems.size());
-
-					// Entity 변환
-					List<Pharmacy> pharmacies = pharmacyApiParser.parseToEntities(apiItems);
-					if (pharmacies.size() != apiItems.size()) {
-						log.warn("[{}] 지역 유효하지 않은 데이터 {}건 제외됨", districtName, apiItems.size() - pharmacies.size());
-					}
+	                    // Entity 변환
+	                    List<Pharmacy> pharmacies = pharmacyApiParser.parseToEntities(apiItems);
+	                    if (pharmacies.size() != apiItems.size()) {
+	                        log.warn("[{}] 지역 유효하지 않은 데이터 {}건 제외됨", districtName, apiItems.size() - pharmacies.size());
+	                    }
 
 					// 3. 중복 제거 처리
 					int duplicateCount = 0;
