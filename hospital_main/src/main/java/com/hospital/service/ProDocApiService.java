@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.hospital.async.ProDocAsyncRunner;
-import com.hospital.config.RegionConfig;
 import com.hospital.repository.HospitalMainApiRepository;
 import com.hospital.repository.ProDocApiRepository;
 
@@ -22,36 +21,37 @@ public class ProDocApiService {
 
 	private final HospitalMainApiRepository hospitalMainApiRepository;
 	private final ProDocAsyncRunner proDocAsyncRunner;
-	private final ProDocApiRepository proDocApiRepository;
-	private final RegionConfig regionConfig;
+	private final ProDocApiRepository proDocRepository;
 
 	@Autowired
 	public ProDocApiService(HospitalMainApiRepository hospitalMainApiRepository, ProDocAsyncRunner proDocAsyncRunner,
-			ProDocApiRepository proDocApiRepository, RegionConfig regionConfig) {
+			ProDocApiRepository proDocRepository) {
 		this.hospitalMainApiRepository = hospitalMainApiRepository;
 		this.proDocAsyncRunner = proDocAsyncRunner;
-		this.proDocApiRepository = proDocApiRepository;
-		this.regionConfig = regionConfig;
+		this.proDocRepository = proDocRepository;
 	}
 
-	public int updateProDoc() {
-		log.info("병원 데이터 수집 시작 - 대상 지역: {}", regionConfig.getCityName());
-		
-		log.info("기존 병원 데이터 전체 삭제 시작...");
-        proDocApiRepository.deleteAll();
-        log.info("기존 병원 데이터 전체 삭제 완료");
+	public int updateProDocs() {
+		try {
+			
 
-		// regionConfig에서 시군구 코드 가져오기
-		List<String> sidoCodes = regionConfig.getNationwideSidoCodes();
-		proDocAsyncRunner.resetCounter();
-		proDocAsyncRunner.setTotalCount(sidoCodes.size());
+			// 병원 코드 리스트 불러오기
+			List<String> hospitalCodes = hospitalMainApiRepository.findAllHospitalCodes();
+			if (hospitalCodes.isEmpty()) {
+				throw new IllegalStateException("병원 기본정보가 없어 전문의 정보를 수집할 수 없습니다");
+			}
 
-		for (String sidoCd : sidoCodes) {
-			proDocAsyncRunner.runAsync(sidoCd);
+			// 비동기 상태 초기화
+			proDocAsyncRunner.resetCounter();
+			
+			proDocAsyncRunner.runBatchAsync(hospitalCodes);
+			
+			 return hospitalCodes.size();
+			
+		} catch (Exception e) {
+			log.error("전문의 정보 수집 실패", e);
+			throw new RuntimeException("전문의 정보 수집 중 오류 발생: " + e.getMessage(), e);
 		}
-		log.info("{}개 지역 병렬 처리 시작", sidoCodes.size());
-		return sidoCodes.size(); // 총 지역 수만 반환
-
 	}
 
 	public int getCompletedCount() {

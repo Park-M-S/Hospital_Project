@@ -201,7 +201,7 @@ public class HospitalApiController {
 
 		log.info("전문의 정보 저장 시작... (인증된 요청)");
 		
-		int total = proDocApiService.updateProDoc();
+		int total = proDocApiService.updateProDocs();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);

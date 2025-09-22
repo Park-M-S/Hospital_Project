@@ -40,9 +40,6 @@ public class HospitalConverter {
 
 				// 좌표 정보
 				.coordinateX(hospitalMain.getCoordinateX()).coordinateY(hospitalMain.getCoordinateY())
-				
-				
-				
 
 				// 운영 정보 (detail이 있을 때만)
 				.emergencyDayAvailable(detail != null ? convertYnToBoolean(detail.getEmyDayYn()) : null)
@@ -57,77 +54,29 @@ public class HospitalConverter {
 				.medicalSubjects(convertMedicalSubjectsToList(hospitalMain.getMedicalSubjects()))
 
 				// 전문의 정보를 문자열로 변환
-				 .professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs()))
+				.professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs()))
 				.build();
 	}
-	
-	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-        if (set == null || set.isEmpty()) {
-            return Map.of();
-        }
 
-        Map<String, Integer> result = new HashMap<>();
-        for (ProDoc p : set) {
-            putIfValid(result, "외과 일반의", p.getMedGeneralCnt());
-            putIfValid(result, "외과 인턴", p.getMedInternCnt());
-            putIfValid(result, "외과 레지던트", p.getMedResidentCnt());
-            putIfValid(result, "외과 전문의", p.getMedSpecialistCnt());
 
-            putIfValid(result, "치과 일반의", p.getDentGeneralCnt());
-            putIfValid(result, "치과 인턴", p.getDentInternCnt());
-            putIfValid(result, "치과 레지던트", p.getDentResidentCnt());
-            putIfValid(result, "치과 전문의", p.getDentSpecialistCnt());
+	private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> subjects) {
+		if (subjects == null || subjects.isEmpty()) {
+			return List.of();
+		}
 
-            putIfValid(result, "한방 일반의", p.getOrientalGeneralCnt());
-            putIfValid(result, "한방 인턴", p.getOrientalInternCnt());
-            putIfValid(result, "한방 레지던트", p.getOrientalResidentCnt());
-            putIfValid(result, "한방 전문의", p.getOrientalSpecialistCnt());
+		return subjects.stream().map(MedicalSubject::getSubjects) // 엔티티의 subjects(String) 가져오기
+				.filter(s -> s != null && !s.isBlank()) // null/빈 문자열 제거
+				.flatMap(s -> Arrays.stream(s.split(","))) // 쉼표로 나누어 각 과목 분리
+				.map(String::trim).filter(s -> !s.isEmpty()).distinct().sorted().collect(Collectors.toList());
+	}
 
-            putIfValid(result, "조산사", p.getMidwifeCnt());
-        }
-        return result;
-    }
-
-    private void putIfValid(Map<String, Integer> map, String key, String value) {
-        if (value != null && !value.isBlank()) {
-            try {
-                int count = Integer.parseInt(value);
-                if (count > 0) {
-                    map.put(key, count);
-                }
-            } catch (NumberFormatException ignored) {}
-        }
-    }
-	
-	 private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> subjects) {
-	        if (subjects == null || subjects.isEmpty()) {
-	            return List.of();
-	        }
-
-	        return subjects.stream()
-	                .map(MedicalSubject::getSubjects)        // 엔티티의 subjects(String) 가져오기
-	                .filter(s -> s != null && !s.isBlank())  // null/빈 문자열 제거
-	                .flatMap(s -> Arrays.stream(s.split(","))) // 쉼표로 나누어 각 과목 분리
-	                .map(String::trim)
-	                .filter(s -> !s.isEmpty())
-	                .distinct()
-	                .sorted()
-	                .collect(Collectors.toList());
-	    }
-	
-	 /* private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
-	        if (set == null || set.isEmpty()) {
-	            return List.of();
-	        }
-	        return set.stream()
-	                .map(MedicalSubject::getSubjectName)
-	                .filter(name -> name != null && !name.trim().isEmpty())
-	                .distinct()
-	                .sorted()
-	                .collect(Collectors.toList());
-	    }*/
-	
-
+	/*
+	 * private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
+	 * if (set == null || set.isEmpty()) { return List.of(); } return set.stream()
+	 * .map(MedicalSubject::getSubjectName) .filter(name -> name != null &&
+	 * !name.trim().isEmpty()) .distinct() .sorted() .collect(Collectors.toList());
+	 * }
+	 */
 
 	private String formatTime(String timeStr) {
 		// null이거나 4자리가 아니면 원본값 그대로 반환
@@ -138,8 +87,7 @@ public class HospitalConverter {
 		// HHMM을 HH:MM으로 변환
 		return timeStr.substring(0, 2) + ":" + timeStr.substring(2, 4);
 	}
-	
-	
+
 	// Hospital 엔티티 리스트를 DTO 리스트로 변환
 	public List<HospitalWebResponse> convertToDtos(List<HospitalMain> hospitals) {
 		if (hospitals == null) {
@@ -148,27 +96,32 @@ public class HospitalConverter {
 
 		return hospitals.stream().map(this::convertToDTO).collect(Collectors.toList());
 	}
-	
-	 /*private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-	        if (set == null || set.isEmpty()) {
-	            return new HashMap<>();
-	        }
-	        return set.stream()
-	                .collect(Collectors.toMap(
-	                    ProDoc::getSubjectName,
-	                    ProDoc::getProDocCount,
-	                    Integer::sum  // 중복 시 합산
-	                ));
-	    }*/
-	
 
-	//문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
+	
+	//ProDoc의 subjectDetails 문자열을 Map으로 변환
+	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
+		if (set == null || set.isEmpty()) {
+			return new HashMap<>();
+		}
+
+		return set.stream()
+				.filter(proDoc -> proDoc.getProDocList() != null)
+				.flatMap(proDoc ->  convertStringToSubjectMap(proDoc.getProDocList()).entrySet().stream())
+				.collect(Collectors.toMap(
+					Map.Entry::getKey,
+					Map.Entry::getValue,
+					Integer::sum // 중복 시 합산
+				));
+	}
+
+	
+	// 문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
 	private Map<String, Integer> convertStringToSubjectMap(String ProDocList) {
 		Map<String, Integer> result = new HashMap<>();
 		if (ProDocList == null || ProDocList.trim().isEmpty()) {
 			return result;
 		}
-		
+
 		// "내과(5명), 외과(3명)" → Map으로 변환
 		String[] subjects = ProDocList.split(", ");
 		for (String subject : subjects) {
@@ -185,15 +138,12 @@ public class HospitalConverter {
 		}
 		return result;
 	}
-	
-	private Boolean convertYnToBoolean(String ynValue) {
-        if (ynValue == null) {
-            return null;
-        }
-        return "Y".equalsIgnoreCase(ynValue.trim());
-    }
-	
-	
 
+	private Boolean convertYnToBoolean(String ynValue) {
+		if (ynValue == null) {
+			return null;
+		}
+		return "Y".equalsIgnoreCase(ynValue.trim());
+	}
 
 }

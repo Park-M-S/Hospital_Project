@@ -1,23 +1,14 @@
 package com.hospital.caller;
 
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hospital.dto.HospitalMainApiResponse;
-import com.hospital.dto.ProDocApiItem;
 import com.hospital.dto.ProDocApiResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 
@@ -25,10 +16,10 @@ import org.springframework.web.client.HttpServerErrorException;
 @Component
 public class ProDocApiCaller {
 
-	@Value("${hospital.main.api.base-url}")
+	@Value("${hospital.proDoc.api.base-url}")
 	private String baseUrl;
 
-	@Value("${hospital.main.api.key}")
+	@Value("${hospital.proDoc.api.key}")
 	private String serviceKey;
 	
     private final RestTemplate restTemplate;
@@ -40,44 +31,22 @@ public class ProDocApiCaller {
     }
 
     public ProDocApiResponse callApi(String queryParams) {
-        String encodedServiceKey;
         try {
-            encodedServiceKey = URLEncoder.encode(serviceKey, StandardCharsets.UTF_8.toString());
-        } catch (UnsupportedEncodingException e) {
-            log.error("서비스 키 인코딩 실패: {}", e.getMessage());
-            throw new RuntimeException("서비스 키 인코딩 실패: " + e.getMessage(), e);
-        }
-
-        URI uri = UriComponentsBuilder.fromUriString(baseUrl)
-                                     .query(queryParams)
-                                     .queryParam("serviceKey", encodedServiceKey)
-                                     .queryParam("_type", "json")
-                                     .build(true)
-                                     .toUri();
-        try {
+            // 최종 호출할 전체 URL 생성
+            String fullUrl = baseUrl + "?serviceKey=" + serviceKey + "&_type=json&" + queryParams;
 
             // 외부 API 호출 (GET 방식)
-            String responseJson = restTemplate.getForObject(uri, String.class);
+            String response = restTemplate.getForObject(fullUrl, String.class);
 
-            if (responseJson == null || responseJson.trim().isEmpty()) {
+            if (response == null || response.trim().isEmpty()) {
                 log.warn("API 응답이 비어있음");
                 return null;
             }
 
-            log.debug("API 응답: {}", responseJson);
+            log.debug("API 응답: {}", response);
 
-            ProDocApiResponse apiResponseDto = objectMapper.readValue(responseJson, ProDocApiResponse.class);
-            
-            // resultCode 검사
-            String resultCode = apiResponseDto.getResponse().getHeader().getResultCode();
-            String resultMsg = apiResponseDto.getResponse().getHeader().getResultMsg();
-
-            if (!"00".equals(resultCode)) {
-                log.error("API 응답 오류 - 코드: {}, 메시지: {}", resultCode, resultMsg);
-                throw new RuntimeException("API 응답 오류: " + resultCode + " - " + resultMsg);
-            }
-
-            return apiResponseDto;
+            // JSON 응답을 Java 객체로 역직렬화
+            return objectMapper.readValue(response, ProDocApiResponse.class);
 
         } catch (HttpClientErrorException e) {
             // 4xx 클라이언트 오류

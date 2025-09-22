@@ -37,49 +37,10 @@ public class ProDoc {
     @Column(name = "hospital_code", nullable = false)
     private String hospitalCode; //실제 DB에 저장될 병원 코드 (외래키)
     
+   
     
-    @Column(name = "med_general_cnt")
-    private String medGeneralCnt;  // mdeptGdrCnt
-    
-    @Column(name = "med_intern_cnt")
-    private String medInternCnt;  // mdeptIntnCnt
-    
-    @Column(name = "med_resident_cnt")
-    private String medResidentCnt;  // mdeptResdntCnt
-    
-    @Column(name = "med_specialist_cnt")
-    private String medSpecialistCnt;  // mdeptSdrCnt
-    
-    // 치과
-    @Column(name = "dent_general_cnt")
-    private String dentGeneralCnt;  // detyGdrCnt
-    
-    @Column(name = "dent_intern_cnt")
-    private String dentInternCnt;  // detyIntnCnt
-    
-    @Column(name = "dent_resident_cnt")
-    private String dentResidentCnt;  // detyResdntCnt
-    
-    @Column(name = "dent_specialist_cnt")
-    private String dentSpecialistCnt;  // detySdrCnt
-    
-    // 한방
-    @Column(name = "oriental_general_cnt")
-    private String orientalGeneralCnt;  // cmdcGdrCnt
-    
-    @Column(name = "oriental_intern_cnt")
-    private String orientalInternCnt;  // cmdcIntnCnt
-    
-    @Column(name = "oriental_resident_cnt")
-    private String orientalResidentCnt;  // cmdcResdntCnt
-    
-    @Column(name = "oriental_specialist_cnt")
-    private String orientalSpecialistCnt;  // cmdcSdrCnt
-    
-    // 기타
-    @Column(name = "midwife_cnt")
-    private String midwifeCnt;  // pnursCnt
-    
+    @Column(name = "proDoc_List")
+    private String proDocList;
     
     
 
@@ -87,7 +48,6 @@ public class ProDoc {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hospital_code", referencedColumnName = "hospital_code", insertable = false, updatable = false)
     private HospitalMain hospital;
-    
     
     //public boolean hasSpecialist() {
         // proDocCount가 null이거나 0이면 false
@@ -97,9 +57,9 @@ public class ProDoc {
     
 
     //전문의 존재 여부 체크
-    //public boolean hasSpecialist() {
-        //return this.proDocList != null && !this.proDocList.trim().isEmpty();
-   //}
+    public boolean hasSpecialist() {
+        return this.proDocList != null && !this.proDocList.trim().isEmpty();
+   }
     
  
 }

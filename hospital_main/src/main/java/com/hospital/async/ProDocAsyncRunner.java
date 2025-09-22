@@ -2,120 +2,139 @@ package com.hospital.async;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.google.common.util.concurrent.RateLimiter;
 import com.hospital.caller.ProDocApiCaller;
-import com.hospital.config.RegionConfig;
-import com.hospital.dto.HospitalMainApiResponse;
-import com.hospital.dto.ProDocApiItem;
 import com.hospital.dto.ProDocApiResponse;
-import com.hospital.entity.HospitalMain;
 import com.hospital.entity.ProDoc;
 import com.hospital.parser.ProDocApiParser;
 import com.hospital.repository.ProDocApiRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
-@Service
 @Slf4j
+@Service
 public class ProDocAsyncRunner {
-
-    private final RateLimiter rateLimiter = RateLimiter.create(5.0);
-    private final AtomicInteger completedCount = new AtomicInteger(0);
-    private final AtomicInteger failedCount = new AtomicInteger(0);
-    private final AtomicInteger insertedCount = new AtomicInteger(0);
-    private int totalCount = 0;
+    private final RateLimiter rateLimiter = RateLimiter.create(10.0);
+    private final Executor executor;
 
     private final ProDocApiCaller apiCaller;
     private final ProDocApiParser parser;
-    private final ProDocApiRepository proDocApiRepository;
-    private final RegionConfig regionConfig;
+    private final ProDocApiRepository repository;
 
-    private static final int BATCH_SIZE = 100;
+    private final AtomicInteger completedCount = new AtomicInteger(0);
+    private final AtomicInteger failedCount = new AtomicInteger(0);
+    private final AtomicInteger insertedCount = new AtomicInteger(0);
+
+    private static final int CHUNK_SIZE = 100;
 
     @Autowired
-    public ProDocAsyncRunner(ProDocApiCaller apiCaller,
-    		ProDocApiParser parser,
-    		ProDocApiRepository proDocApiRepository,
-    		RegionConfig regionConfig) {
+    public ProDocAsyncRunner(ProDocApiCaller apiCaller, ProDocApiParser parser,
+            ProDocApiRepository repository, @Qualifier("apiExecutor") Executor executor) {
         this.apiCaller = apiCaller;
         this.parser = parser;
-        this.proDocApiRepository = proDocApiRepository;
-        this.regionConfig = regionConfig;
+        this.repository = repository;
+        this.executor = executor;
     }
 
     @Async("apiExecutor")
-    public void runAsync(String sidoCd) {
-        rateLimiter.acquire();
+    public void runBatchAsync(List<String> hospitalCodes) {
+        log.info("전문의 정보 배치(전체 삭제 후 삽입) 시작: 총 {}건", hospitalCodes.size());
+
         try {
-            String sidoName = regionConfig.getSidoName(sidoCd);
-            log.info("지역코드 {} 처리 시작", sidoName);
+            // 1. 청크 분할
+            List<List<String>> chunks = partitionList(hospitalCodes, CHUNK_SIZE);
 
-
-            List<ProDoc> allHospitals = new ArrayList<>();
-            int pageNo = 1;
-            int numOfRows = 1000;
-            boolean hasMorePages = true;
-
-            while (hasMorePages) {
-                String queryParams = String.format("sidoCd=%s&pageNo=%s&numOfRows=%s", sidoCd, pageNo, numOfRows);
-                ProDocApiResponse response = apiCaller.callApi(queryParams);
-                List<ProDoc> proDocs = parser.parseProDocs(response);
-
-                if (proDocs.isEmpty()) {
-                    log.info("지역 {} 페이지 {}: 더 이상 데이터 없음", sidoName, pageNo);
-                    break;
-                }
-
-                allHospitals.addAll(proDocs);
-
-                Thread.sleep(1000); // 페이지 간 대기
-                pageNo++;
-                hasMorePages = proDocs.size() >= numOfRows;
+            // 2. 전체 API 결과 수집
+            List<CompletableFuture<List<ProDoc>>> futures = new ArrayList<>();
+            for (List<String> chunk : chunks) {
+                futures.add(CompletableFuture.supplyAsync(() -> processChunk(chunk), executor));
             }
 
-            // 배치 저장
-            for (int i = 0; i < allHospitals.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allHospitals.size());
-                proDocApiRepository.saveAll(allHospitals.subList(i, end));
-            }
+            List<ProDoc> allNewData = new ArrayList<>();
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .thenRun(() -> {
+                        futures.forEach(f -> {
+                            try {
+                                allNewData.addAll(f.get());
+                            } catch (Exception e) {
+                                log.error("청크 수집 실패", e);
+                            }
+                        });
+                    })
+                    .join();
 
-            insertedCount.addAndGet(allHospitals.size());
-            completedCount.incrementAndGet();
-            log.info("지역 {} 처리 완료: 총 {}건 저장", sidoName, allHospitals.size());
+            log.info("API 호출 완료: 총 {}건 수집", allNewData.size());
+
+            // 3. 기존 데이터 전체 삭제
+            repository.deleteAllInBatch();
+            log.info("기존 전문의 데이터 전체 삭제 완료");
+
+            // 4. 신규 데이터 전체 삽입
+            repository.saveAll(allNewData);
+            insertedCount.addAndGet(allNewData.size());
+
+            log.info("전문의 정보 배치 완료: 완료 {}, 실패 {}, 신규 {}", 
+                    completedCount.get(), failedCount.get(), insertedCount.get());
 
         } catch (Exception e) {
-            failedCount.incrementAndGet();
-            log.error("지역 코드 {} 처리 실패: {}", regionConfig.getSidoName(sidoCd), e.getMessage());
+            failedCount.addAndGet(hospitalCodes.size());
+            log.error("전체 배치 실패", e);
         }
     }
 
-    // ✅ 상태 관리 메서드
-    public int getCompletedCount() {
-        return completedCount.get();
+    private List<ProDoc> processChunk(List<String> chunk) {
+        String threadName = Thread.currentThread().getName();
+        log.debug("[{}] 청크 처리 시작: {}건", threadName, chunk.size());
+
+        List<ProDoc> results = new ArrayList<>();
+
+        for (String hospitalCode : chunk) {
+            try {
+                rateLimiter.acquire();
+
+                String queryParams = "ykiho=" + hospitalCode;
+                ProDocApiResponse response = apiCaller.callApi(queryParams);
+
+                List<ProDoc> parsedList = parser.parse(response, hospitalCode);
+                results.addAll(parsedList);
+
+                completedCount.incrementAndGet();
+
+            } catch (Exception e) {
+                failedCount.incrementAndGet();
+                log.error("[{}] API 호출 실패: {}", threadName, hospitalCode, e);
+            }
+        }
+
+        log.debug("[{}] 청크 처리 완료: {}건", threadName, results.size());
+        return results;
     }
 
-    public int getFailedCount() {
-        return failedCount.get();
+    private List<List<String>> partitionList(List<String> list, int size) {
+        List<List<String>> chunks = new ArrayList<>();
+        for (int i = 0; i < list.size(); i += size) {
+            chunks.add(list.subList(i, Math.min(i + size, list.size())));
+        }
+        return chunks;
     }
 
-    public int getInsertedCount() {
-        return insertedCount.get();
-    }
-
+    // 상태 관리 메서드
     public void resetCounter() {
         completedCount.set(0);
         failedCount.set(0);
         insertedCount.set(0);
     }
 
-    public void setTotalCount(int totalCount) {
-        this.totalCount = totalCount;
-        resetCounter();
-    }
+    public int getCompletedCount() { return completedCount.get(); }
+    public int getFailedCount() { return failedCount.get(); }
+    public int getInsertedCount() { return insertedCount.get(); }
 }

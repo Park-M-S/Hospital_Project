@@ -31,22 +31,7 @@ public class HospitalWebResponse {
     // 좌표 정보
     private Double coordinateX;
     private Double coordinateY;
-    
-    private String medGeneralCnt;
-    private String medInternCnt;
-    private String medResidentCnt;
-    private String medSpecialistCnt;
-    private String dentGeneralCnt;
-    private String dentInternCnt;
-    private String dentResidentCnt;
-    private String dentSpecialistCnt;
-    private String orientalGeneralCnt;
-    private String orientalInternCnt;
-    private String orientalResidentCnt;
-    private String orientalSpecialistCnt;
-    private String midwifeCnt;
-    
-    
+   
     // 운영 정보
     private Boolean emergencyDayAvailable;    // Y/N
     private Boolean emergencyNightAvailable;  // Y/N
@@ -61,6 +46,10 @@ public class HospitalWebResponse {
     
   
     private Map<String, Integer> professionalDoctors; 
+    
+    private Map<String, Integer> generalDoctors; 
+    
+    
 }
 
 
