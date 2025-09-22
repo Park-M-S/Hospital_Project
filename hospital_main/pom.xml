@@ -171,40 +171,6 @@
 			<artifactId>spring-webflux</artifactId>
 			<version>${spring.version}</version> <!-- 또는 사용 중인 스프링 버전 맞게 -->
 		</dependency>
-		<!-- Micrometer Core - 메트릭 수집 라이브러리 -->
-		<dependency>
-    		<groupId>io.micrometer</groupId>
-    		<artifactId>micrometer-core</artifactId>
-    		<version>1.10.5</version>
-		</dependency>
-
-		<!-- Micrometer Prometheus Registry - Prometheus 형식으로 메트릭 노출 -->
-		<dependency>
-    		<groupId>io.micrometer</groupId>
-    		<artifactId>micrometer-registry-prometheus</artifactId>
-    		<version>1.10.5</version>
-		</dependency>
-
-		<!-- Prometheus Java Client - 메트릭 수집 및 노출 (micrometer와 함께 사용) -->
-		<dependency>
-    		<groupId>io.prometheus</groupId>
-    		<artifactId>simpleclient</artifactId>
-    		<version>0.16.0</version>
-		</dependency>
-
-		<!-- Prometheus HTTP Server - 메트릭 엔드포인트 제공 -->
-		<dependency>
-    		<groupId>io.prometheus</groupId>
-    		<artifactId>simpleclient_httpserver</artifactId>
-    		<version>0.16.0</version>
-		</dependency>
-
-		<!-- Prometheus Hotspot JVM 메트릭 -->
-		<dependency>
-    		<groupId>io.prometheus</groupId>
-    		<artifactId>simpleclient_hotspot</artifactId>
-    		<version>0.16.0</version>
-		</dependency>
 		<!-- Reactor Netty (기본 HTTP connector 제공) -->
 		<dependency>
 			<groupId>io.projectreactor.netty</groupId>
@@ -319,6 +285,4 @@
 		</plugins>
 	</build>
 </project>
-
-
 

@@ -56,6 +56,7 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	List<HospitalMain> findByProvinceName(String provinceName);
+	
 
 	@Modifying
 	@Transactional

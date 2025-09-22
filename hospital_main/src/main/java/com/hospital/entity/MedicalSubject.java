@@ -42,13 +42,13 @@ public class MedicalSubject {
 
    
     
-    @Column(name = "subjects")
+    @Column(name = "subjects", length = 1000)
     private String subjects;
     
     
 
    
-    @ManyToOne(fetch = FetchType.LAZY)
+   @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
         name = "hospital_code",                 // 이 테이블의 외래키 컬럼
         referencedColumnName = "hospital_code", // 병원 테이블의 PK 컬럼

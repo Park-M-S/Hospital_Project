@@ -26,11 +26,26 @@ public class HospitalWebResponse {
     private String districtName;
     private String hospitalTel;
     private String hospitalHomepage;
-    private Integer doctorNum;
+    private String totalDoctors;
     
     // 좌표 정보
     private Double coordinateX;
     private Double coordinateY;
+    
+    private String medGeneralCnt;
+    private String medInternCnt;
+    private String medResidentCnt;
+    private String medSpecialistCnt;
+    private String dentGeneralCnt;
+    private String dentInternCnt;
+    private String dentResidentCnt;
+    private String dentSpecialistCnt;
+    private String orientalGeneralCnt;
+    private String orientalInternCnt;
+    private String orientalResidentCnt;
+    private String orientalSpecialistCnt;
+    private String midwifeCnt;
+    
     
     // 운영 정보
     private Boolean emergencyDayAvailable;    // Y/N
