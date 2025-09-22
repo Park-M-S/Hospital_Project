@@ -6,9 +6,9 @@ Spring Framework 기반의 병원 정보 조회 시스템으로, 공공데이터
 ## 🛠️ 기술 스택
 - **Backend**: Spring Framework 5.x
 - **Database**: MariaDB 10.11
-- **Frontend**: Vue.js 3 + Vite
+- **Frontend**: ~~Vue.js 3 + Vite~~ Flutter
 - **Deployment**: Docker + Docker Compose
-- **Web Server**: Caddy (SSL 자동화)
+- **Web Server**: nginx (예정)
 - **CI/CD**: GitHub Actions
 
 ## 🚀 주요 기능
@@ -26,7 +26,7 @@ Spring Framework 기반의 병원 정보 조회 시스템으로, 공공데이터
 
 ## 🏗️ 아키텍처
 ```
-🌐 Frontend (Vue.js) 
+🌐 Frontend (Flutter) 
     ↕️
 🔧 Backend (Spring Framework)
     ↕️
@@ -37,14 +37,12 @@ Spring Framework 기반의 병원 정보 조회 시스템으로, 공공데이터
 
 ## 🐳 배포 환경
 - **서버**: AWS EC2
-- **SSL**: Let's Encrypt (DuckDNS 연동)
 - **컨테이너**: Docker Compose
 - **자동 배포**: GitHub Actions
 
 ## 🔐 보안 관리
 - GitHub Secrets를 통한 API 키 관리
 - 환경변수 기반 설정 관리
-- HTTPS 강제 리다이렉트
 
 ## 📂 프로젝트 구조
 ```
@@ -83,7 +81,7 @@ hospital-system/
 - `GET /api/hospitals` - 🏥 병원 목록 조회
 - `GET /api/pharmacies` - 💊 약국 목록 조회  
 - `GET /api/emergency` - 🚨 응급실 정보 조회
-- `GET /api/doctors` - 👨‍⚕️ 전문의 정보 조회
+- `GET /api/proDoc` - 👨‍⚕️ 전문의 정보 조회
 
 ## 🤝 기여하기
 1. Fork the repository
