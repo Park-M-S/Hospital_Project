@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 //병원,약국 조회
 @RestController
@@ -33,18 +34,15 @@ public class HospitalController {
 	}
 
 	// 병원 검색
-	@GetMapping(value = "/hospitalsData", produces = MediaType.APPLICATION_JSON_VALUE)
-	public List<HospitalWebResponse> getHospitals(@RequestParam("userLat") double userLat,
-			@RequestParam("userLng") double userLng, @RequestParam("radius") double radius,
-			 @RequestParam(value = "tags", required = false) List<String> tags) {
-		log.info("병원 검색 API 호출 - 위도: {}, 경도: {}, 반경: {}km, 태그: {}", userLat, userLng, radius, tags);
-
-		List<HospitalWebResponse> result = hospitalService.getHospitals(userLat, userLng, radius, tags);
-
-		log.info("병원 검색 완료 - 조회된 병원 수: {}개", result.size());
-
-		return result;
-	}
+	  @GetMapping(value = "/hospitalsData", produces = MediaType.APPLICATION_JSON_VALUE)
+	    public List<HospitalWebResponse> getHospitals(
+	            @RequestParam double userLat,         // 사용자 위도
+	            @RequestParam double userLng,         // 사용자 경도
+	            @RequestParam double radius          // 검색 반경 (km)
+	         
+	    ) {
+	        return hospitalService.getHospitals(userLat, userLng, radius);
+	    }
 
 	// 약국 검색 API
 	@GetMapping(value = "/pharmaciesData", produces = MediaType.APPLICATION_JSON_VALUE)

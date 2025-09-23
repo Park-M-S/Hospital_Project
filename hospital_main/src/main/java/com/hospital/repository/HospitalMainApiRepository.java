@@ -30,12 +30,17 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@Query("SELECT h FROM HospitalMain h WHERE REPLACE(h.hospitalName, ' ', '') LIKE CONCAT('%', REPLACE(:hospitalName, ' ', ''), '%')")
 	List<HospitalMain> findByHospitalNameContaining(@Param("hospitalName") String hospitalName);
 
-	/*@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	@EntityGraph("hospital-with-all")
-	@Query("SELECT DISTINCT h FROM HospitalMain h WHERE "
-			+ "(SELECT COUNT(DISTINCT ms.subjectName) FROM h.medicalSubjects ms "
-			+ " WHERE ms.subjectName IN :subjects) = :#{#subjects.size()}")
-	List<HospitalMain> findHospitalsBySubjects(@Param("subjects") List<String> subjects);*/
+	/*
+	 * @QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
+	 * 
+	 * @EntityGraph("hospital-with-all")
+	 * 
+	 * @Query("SELECT DISTINCT h FROM HospitalMain h WHERE " +
+	 * "(SELECT COUNT(DISTINCT ms.subjectName) FROM h.medicalSubjects ms " +
+	 * " WHERE ms.subjectName IN :subjects) = :#{#subjects.size()}")
+	 * List<HospitalMain> findHospitalsBySubjects(@Param("subjects") List<String>
+	 * subjects);
+	 */
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	@EntityGraph("hospital-with-detail")
@@ -56,23 +61,24 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	List<HospitalMain> findByProvinceName(String provinceName);
-	
 
 	@Modifying
 	@Transactional
 	List<HospitalMain> deleteByHospitalCodeIn(List<String> hospitalcodes);
-	
-	 @Query(value = """
-		        SELECT h.*
-		        FROM hospital_main h
-		        WHERE ST_Distance_Sphere(
-		                  point(h.coordinate_x, h.coordinate_y),
-		                  point(:lon, :lat)
-		              ) <= :radius * 1000
-		        """, nativeQuery = true)
-		    List<HospitalMain> findHospitalsWithinRadius(
-		            @Param("lat") double lat,
-		            @Param("lon") double lon,
-		            @Param("radius") double radius);
 
+	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
+	@Query(value = """
+	        SELECT h.*
+	        FROM hospital_main h
+	        WHERE ST_Distance_Sphere(
+	                  point(h.coordinate_x, h.coordinate_y),
+	                  point(:lon, :lat)
+	              ) <= :radius * 1000
+	        AND h.coordinate_x IS NOT NULL 
+	        AND h.coordinate_y IS NOT NULL
+	        """, nativeQuery = true)
+	List<HospitalMain> findHospitalsWithinRadius(
+	        @Param("lat") double lat,
+	        @Param("lon") double lon,
+	        @Param("radius") double radius);
 }
