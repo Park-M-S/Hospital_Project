@@ -43,7 +43,7 @@ public class MedicalSubjectApiService {
 			log.info("병원 데이터 수집 시작 - 진료과목: {}", subjectMappingConfig.getSubjectNames());
 			
 			log.info("기존 과목 데이터 전체 삭제 시작...");
-	        medicalSubjectApiRepository.deleteAll();
+	        medicalSubjectApiRepository.deleteAllInBatch();
 	        log.info("기존 과목 데이터 전체 삭제 완료");
 			
 			List<String> subCodes = subjectMappingConfig.getSubjectCodes();

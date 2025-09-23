@@ -43,8 +43,6 @@ import lombok.ToString;
 				@NamedAttributeNode("medicalSubjects"), @NamedAttributeNode("proDocs") }) })
 public class HospitalMain {
 
-
-	
 	@Id
 	@Column(name = "hospital_code", nullable = false, length = 255) // 컬럼 이름과 속성 지정
 	private String hospitalCode;
@@ -75,12 +73,6 @@ public class HospitalMain {
 
 	@Column(name = "coordinate_y")
 	private Double coordinateY;
-	
-    @Lob
-    @Column(name = "subject_names", length = 1000)
-    private String subjectNames; // ["내과", "외과", "정형외과"]
-    
-    
 
 	@OneToOne(mappedBy = "hospital",
 

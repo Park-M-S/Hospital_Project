@@ -36,7 +36,7 @@ public class HospitalConverter {
 				.hospitalName(hospitalMain.getHospitalName()).hospitalAddress(hospitalMain.getHospitalAddress())
 				.provinceName(hospitalMain.getProvinceName()).districtName(hospitalMain.getDistrictName())
 				.hospitalTel(hospitalMain.getHospitalTel()).hospitalHomepage(hospitalMain.getHospitalHomepage())
-				.totalDoctors(hospitalMain.getTotalDoctors())
+				.totalDoctors(convertStringToInteger(hospitalMain.getTotalDoctors()))
 
 				// 좌표 정보
 				.coordinateX(hospitalMain.getCoordinateX()).coordinateY(hospitalMain.getCoordinateY())
@@ -70,13 +70,16 @@ public class HospitalConverter {
 				.map(String::trim).filter(s -> !s.isEmpty()).distinct().sorted().collect(Collectors.toList());
 	}
 
-	/*
-	 * private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
-	 * if (set == null || set.isEmpty()) { return List.of(); } return set.stream()
-	 * .map(MedicalSubject::getSubjectName) .filter(name -> name != null &&
-	 * !name.trim().isEmpty()) .distinct() .sorted() .collect(Collectors.toList());
-	 * }
-	 */
+	private Integer convertStringToInteger(String value) {
+	    if (value == null || value.trim().isEmpty()) {
+	        return null;
+	    }
+	    try {
+	        return Integer.parseInt(value.trim());
+	    } catch (NumberFormatException e) {
+	        return null;  // 또는 0
+	    }
+	}
 
 	private String formatTime(String timeStr) {
 		// null이거나 4자리가 아니면 원본값 그대로 반환
@@ -98,47 +101,58 @@ public class HospitalConverter {
 	}
 
 	
-	//ProDoc의 subjectDetails 문자열을 Map으로 변환
 	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-		if (set == null || set.isEmpty()) {
-			return new HashMap<>();
-		}
+	    System.out.println("=== ProDoc 디버깅 시작 ===");
+	    System.out.println("ProDoc set is null: " + (set == null));
+	    System.out.println("ProDoc set size: " + (set != null ? set.size() : 0));
+	    
+	    if (set == null || set.isEmpty()) {
+	        System.out.println("ProDoc set이 비어있음");
+	        return new HashMap<>();
+	    }
 
-		return set.stream()
-				.filter(proDoc -> proDoc.getProDocList() != null)
-				.flatMap(proDoc ->  convertStringToSubjectMap(proDoc.getProDocList()).entrySet().stream())
-				.collect(Collectors.toMap(
-					Map.Entry::getKey,
-					Map.Entry::getValue,
-					Integer::sum // 중복 시 합산
-				));
+	    // 각 ProDoc 확인
+	    for (ProDoc proDoc : set) {
+	        System.out.println("ProDoc ID: " + proDoc.getId());
+	        System.out.println("ProDoc List: " + proDoc.getProDocList());
+	    }
+
+	    Map<String, Integer> result = set.stream()
+	            .filter(proDoc -> proDoc.getProDocList() != null)
+	            .flatMap(proDoc -> convertStringToSubjectMap(proDoc.getProDocList()).entrySet().stream())
+	            .collect(Collectors.toMap(
+	                Map.Entry::getKey,
+	                Map.Entry::getValue,
+	                Integer::sum
+	            ));
+	    
+	    System.out.println("최종 결과: " + result);
+	    System.out.println("=== ProDoc 디버깅 끝 ===");
+	    return result;
 	}
-
 	
 	// 문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
-	private Map<String, Integer> convertStringToSubjectMap(String ProDocList) {
-		Map<String, Integer> result = new HashMap<>();
-		if (ProDocList == null || ProDocList.trim().isEmpty()) {
-			return result;
-		}
+	private Map<String, Integer> convertStringToSubjectMap(String proDocList) {
+	    Map<String, Integer> result = new HashMap<>();
+	    if (proDocList == null || proDocList.trim().isEmpty()) {
+	        return result;
+	    }
 
-		// "내과(5명), 외과(3명)" → Map으로 변환
-		String[] subjects = ProDocList.split(", ");
-		for (String subject : subjects) {
-			// "내과(5명)" → "내과"=5
-			if (subject.contains("(") && subject.contains("명)")) {
-				String name = subject.substring(0, subject.indexOf("(")).trim();
-				String countStr = subject.substring(subject.indexOf("(") + 1, subject.indexOf("명)")).trim();
-				try {
-					result.put(name, Integer.parseInt(countStr));
-				} catch (NumberFormatException e) {
-					// 파싱 실패 시 무시
-				}
-			}
-		}
-		return result;
+	    String[] subjects = proDocList.split(", ");
+	    for (String subject : subjects) {
+	        // "가정의학과(1)" → "가정의학과"=1
+	        if (subject.contains("(") && subject.contains(")")) {
+	            String name = subject.substring(0, subject.indexOf("(")).trim();
+	            String countStr = subject.substring(subject.indexOf("(") + 1, subject.indexOf(")")).trim();
+	            try {
+	                result.put(name, Integer.parseInt(countStr));
+	            } catch (NumberFormatException e) {
+	                System.out.println("파싱 실패: " + subject);
+	            }
+	        }
+	    }
+	    return result;
 	}
-
 	private Boolean convertYnToBoolean(String ynValue) {
 		if (ynValue == null) {
 			return null;

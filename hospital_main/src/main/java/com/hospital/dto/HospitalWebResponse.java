@@ -26,7 +26,7 @@ public class HospitalWebResponse {
     private String districtName;
     private String hospitalTel;
     private String hospitalHomepage;
-    private String totalDoctors;
+    private Integer totalDoctors;
     
     // 좌표 정보
     private Double coordinateX;
@@ -47,7 +47,6 @@ public class HospitalWebResponse {
   
     private Map<String, Integer> professionalDoctors; 
     
-    private Map<String, Integer> generalDoctors; 
     
     
 }
