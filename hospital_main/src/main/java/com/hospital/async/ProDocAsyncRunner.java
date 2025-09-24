@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
@@ -29,7 +31,7 @@ public class ProDocAsyncRunner {
 	private final AtomicInteger failedCount = new AtomicInteger(0);
 	private final AtomicInteger insertedCount = new AtomicInteger(0);
 	private static final int CHUNK_SIZE = 100;
-	private static final int BATCH_SIZE = 1000;
+	private static final int BATCH_SIZE = 100;
 
 	@Autowired
 	public ProDocAsyncRunner(ProDocApiCaller apiCaller, ProDocApiParser parser, ProDocApiRepository repository,
@@ -42,6 +44,7 @@ public class ProDocAsyncRunner {
 
 	@Async("apiExecutor")
 	public void runBatchAsync(List<String> hospitalCodes) {
+		
 		log.info("전문의 정보 배치(전체 삭제 후 삽입) 시작: 총 {}건", hospitalCodes.size());
 		try {
 			// 1. 청크 분할

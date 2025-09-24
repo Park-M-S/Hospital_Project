@@ -7,6 +7,8 @@ import com.hospital.entity.HospitalDetail;
 import com.hospital.entity.ProDoc;
 import com.hospital.util.TodayOperatingTimeCalculator;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -17,7 +19,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+
 @Component
+@Slf4j
 public class HospitalConverter {
 
 	// Hospital 엔티티를 HospitalResponseDto로 변환
@@ -102,44 +106,19 @@ public class HospitalConverter {
 	}
 
 	
-	//ProDoc의 proDocList 문자열을 Map으로 변환
+	// ProDoc의 개별 필드를 Map으로 변환
 	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-		if (set == null || set.isEmpty()) {
-			return new HashMap<>();
-		}
-
-		return set.stream()
-				.filter(proDoc -> proDoc.getProDocList() != null)
-				.flatMap(proDoc ->  convertStringToSubjectMap(proDoc.getProDocList()).entrySet().stream())
-				.collect(Collectors.toMap(
-					Map.Entry::getKey,
-					Map.Entry::getValue,
-					Integer::sum // 중복 시 합산
-				));
-	}
-
-	
-	// 문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
-	private Map<String, Integer> convertStringToSubjectMap(String proDocList) {
-	    Map<String, Integer> result = new HashMap<>();
-	    if (proDocList == null || proDocList.trim().isEmpty()) {
-	        return result;
+	    if (set == null || set.isEmpty()) {
+	        return new HashMap<>();
 	    }
 
-	    String[] subjects = proDocList.split(", ");
-	    for (String subject : subjects) {
-	        // "가정의학과(1명)" → "가정의학과"=1
-	        if (subject.contains("(") && subject.contains("명)")) {
-	            String name = subject.substring(0, subject.indexOf("(")).trim();
-	            String countStr = subject.substring(subject.indexOf("(") + 1, subject.indexOf("명)")).trim();
-	            try {
-	                result.put(name, Integer.parseInt(countStr));
-	            } catch (NumberFormatException e) {
-	                System.out.println("파싱 실패: " + subject);
-	            }
-	        }
-	    }
-	    return result;
+	    return set.stream()
+	            .filter(proDoc -> proDoc.getSubjectName() != null && proDoc.getProDocCount() != null)
+	            .collect(Collectors.toMap(
+	                    ProDoc::getSubjectName,     // 과목명을 키로
+	                    ProDoc::getProDocCount,     // 이미 Integer이므로 바로 사용
+	                    Integer::sum               // 중복 시 합산
+	            ));
 	}
 
 	private Boolean convertYnToBoolean(String ynValue) {

@@ -12,12 +12,11 @@ import lombok.*;
 @JsonIgnoreProperties(ignoreUnknown = true) // JSON 중 필요한 필드 외 무시
 public class ProDocApiItem {
 
-    @JsonProperty("ykiho") // 병원 고유 코드
-    private String hospitalCode;
 
     @JsonProperty("dgsbjtCdNm") // 진료 과목명 (ex. 내과, 신경과 등)
-    private String subjectName;
+    private String dgsbjtCdNm;
+    
 
     @JsonProperty("dtlSdrCnt")  // 전문의 수 (해당 과목에 소속된)
-    private Integer proDocCount;
+    private Integer dtlSdrCnt;
 }
