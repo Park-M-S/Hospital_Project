@@ -1,6 +1,6 @@
 package com.hospital.parser;
 
-import com.hospital.config.SubjectMappingConfig;
+
 import com.hospital.dto.ProDocApiItem;
 import com.hospital.dto.ProDocApiResponse;
 import com.hospital.entity.ProDoc;
@@ -9,45 +9,36 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class ProDocApiParser {
 
-	private final SubjectMappingConfig SubjectMappingConfig;
+    public List<ProDoc> parse(ProDocApiResponse response, String hospitalCode) {
+        if (response == null || response.getResponse() == null || 
+            response.getResponse().getBody() == null || 
+            response.getResponse().getBody().getItems() == null ||
+            response.getResponse().getBody().getItems().getItem() == null) {
+            return List.of();
+        }
 
-	@Autowired
-	public ProDocApiParser(SubjectMappingConfig mappingConfig) {
-		this.SubjectMappingConfig = mappingConfig;
-	}
+        List<ProDocApiItem> items = response.getResponse().getBody().getItems().getItem();
+        if (items.isEmpty()) {
+            return List.of();
+        }
 
-	public List<ProDoc> parse(ProDocApiResponse response, String hospitalCode) {
-		// 응답 검증
-		if (response == null || response.getResponse() == null || response.getResponse().getBody() == null) {
-			return List.of(); // 빈 리스트 반환
-		}
+        String proDocList = items.stream()
+                .map(item -> item.getSubjectName() + "(" + item.getProDocCount() + "명)")
+                .collect(Collectors.joining(", "));
 
-		List<ProDoc> result = new ArrayList<>();
-		List<ProDocApiItem> items = response.getResponse().getBody().getItems().getItem();
+        ProDoc record = ProDoc.builder()
+                .hospitalCode(hospitalCode)
+                .proDocList(proDocList)
+                .build(); // subjectDetails -> subjectName
 
-		if (items == null)
-			return result;
+        log.debug("병원 {} 전문의 정보 통합: {}", hospitalCode, proDocList);
 
-		for (ProDocApiItem item : items) {
-			String rawSubjectName = item.getSubjectName(); // 원본 진료과명
-			Integer count = item.getProDocCount(); // 전문의 수
-
-			// 설정 기반 과목명 정규화
-			String normalized = SubjectMappingConfig.normalizeSubjectName(rawSubjectName);
-
-			// Builder 패턴으로 엔티티 생성
-			ProDoc doc = ProDoc.builder().hospitalCode(hospitalCode).subjectName(normalized)
-					.proDocCount(count != null ? count : 0) // null 방지
-					.build();
-
-			result.add(doc);
-		}
-
-		return result;
-	}
+        return List.of(record);
+    }
 }

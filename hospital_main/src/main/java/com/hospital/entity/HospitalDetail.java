@@ -1,5 +1,7 @@
 package com.hospital.entity;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +17,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
+@DynamicUpdate
+@ToString(exclude = "hospital")
 public class HospitalDetail {
 
     @Id
@@ -43,11 +46,11 @@ public class HospitalDetail {
     @Column(name = "saturday_reception", length = 50)
     private String rcvSat;
 
-    @Column(name = "no_trmt_holi")
-    private String noTrmtHoli;
+    //@Column(name = "no_trmt_holi")
+    //private String noTrmtHoli;
 
-    @Column(name = "no_trmt_sun")
-    private String noTrmtSun;
+    //@Column(name = "no_trmt_sun")
+    //private String noTrmtSun;
 
     // 요일별 진료 시작/종료 시간
     @Column(name = "mon_open", length = 20)
@@ -115,7 +118,10 @@ public class HospitalDetail {
     
     //유효한 시간 값인지 체크
     public static boolean isValidTime(String timeStr) {
-        if (timeStr == null || 
+        if (timeStr == null) {
+        	return false;
+        }
+        if(
             timeStr.trim().isEmpty() || 
             "(NULL)".equals(timeStr) || 
             !timeStr.matches("\\d{4}")) {

@@ -1,9 +1,19 @@
 package com.hospital.async;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -11,111 +21,270 @@ import com.google.common.util.concurrent.RateLimiter;
 import com.hospital.caller.HospitalDetailApiCaller;
 import com.hospital.dto.HospitalDetailApiResponse;
 import com.hospital.entity.HospitalDetail;
-import com.hospital.entity.HospitalMain;
 import com.hospital.parser.HospitalDetailApiParser;
 import com.hospital.repository.HospitalDetailApiRepository;
-import com.hospital.repository.HospitalMainApiRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
 public class HospitalDetailAsyncRunner {
-	private final RateLimiter rateLimiter = RateLimiter.create(8.0); // 초당 8건 제한
+	private final RateLimiter rateLimiter = RateLimiter.create(10.0); // 초당 10건 제한
+	private final Executor executor; // 병렬 실행을 위한 스레드풀
 
-	// 의존성 주입: API 호출, 파싱, 저장을 담당하는 객체들
 	private final HospitalDetailApiCaller apiCaller;
 	private final HospitalDetailApiParser parser;
-	private final HospitalDetailApiRepository hospitalDetailrepository;
-	private final HospitalMainApiRepository hospitalMainApiRepository; 
+	private final HospitalDetailApiRepository hospitalDetailApiRepository;
 
+	private final AtomicInteger completedCount = new AtomicInteger(0);
+	private final AtomicInteger failedCount = new AtomicInteger(0);
+	private final AtomicInteger insertedCount = new AtomicInteger(0);
+	private final AtomicInteger updatedCount = new AtomicInteger(0);
+	private int totalCount = 0;
 
-	// 처리 상태 추적용 카운터
-	private final AtomicInteger completedCount = new AtomicInteger(0); // 성공
-	private final AtomicInteger failedCount = new AtomicInteger(0); // 실패
-	private int totalCount = 0; // 전체 병원 수
+	private static final int BATCH_SIZE = 100;
+	private static final int CHUNK_SIZE = 100; // 병원코드 청크 단위
 
 	@Autowired
 	public HospitalDetailAsyncRunner(HospitalDetailApiCaller apiCaller, HospitalDetailApiParser parser,
-			HospitalDetailApiRepository hospitalDetailrepository,
-			HospitalMainApiRepository hospitalMainRepository) {
+			HospitalDetailApiRepository hospitalDetailApiRepository, @Qualifier("apiExecutor") Executor executor) {
 		this.apiCaller = apiCaller;
 		this.parser = parser;
-		this.hospitalDetailrepository = hospitalDetailrepository;
-		this.hospitalMainApiRepository = hospitalMainRepository;
+		this.hospitalDetailApiRepository = hospitalDetailApiRepository;
+		this.executor = executor;
+	}
+	
+	@Async("apiExecutor")
+	public void runBatchAsync(List<String> hospitalCodes) {
+	    log.info("멀티스레드 배치 시작: {}건", hospitalCodes.size());
+
+	    try {
+	        Map<String, HospitalDetail> existingMap = loadExistingDetails(hospitalCodes);
+	        List<List<String>> partitions = partitionList(hospitalCodes, CHUNK_SIZE);
+
+	        Set<String> processedCodes = new HashSet<>();
+
+	        List<CompletableFuture<Void>> futures = partitions.stream()
+	                .map(chunk -> CompletableFuture.runAsync(() -> processChunk(chunk, existingMap, processedCodes), executor))
+	                .toList();
+
+	        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+	        log.info("모든 청크 처리 완료: 완료 {}, 실패 {}, 신규 {}, 수정 {}", 
+	                completedCount.get(), failedCount.get(), insertedCount.get(), updatedCount.get());
+
+	        // 삭제 처리
+	        deleteObsoleteDetails(processedCodes);
+
+	    } catch (Exception e) {
+	        failedCount.addAndGet(hospitalCodes.size());
+	        log.error("전체 배치 실패: {}", e.getMessage(), e);
+	    }
 	}
 
-	// 진행 상태 초기화
+
+
+	private void processChunk(List<String> chunk, Map<String, HospitalDetail> existingMap, Set<String> processedCodes) {
+	    List<HospitalDetail> toInsert = new ArrayList<>();
+	    List<HospitalDetail> toUpdate = new ArrayList<>();
+
+	    for (String hospitalCode : chunk) {
+	        rateLimiter.acquire();
+
+	        try {
+	            // API 호출
+	            String queryParams = "ykiho=" + hospitalCode;
+	            HospitalDetailApiResponse response = apiCaller.callApi(queryParams);
+
+	            // 파싱
+	            List<HospitalDetail> parsed = parser.parse(response, hospitalCode);
+	            if (!parsed.isEmpty()) {
+	                for (HospitalDetail newDetail : parsed) {
+	                    newDetail.setHospitalCode(hospitalCode);
+
+	                    HospitalDetail existing = existingMap.get(hospitalCode);
+	                    if (existing != null) {
+	                        updateDetailFields(existing, newDetail);
+	                        toUpdate.add(existing);
+	                    } else {
+	                        toInsert.add(newDetail);
+	                    }
+	                }
+	            }
+
+	            completedCount.incrementAndGet();
+	            processedCodes.add(hospitalCode); // 성공 처리된 코드 기록
+
+	        } catch (Exception e) {
+	            failedCount.incrementAndGet();
+	            log.error("API 호출 실패: {}", hospitalCode, e);
+	        }
+
+	        if (toInsert.size() + toUpdate.size() >= BATCH_SIZE) {
+	            saveBatchAndClear(toInsert, toUpdate);
+	        }
+	    }
+
+	    if (!toInsert.isEmpty() || !toUpdate.isEmpty()) {
+	        saveBatchAndClear(toInsert, toUpdate);
+	    }
+	}
+	
+	private void deleteObsoleteDetails(Set<String> processedCodes) {
+	    List<String> allDbCodes = hospitalDetailApiRepository.findAllDistinctHospitalCodes();
+	    List<String> toDelete = allDbCodes.stream()
+	                                      .filter(code -> !processedCodes.contains(code))
+	                                      .toList();
+
+	    if (!toDelete.isEmpty()) {
+	        hospitalDetailApiRepository.deleteAllById(toDelete);
+	        log.info("폐업/삭제 처리 완료: {}건 삭제", toDelete.size());
+	    }
+	}
+
+	private int[] saveBatchAndClear(List<HospitalDetail> toInsert, List<HospitalDetail> toUpdate) {
+		int inserted = 0, updated = 0;
+
+		if (!toInsert.isEmpty()) {
+			hospitalDetailApiRepository.saveAll(toInsert);
+			inserted = toInsert.size();
+			insertedCount.addAndGet(inserted);
+			toInsert.clear();
+		}
+
+		if (!toUpdate.isEmpty()) {
+			hospitalDetailApiRepository.saveAll(toUpdate);
+			updated = toUpdate.size();
+			updatedCount.addAndGet(updated);
+			toUpdate.clear();
+		}
+
+		return new int[] { inserted, updated };
+	}
+
+	private Map<String, HospitalDetail> loadExistingDetails(List<String> hospitalCodes) {
+		List<HospitalDetail> existingDetails = hospitalDetailApiRepository.findByHospitalCodeIn(hospitalCodes);
+		return existingDetails.stream().collect(Collectors.toMap(HospitalDetail::getHospitalCode, Function.identity()));
+	}
+
+	private List<List<String>> partitionList(List<String> list, int size) {
+		List<List<String>> partitions = new ArrayList<>();
+		for (int i = 0; i < list.size(); i += size) {
+			partitions.add(list.subList(i, Math.min(i + size, list.size())));
+		}
+		return partitions;
+	}
+
+	
+
+
+
+	// 필드별 업데이트
+	private void updateDetailFields(HospitalDetail existing, HospitalDetail newData) {
+		if (!Objects.equals(existing.getEmyDayYn(), newData.getEmyDayYn())) {
+			existing.setEmyDayYn(newData.getEmyDayYn());
+		}
+		if (!Objects.equals(existing.getEmyNightYn(), newData.getEmyNightYn())) {
+			existing.setEmyNightYn(newData.getEmyNightYn());
+		}
+
+		if (!Objects.equals(existing.getParkQty(), newData.getParkQty())) {
+			existing.setParkQty(newData.getParkQty());
+		}
+		if (!Objects.equals(existing.getParkXpnsYn(), newData.getParkXpnsYn())) {
+			existing.setParkXpnsYn(newData.getParkXpnsYn());
+		}
+
+		if (!Objects.equals(existing.getLunchWeek(), newData.getLunchWeek())) {
+			existing.setLunchWeek(newData.getLunchWeek());
+		}
+		if (!Objects.equals(existing.getRcvWeek(), newData.getRcvWeek())) {
+			existing.setRcvWeek(newData.getRcvWeek());
+		}
+		if (!Objects.equals(existing.getRcvSat(), newData.getRcvSat())) {
+			existing.setRcvSat(newData.getRcvSat());
+		}
+
+		//if (!Objects.equals(existing.getNoTrmtHoli(), newData.getNoTrmtHoli())) {
+			//existing.setNoTrmtHoli(newData.getNoTrmtHoli());
+		//}
+		//if (!Objects.equals(existing.getNoTrmtSun(), newData.getNoTrmtSun())) {
+			//existing.setNoTrmtSun(newData.getNoTrmtSun());
+		//}
+
+		if (!Objects.equals(existing.getTrmtMonStart(), newData.getTrmtMonStart())) {
+			existing.setTrmtMonStart(newData.getTrmtMonStart());
+		}
+		if (!Objects.equals(existing.getTrmtMonEnd(), newData.getTrmtMonEnd())) {
+			existing.setTrmtMonEnd(newData.getTrmtMonEnd());
+		}
+		if (!Objects.equals(existing.getTrmtTueStart(), newData.getTrmtTueStart())) {
+			existing.setTrmtTueStart(newData.getTrmtTueStart());
+		}
+		if (!Objects.equals(existing.getTrmtTueEnd(), newData.getTrmtTueEnd())) {
+			existing.setTrmtTueEnd(newData.getTrmtTueEnd());
+		}
+		if (!Objects.equals(existing.getTrmtWedStart(), newData.getTrmtWedStart())) {
+			existing.setTrmtWedStart(newData.getTrmtWedStart());
+		}
+		if (!Objects.equals(existing.getTrmtWedEnd(), newData.getTrmtWedEnd())) {
+			existing.setTrmtWedEnd(newData.getTrmtWedEnd());
+		}
+		if (!Objects.equals(existing.getTrmtThurStart(), newData.getTrmtThurStart())) {
+			existing.setTrmtThurStart(newData.getTrmtThurStart());
+		}
+		if (!Objects.equals(existing.getTrmtThurEnd(), newData.getTrmtThurEnd())) {
+			existing.setTrmtThurEnd(newData.getTrmtThurEnd());
+		}
+		if (!Objects.equals(existing.getTrmtFriStart(), newData.getTrmtFriStart())) {
+			existing.setTrmtFriStart(newData.getTrmtFriStart());
+		}
+		if (!Objects.equals(existing.getTrmtFriEnd(), newData.getTrmtFriEnd())) {
+			existing.setTrmtFriEnd(newData.getTrmtFriEnd());
+		}
+		if (!Objects.equals(existing.getTrmtSatStart(), newData.getTrmtSatStart())) {
+			existing.setTrmtSatStart(newData.getTrmtSatStart());
+		}
+		if (!Objects.equals(existing.getTrmtSatEnd(), newData.getTrmtSatEnd())) {
+			existing.setTrmtSatEnd(newData.getTrmtSatEnd());
+		}
+		if (!Objects.equals(existing.getTrmtSunStart(), newData.getTrmtSunStart())) {
+			existing.setTrmtSunStart(newData.getTrmtSunStart());
+		}
+		if (!Objects.equals(existing.getTrmtSunEnd(), newData.getTrmtSunEnd())) {
+			existing.setTrmtSunEnd(newData.getTrmtSunEnd());
+		}
+	}
+
+	// 상태 관리 메서드들
 	public void resetCounter() {
 		completedCount.set(0);
 		failedCount.set(0);
+		insertedCount.set(0);
+		updatedCount.set(0);
 	}
 
-	// 총 작업 수 설정 및 카운터 초기화
 	public void setTotalCount(int totalCount) {
 		this.totalCount = totalCount;
 		completedCount.set(0);
 		failedCount.set(0);
+		insertedCount.set(0);
+		updatedCount.set(0);
 	}
 
-	// 현재까지 완료된 작업 수
 	public int getCompletedCount() {
 		return completedCount.get();
 	}
 
-	// 현재까지 실패한 작업 수
 	public int getFailedCount() {
 		return failedCount.get();
 	}
 
-	// 병원코드 단위 비동기 처리
-	@Async("apiExecutor") // 별도의 실행자 풀 사용
-	public void runAsync(String hospitalCode) {
-		rateLimiter.acquire(); // 이 한 줄로 초당 호출 제한 적용됨
-
-		try {
-			// 1. 병원코드를 쿼리 파라미터로 설정
-			String queryParams = String.format("ykiho=%s", hospitalCode);
-			log.info("API 파라미터: {}", hospitalCode);
-
-			// 2. 공공 API 호출 → JSON 파싱 → DTO 매핑
-			HospitalDetailApiResponse response = apiCaller.callApi(queryParams);
-
-			// 3. DTO → Entity 리스트 변환
-			List<HospitalDetail> parsed = parser.parse(response, hospitalCode);
-
-			// 4. 변환된 데이터가 있을 경우에만 저장
-			if (!parsed.isEmpty()) {
-				   HospitalMain hospitalMain = hospitalMainApiRepository.findById(hospitalCode)
-
-	                        .orElseThrow(() -> new IllegalArgumentException("병원 메인 정보 없음: " + hospitalCode));
-
-
-					for (HospitalDetail detail : parsed) {
-
-						detail.setHospitalCode(hospitalCode);
-
-						detail.setHospital(hospitalMain); //연관관계 설정
-
-						log.info("실제 저장값: {}, 연결된 병원명: {}", detail.getHospitalCode(),
-								hospitalMain.getHospitalName());
-
-					}
-				
-				hospitalDetailrepository.saveAll(parsed);
-			}
-	
-
-			// 5. 완료 카운터 증가 + 로그 출력
-			int done = completedCount.incrementAndGet();
-			log.info("처리됨: {} / {} ({}%)", done, totalCount, (done * 100) / totalCount);
-
-		}catch(
-
-	Exception e)
-	{
-		// 예외 발생 시 실패 카운터 증가 + 로그 출력
-		failedCount.incrementAndGet();
-		log.error("병원코드 {} 처리 중 오류: {}", hospitalCode, e.getMessage());
+	public int getInsertedCount() {
+		return insertedCount.get();
 	}
-}}
+
+	public int getUpdatedCount() {
+		return updatedCount.get();
+	}
+}

@@ -20,6 +20,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -79,15 +80,15 @@ public class WebConfig implements WebMvcConfigurer {
      * 콘텐츠 협상 설정 - JSON 우선
      */
     @Override
-    public void configureContentNegotiation(org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer configurer) {
+    public void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
         configurer
                 .favorPathExtension(false)
                 .favorParameter(false)
                 .ignoreAcceptHeader(false)
                 .useRegisteredExtensionsOnly(false)
-                .defaultContentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                .mediaType("json", org.springframework.http.MediaType.APPLICATION_JSON)
-                .mediaType("xml", org.springframework.http.MediaType.APPLICATION_XML);
+                .defaultContentType(MediaType.APPLICATION_JSON)
+                .mediaType("json", MediaType.APPLICATION_JSON)
+                .mediaType("xml", MediaType.APPLICATION_XML);
     }
     
     /**

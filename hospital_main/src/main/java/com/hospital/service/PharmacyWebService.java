@@ -31,7 +31,7 @@ public class PharmacyWebService {
 
 	}
 
-	@Cacheable(value = "pharmacies", key = "#userLat + '_' + #userLng + '_' + #radius")
+	//@Cacheable(value = "pharmacies", key = "#userLat + '_' + #userLng + '_' + #radius")
 	public List<PharmacyWebResponse> getPharmaciesByDistance(double userLat, double userLng, double radius) {
 		List<Pharmacy> allPharmacies = pharmacyApiRepository.findAll();
 
