@@ -58,7 +58,7 @@ public class HospitalController {
 	}
 
 	// 병원명 검색
-	@GetMapping(value = "/hospitals/search", produces = MediaType.APPLICATION_JSON_VALUE)
+	@GetMapping(value = "/hospitalsData/search", produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<HospitalWebResponse> searchHospitalsByName(@RequestParam String hospitalName // 검색할 병원명
 	) {
 		return hospitalService.searchHospitalsByName(hospitalName);

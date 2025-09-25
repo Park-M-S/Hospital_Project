@@ -21,7 +21,7 @@ public class QuartzConfig {
     @Bean
     public Scheduler scheduler(SchedulerFactoryBean factory) throws SchedulerException {
         Scheduler scheduler = factory.getScheduler();
-        scheduler.start();
+        //scheduler.start();
         return scheduler;
     }
 }

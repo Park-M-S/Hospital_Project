@@ -16,6 +16,7 @@ import com.hospital.caller.ProDocApiCaller;
 import com.hospital.dto.ProDocApiResponse;
 import com.hospital.entity.ProDoc;
 import com.hospital.parser.ProDocApiParser;
+import com.hospital.repository.CommonBatchRepository;
 import com.hospital.repository.ProDocApiRepository;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,14 +33,16 @@ public class ProDocAsyncRunner {
 	private final AtomicInteger insertedCount = new AtomicInteger(0);
 	private static final int CHUNK_SIZE = 100;
 	private static final int BATCH_SIZE = 100;
+	private final CommonBatchRepository commonBatchRepository;
 
 	@Autowired
 	public ProDocAsyncRunner(ProDocApiCaller apiCaller, ProDocApiParser parser, ProDocApiRepository repository,
-			@Qualifier("apiExecutor") Executor executor) {
+			@Qualifier("apiExecutor") Executor executor, CommonBatchRepository commonBatchRepository) {
 		this.apiCaller = apiCaller;
 		this.parser = parser;
 		this.repository = repository;
 		this.executor = executor;
+		this.commonBatchRepository = commonBatchRepository;
 	}
 
 	@Async("apiExecutor")
@@ -80,10 +83,17 @@ public class ProDocAsyncRunner {
 				batch.addAll(parsedList);
 				completedCount.incrementAndGet();
 				// 배치 단위로 저장
-				if (batch.size() >= BATCH_SIZE) {
-					repository.saveAll(batch);
-					insertedCount.addAndGet(batch.size());
-					batch.clear();
+				if (!batch.isEmpty() && batch.size() >= BATCH_SIZE) {
+				    int currentBatchSize = batch.size(); // 저장 전 사이즈 저장
+
+				    commonBatchRepository.saveBatchWithFallback(
+				        batch,
+				        "INSERT INTO pro_doc (hospital_code, subject_name, pro_doc_count) VALUES (?, ?, ?)", // JDBC SQL
+				        doc -> new Object[]{doc.getHospitalCode(), doc.getSubjectName(), doc.getProDocCount()}
+				    );
+
+				    insertedCount.addAndGet(currentBatchSize); // 저장된 개수 업데이트
+				    batch.clear(); // batch 초기화
 				}
 			} catch (Exception e) {
 				failedCount.incrementAndGet();
@@ -92,8 +102,13 @@ public class ProDocAsyncRunner {
 		}
 		// 남은 배치 저장
 		if (!batch.isEmpty()) {
-			repository.saveAll(batch);
-			insertedCount.addAndGet(batch.size());
+		    int lastBatchSize = batch.size();
+		    commonBatchRepository.saveBatchWithFallback(
+		        batch,
+		        "INSERT INTO pro_doc (hospital_code, subject_name, pro_doc_count) VALUES (?, ?, ?)", // JDBC SQL
+		        doc -> new Object[]{doc.getHospitalCode(), doc.getSubjectName(), doc.getProDocCount()}
+		    );
+		    insertedCount.addAndGet(lastBatchSize);
 		}
 		log.debug("[{}] 청크 처리 완료: {}건 저장", threadName, batch.size());
 	}
