@@ -33,6 +33,8 @@ public class HospitalMainApiService {
 
 	public int updateHospitalMain() {
 		log.info("병원 데이터 수집 시작 - 대상 지역: {}", regionConfig.getCityName());
+		
+		hospitalMainApiRepository.deleteAllInBatch();
 
 		// regionConfig에서 시군구 코드 가져오기
 		List<String> sidoCodes = regionConfig.getNationwideSidoCodes();

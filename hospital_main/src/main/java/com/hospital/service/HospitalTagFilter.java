@@ -26,12 +26,12 @@ public class HospitalTagFilter {
                     return false;
                 }
                 break;
-            case "전문의":
+            /*case "전문의":
                 if (Objects.isNull(hospital.getProDocs()) || hospital.getProDocs().isEmpty()
                         || hospital.getProDocs().stream().noneMatch(ProDoc::hasSpecialist)) {
                     return false;
                 }
-                break;
+                break;*/
             case "현재운영중":
                 if (Objects.isNull(hospital.getHospitalDetail()) || !isCurrentlyOpen(hospital.getHospitalDetail())) {
                     return false;

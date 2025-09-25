@@ -74,7 +74,7 @@ public class HospitalMainApiParser {
                 .hospitalAddress(itemDto.getAddr())
                 .hospitalTel(itemDto.getTelno())
                 .hospitalHomepage(itemDto.getHospUrl())
-                .doctorNum(itemDto.getDrTotCnt())
+                .totalDoctors(itemDto.getDrTotCnt())
                 .coordinateX(itemDto.getXPos())
                 .coordinateY(itemDto.getYPos())
                 .build();

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
+import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.hospital.entity.ProDoc;
@@ -45,5 +46,13 @@ public interface ProDocApiRepository extends JpaRepository<ProDoc, Long> {
     @QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
     @Query("SELECT DISTINCT p.hospitalCode FROM ProDoc p")
     List<String> findAllDistinctHospitalCodes();
+    
+    
+        
+    @Query("SELECT COUNT(p) FROM ProDoc p WHERE p.hospitalCode = :hospitalCode")
+    int countByHospitalCode(@Param("hospitalCode") String hospitalCode);
+        
+     
+    
 
 }

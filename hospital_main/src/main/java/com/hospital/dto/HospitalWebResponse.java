@@ -26,12 +26,12 @@ public class HospitalWebResponse {
     private String districtName;
     private String hospitalTel;
     private String hospitalHomepage;
-    private Integer doctorNum;
+    private Integer totalDoctors;
     
     // 좌표 정보
     private Double coordinateX;
     private Double coordinateY;
-    
+   
     // 운영 정보
     private Boolean emergencyDayAvailable;    // Y/N
     private Boolean emergencyNightAvailable;  // Y/N
@@ -46,6 +46,9 @@ public class HospitalWebResponse {
     
   
     private Map<String, Integer> professionalDoctors; 
+    
+    
+    
 }
 
 

@@ -10,9 +10,11 @@ import com.hospital.dto.HospitalWebResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,17 +35,12 @@ public class HospitalWebService {
 
 	}
 
-	// 기존 메서드: 진료과목으로 병원 검색
-	//@Cacheable(value = "hospitals", key = "#radius + '_' + (#tags != null ? #tags.toString() : 'null')")
-	public List<HospitalWebResponse> getHospitals(double userLat, double userLng, double radius, List<String> tags){
-		List<HospitalMain> hospitalEntities;
+	public List<HospitalWebResponse> getHospitals(double userLat, double userLng, double radius) {
+		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsWithinRadius(userLat, userLng,
+				radius);
 
-		hospitalEntities = hospitalMainApiRepository.findHospitalsWithinRadius(userLat, userLng, radius);
-
-		hospitalEntities = hospitalEntities.stream()
-				.filter(h -> h.getCoordinateX() != null && h.getCoordinateY() != null).toList();
-
-		return applyFiltersAndSort(hospitalEntities, tags);
+		return hospitalEntities.stream() // stream() → parallelStream()
+				.map(hospitalConverter::convertToDTO).collect(Collectors.toList());
 	}
 
 	// ✅ 병원명 검색
@@ -63,9 +60,7 @@ public class HospitalWebService {
 	private List<HospitalWebResponse> applyFiltersAndSort(List<HospitalMain> hospitalEntities, List<String> tags) {
 
 		return hospitalEntities.stream().filter(hospital -> HospitalTagFilter.matchesAllTags(hospital, tags))
-				.map(hospitalConverter::convertToDTO)
-				// 거리 계산을 한 번만 수행
-				.collect(Collectors.toList());
+				.map(hospitalConverter::convertToDTO).collect(Collectors.toList());
 	}
 
 	// 전체병원 조회
@@ -78,13 +73,11 @@ public class HospitalWebService {
 	}
 
 	// 거리와 함께 임시로 저장하는 내부 클래스
-	/*private static class HospitalWithDistance {
-		final HospitalWebResponse hospital;
-		final double distance;
-
-		HospitalWithDistance(HospitalWebResponse hospital, double distance) {
-			this.hospital = hospital;
-			this.distance = distance;
-		}
-	}*/
+	/*
+	 * private static class HospitalWithDistance { final HospitalWebResponse
+	 * hospital; final double distance;
+	 * 
+	 * HospitalWithDistance(HospitalWebResponse hospital, double distance) {
+	 * this.hospital = hospital; this.distance = distance; } }
+	 */
 }
