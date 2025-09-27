@@ -14,7 +14,8 @@ public class QuartzConfig {
         SchedulerFactoryBean factory = new SchedulerFactoryBean();
         factory.setJobFactory(new SpringBeanJobFactory());
         factory.setOverwriteExistingJobs(true);
-        factory.setStartupDelay(10); // 10초 후 시작
+        //factory.setStartupDelay(10); // 10초 후 시작
+        factory.setAutoStartup(false);
         return factory;
     }
 

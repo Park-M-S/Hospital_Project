@@ -30,29 +30,29 @@ public class EmergencyWebResponse {
 
 	// === 핵심 병상 현황 ===
 	@JsonProperty("hvec")
-	private String emergencyBeds; // 응급실 일반 병상 (음수=포화)
+	private Integer emergencyBeds; // 응급실 일반 병상 (음수=포화)
 
 	@JsonProperty("hvoc")
-	private String operatingBeds; // 수술실 병상
+	private Integer operatingBeds; // 수술실 병상
 
 	@JsonProperty("hvgc")
-	private String generalWardBeds; // 일반 입원실 병상
+	private Integer generalWardBeds; // 일반 입원실 병상
 
 	// === 장비/서비스 가용성 ===
 	@JsonProperty("hvamyn")
-	private String ambulanceAvailability; // 구급차 가용 여부
+	private Boolean ambulanceAvailability; // 구급차 가용 여부
 
 	@JsonProperty("hvventiayn")
-	private String ventilatorAvailability; // 인공호흡기 가용
+	private Boolean ventilatorAvailability; // 인공호흡기 가용
 
 	@JsonProperty("hvctayn")
-	private String ctAvailability; // CT 가용
+	private Boolean ctAvailability; // CT 가용
 
 	@JsonProperty("hvmriayn")
-	private String mriAvailability; // MRI 가용
+	private Boolean mriAvailability; // MRI 가용
 
 	@JsonProperty("hvcrrtayn")
-	private String crrtAvailability; // CRRT(투석) 가용
+	private Boolean crrtAvailability; // CRRT(투석) 가용
 
 	// === 좌표 정보 (DB에서 추가) ===
 	private Double coordinateX; // x 좌표 (위도)
