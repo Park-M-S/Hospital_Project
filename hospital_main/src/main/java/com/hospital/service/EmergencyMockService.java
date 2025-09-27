@@ -77,7 +77,7 @@ public class EmergencyMockService {
                     Thread.sleep(30000); // 30초 대기
                     if (schedulerRunning.get()) {
                         // MockDataGenerator의 메서드를 직접 호출
-                        mockDataGenerator.generateRandomEmergencyData();
+                        mockDataGenerator.getCachedEmergencyData();
                         updateMockDataCache();
                     }
                 } catch (InterruptedException e) {

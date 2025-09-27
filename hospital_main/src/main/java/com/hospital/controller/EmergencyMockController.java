@@ -104,33 +104,6 @@ public class EmergencyMockController {
         return ResponseEntity.ok(regionCount);
     }
 
-    /**
-     * 병상 포화 현황 조회
-     */
-   
-    /**
-     * 장비 가용성 통계
-     */
-    @GetMapping("/equipment-stats")
-    public ResponseEntity<Map<String, Object>> getEquipmentStats() {
-      
-        
-        List<EmergencyWebResponse> mockData = mockService.getMockDataDirect();
-        long total = mockData.size();
-        
-        long ambulanceAvailable = mockData.stream().filter(e -> "Y".equals(e.getAmbulanceAvailability())).count();
-        long ctAvailable = mockData.stream().filter(e -> "Y".equals(e.getCtAvailability())).count();
-        long mriAvailable = mockData.stream().filter(e -> "Y".equals(e.getMriAvailability())).count();
-        long ventilatorAvailable = mockData.stream().filter(e -> "Y".equals(e.getVentilatorAvailability())).count();
-        long crrtAvailable = mockData.stream().filter(e -> "Y".equals(e.getCrrtAvailability())).count();
-        
-        return ResponseEntity.ok(Map.of(
-            "totalHospitals", total,
-            "ambulance", Map.of("available", ambulanceAvailable, "rate", String.format("%.1f%%", (double)ambulanceAvailable / total * 100)),
-            "ct", Map.of("available", ctAvailable, "rate", String.format("%.1f%%", (double)ctAvailable / total * 100)),
-            "mri", Map.of("available", mriAvailable, "rate", String.format("%.1f%%", (double)mriAvailable / total * 100)),
-            "ventilator", Map.of("available", ventilatorAvailable, "rate", String.format("%.1f%%", (double)ventilatorAvailable / total * 100)),
-            "crrt", Map.of("available", crrtAvailable, "rate", String.format("%.1f%%", (double)crrtAvailable / total * 100))
-        ));
-    }
+    
+  
 }
