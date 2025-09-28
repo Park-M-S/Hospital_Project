@@ -60,7 +60,7 @@ public class EmergencyMockDataGenerator {
         bounds.put("대전", new CoordinateRange(36.2500, 36.4000, 127.3000, 127.5000));
         bounds.put("울산", new CoordinateRange(35.4500, 35.6000, 129.1000, 129.4000));
         bounds.put("경기", new CoordinateRange(37.0000, 37.9000, 126.6000, 127.8000)); // 경기도 축소
-        bounds.put("강원", new CoordinateRange(37.1000, 38.6000, 127.7000, 129.2000)); // 강원도 서쪽 제한
+        bounds.put("강원", new CoordinateRange(37.3000, 38.3000, 127.8000, 128.9000)); // 강원도 서쪽 제한
         bounds.put("충북", new CoordinateRange(36.2000, 37.0000, 127.5000, 128.5000));
         bounds.put("충남", new CoordinateRange(36.0000, 36.9000, 126.3000, 127.5000));
         bounds.put("전북", new CoordinateRange(35.3000, 36.0000, 126.5000, 127.6000));
