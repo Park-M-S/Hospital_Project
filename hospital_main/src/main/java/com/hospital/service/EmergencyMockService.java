@@ -32,51 +32,7 @@ public class EmergencyMockService {
         this.objectMapper = new ObjectMapper();
     }
 
-    /**
-     * Mock WebSocket 연결 시 호출 - 첫 번째 연결이면 스케줄러 시작
-     */
-    public void onMockWebSocketConnected() {
-     
-        
-        if (schedulerRunning.compareAndSet(false, true)) {
-            System.out.println("🔧 Mock 모드 활성화 - Mock 데이터 사용");
-            
-            // MockDataGenerator의 스케줄러 활성화
-            mockDataGenerator.enableScheduler();
-            
-            // 서비스 레벨 스케줄러도 시작
-            startMockDataScheduler();
-        }
-    }
 
-
-    /**
-     * Mock 데이터 스케줄러 시작 (30초마다 자동 갱신)
-     */
-    private void startMockDataScheduler() {
-        // 초기 데이터 로드
-        updateMockDataCache();
-        
-        // 30초마다 Mock 데이터 갱신하는 별도 스레드
-        new Thread(() -> {
-            while (schedulerRunning.get()) {
-                try {
-                    Thread.sleep(30000); // 30초 대기
-                    if (schedulerRunning.get()) {
-                        // MockDataGenerator의 메서드를 직접 호출
-                        mockDataGenerator.getCachedEmergencyData();
-                        updateMockDataCache();
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    System.err.println("Mock 스케줄러 실행 중 오류: " + e.getMessage());
-                }
-            }
-        }).start();
-    }
-    
     /**
      * Mock 데이터 캐시 업데이트
      */
@@ -88,6 +44,21 @@ public class EmergencyMockService {
         } catch (Exception e) {
             System.err.println("Mock 응급실 데이터 처리 중 오류 발생");
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Mock WebSocket 연결 시 호출 - 스케줄러 상태만 활성화
+     */
+    public void onMockWebSocketConnected() {
+        if (schedulerRunning.compareAndSet(false, true)) {
+            System.out.println("🔧 Mock 모드 활성화 - Mock 데이터 사용");
+            
+            // MockDataGenerator의 스케줄러만 활성화 (자체 스케줄러는 시작 안 함)
+            mockDataGenerator.enableScheduler();
+            
+            // 초기 데이터 로드
+            updateMockDataCache();
         }
     }
 
@@ -156,6 +127,10 @@ public class EmergencyMockService {
      */
     public boolean isMockSchedulerRunning() {
         return schedulerRunning.get();
+    }
+    
+    public void forceUpdateData() {
+        updateMockDataCache();
     }
     
 

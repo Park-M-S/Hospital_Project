@@ -48,26 +48,27 @@ public class EmergencyMockDataGenerator {
     }
     
     // 시도별 좌표 범위
+ // 시도별 좌표 범위 (한국 영토 내로 더 정확하게 제한)
     private static final Map<String, CoordinateRange> REGIONAL_BOUNDS;
     static {
         Map<String, CoordinateRange> bounds = new HashMap<>();
         bounds.put("서울", new CoordinateRange(37.4500, 37.7000, 126.7500, 127.2000));
-        bounds.put("부산", new CoordinateRange(35.0000, 35.3500, 128.9000, 129.3500));
-        bounds.put("대구", new CoordinateRange(35.7000, 35.9500, 128.4500, 128.7500));
-        bounds.put("인천", new CoordinateRange(37.2500, 37.6500, 126.4000, 126.9000));
-        bounds.put("광주", new CoordinateRange(35.0500, 35.2500, 126.7000, 127.0000));
-        bounds.put("대전", new CoordinateRange(36.2000, 36.5000, 127.2000, 127.5500));
-        bounds.put("울산", new CoordinateRange(35.4000, 35.7000, 129.0000, 129.4500));
-        bounds.put("경기", new CoordinateRange(36.8000, 38.3000, 126.4000, 127.9000));
-        bounds.put("강원", new CoordinateRange(37.0000, 38.6000, 127.0000, 129.4000));
-        bounds.put("충북", new CoordinateRange(36.0000, 37.0000, 127.2000, 128.5000));
-        bounds.put("충남", new CoordinateRange(35.9000, 37.0000, 126.1000, 127.8000));
-        bounds.put("전북", new CoordinateRange(35.1000, 36.0000, 126.4000, 127.8000));
-        bounds.put("전남", new CoordinateRange(34.2000, 35.7000, 125.0000, 127.6000));
-        bounds.put("경북", new CoordinateRange(35.4000, 37.5000, 128.0000, 129.9000));
-        bounds.put("경남", new CoordinateRange(34.6000, 35.9000, 127.4000, 129.3000));
-        bounds.put("제주", new CoordinateRange(33.1000, 33.6000, 126.1000, 126.9000));
-        bounds.put("세종", new CoordinateRange(36.4000, 36.6000, 127.1000, 127.4000));
+        bounds.put("부산", new CoordinateRange(35.0500, 35.3000, 128.9500, 129.2500));
+        bounds.put("대구", new CoordinateRange(35.7500, 35.9000, 128.5000, 128.7000));
+        bounds.put("인천", new CoordinateRange(37.3000, 37.6000, 126.5000, 126.8000));
+        bounds.put("광주", new CoordinateRange(35.1000, 35.2200, 126.8000, 127.0000));
+        bounds.put("대전", new CoordinateRange(36.2500, 36.4000, 127.3000, 127.5000));
+        bounds.put("울산", new CoordinateRange(35.4500, 35.6000, 129.1000, 129.4000));
+        bounds.put("경기", new CoordinateRange(37.0000, 37.9000, 126.6000, 127.8000)); // 경기도 축소
+        bounds.put("강원", new CoordinateRange(37.1000, 38.6000, 127.7000, 129.2000)); // 강원도 서쪽 제한
+        bounds.put("충북", new CoordinateRange(36.2000, 37.0000, 127.5000, 128.5000));
+        bounds.put("충남", new CoordinateRange(36.0000, 36.9000, 126.3000, 127.5000));
+        bounds.put("전북", new CoordinateRange(35.3000, 36.0000, 126.5000, 127.6000));
+        bounds.put("전남", new CoordinateRange(34.3000, 35.4000, 126.1000, 127.4000));
+        bounds.put("경북", new CoordinateRange(35.7000, 36.9000, 128.1000, 129.5000));
+        bounds.put("경남", new CoordinateRange(34.8000, 35.8000, 127.7000, 129.1000));
+        bounds.put("제주", new CoordinateRange(33.2000, 33.5500, 126.2000, 126.8000));
+        bounds.put("세종", new CoordinateRange(36.4500, 36.5500, 127.2000, 127.3000));
         REGIONAL_BOUNDS = Collections.unmodifiableMap(bounds);
     }
     

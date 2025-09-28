@@ -6,10 +6,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.hospital.service.EmergencyApiService;
 import com.hospital.service.EmergencyMockService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -55,8 +55,10 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
         sessions.remove(session);
         System.out.println("WebSocket 연결 해제: " + session.getId() + ", 총 연결수: " + sessions.size());
         
-        // 마지막 접속자가 나가면 스케줄러 중지
-        emergencyMockApiService.stopMockScheduler();
+        // 연결된 세션이 없을 때만 스케줄러 중지
+        if (getConnectedSessionCount() == 0) {
+            emergencyMockApiService.stopMockScheduler();
+        }
     }
 
     @Override
@@ -66,8 +68,34 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
         
         sessions.remove(session);
         
-        // 에러로 인한 연결 해제도 스케줄러 중지 확인
-        emergencyMockApiService.stopMockScheduler();
+        // 연결된 세션이 없을 때만 스케줄러 중지
+        if (getConnectedSessionCount() == 0) {
+            emergencyMockApiService.stopMockScheduler();
+        }
+    }
+
+    /**
+     * 30초마다 Mock 데이터 브로드캐스트
+     */
+    @Scheduled(fixedRate = 30000)
+    public void scheduledBroadcast() {
+        if (sessions.isEmpty()) {
+            return;
+        }
+        
+        try {
+            // 먼저 새로운 데이터 생성 요청
+            emergencyMockApiService.forceUpdateData();
+            
+            // 그 다음 최신 데이터 브로드캐스트
+            JsonNode data = emergencyMockApiService.getMockEmergencyRoomData();
+            if (data != null && data.size() > 0) {
+                broadcastEmergencyRoomData(data.toString());
+                System.out.println("스케줄된 브로드캐스트 완료");
+            }
+        } catch (Exception e) {
+            System.err.println("스케줄된 브로드캐스트 실패: " + e.getMessage());
+        }
     }
 
     /**
