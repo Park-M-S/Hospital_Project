@@ -43,14 +43,6 @@ public class EmergencyMockController {
     }
 
  
-    /**
-     * Mock 서비스 상태 조회
-     */
-    @GetMapping("/status")
-    public ResponseEntity<Map<String, Object>> getMockStatus() {
-        Map<String, Object> status = mockService.getMockStats();
-        return ResponseEntity.ok(status);
-    }
 
     /**
      * Mock 스케줄러 시작

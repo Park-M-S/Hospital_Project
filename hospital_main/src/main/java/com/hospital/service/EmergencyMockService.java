@@ -19,7 +19,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class EmergencyMockService {
 
     private final EmergencyMockDataGenerator mockDataGenerator;
-    private final EmergencyApiWebSocketHandler webSocketHandler;
     private final ObjectMapper objectMapper;
     private volatile String latestEmergencyJson = null;
     private final AtomicBoolean schedulerRunning = new AtomicBoolean(false);
@@ -27,10 +26,9 @@ public class EmergencyMockService {
 
     @Autowired
     @Lazy
-    public EmergencyMockService(EmergencyMockDataGenerator mockDataGenerator,
-                               EmergencyApiWebSocketHandler webSocketHandler) {
+    public EmergencyMockService(EmergencyMockDataGenerator mockDataGenerator
+                              ) {
         this.mockDataGenerator = mockDataGenerator;
-        this.webSocketHandler = webSocketHandler;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -51,17 +49,6 @@ public class EmergencyMockService {
         }
     }
 
-    /**
-     * Mock WebSocket 연결 해제 시 호출 - 마지막 연결이면 스케줄러 중지
-     */
-    public void onMockWebSocketDisconnected() {
-        if (webSocketHandler.getConnectedSessionCount() == 0) {
-            if (schedulerRunning.compareAndSet(true, false)) {
-                // Mock 모드에서는 별도 중지 로직 없음 (스케줄러가 자동 실행)
-                System.out.println("🔧 Mock 모드 - 스케줄러는 계속 실행됨");
-            }
-        }
-    }
 
     /**
      * Mock 데이터 스케줄러 시작 (30초마다 자동 갱신)
@@ -115,11 +102,10 @@ public class EmergencyMockService {
         try {
             String newJsonData = objectMapper.writeValueAsString(dtoList);
             
-            // 데이터가 변경된 경우에만 브로드캐스트
             if (!newJsonData.equals(latestEmergencyJson)) {
                 latestEmergencyJson = newJsonData;
-                webSocketHandler.broadcastEmergencyRoomData(newJsonData);
-                System.out.println("✅ Mock 응급실 데이터 업데이트 및 브로드캐스트 완료");
+                // 브로드캐스트 코드 제거 - WebSocketHandler에서 처리
+                System.out.println("✅ Mock 응급실 데이터 업데이트 완료");
             }
         } catch (Exception e) {
             System.err.println("Mock 응급실 데이터 처리 중 오류 발생");
@@ -164,21 +150,7 @@ public class EmergencyMockService {
         }
     }
 
-    /**
-     * Mock 서비스 상태 정보 반환
-     */
-    public Map<String, Object> getMockStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("schedulerRunning", schedulerRunning.get());
-        stats.put("hasLatestData", latestEmergencyJson != null);
-        stats.put("lastDataSize", getMockEmergencyRoomData().size());
-        stats.put("connectedSessions", webSocketHandler.getConnectedSessionCount());
-        stats.put("mockDataCount", mockDataGenerator.getCachedEmergencyData().size());
-        stats.put("dataSource", "Mock Generator");
-        
-        return stats;
-    }
-
+ 
     /**
      * Mock 스케줄러 상태 확인
      */

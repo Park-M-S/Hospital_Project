@@ -7,6 +7,8 @@ import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hospital.service.EmergencyApiService;
+import com.hospital.service.EmergencyMockService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -19,11 +21,11 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
 
     private final Set<WebSocketSession> sessions = Collections.synchronizedSet(new HashSet<>());
     
-    private EmergencyApiService emergencyApiService;
+    private EmergencyMockService emergencyMockApiService;
     
     @Autowired
-    public void setEmergencyApiService(EmergencyApiService emergencyApiService) {
-        this.emergencyApiService = emergencyApiService;
+    public void setEmergencyApiService(EmergencyMockService emergencyMockApiService) {
+        this.emergencyMockApiService = emergencyMockApiService;
     }
 
     @Override
@@ -32,11 +34,11 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
         System.out.println("WebSocket 연결됨: " + session.getId() + ", 총 연결수: " + sessions.size());
         
         // 첫 접속자면 스케줄러 시작
-        emergencyApiService.onWebSocketConnected();
+        emergencyMockApiService.onMockWebSocketConnected();
         
         // 초기 데이터 전송 (캐시된 데이터가 있으면)
         try {
-            JsonNode initialData = emergencyApiService.getEmergencyRoomData();
+            JsonNode initialData = emergencyMockApiService.getMockEmergencyRoomData();
             if (initialData != null && initialData.size() > 0) {
                 session.sendMessage(new TextMessage(initialData.toString()));
                 System.out.println("초기 데이터 전송 완료: " + session.getId());
@@ -54,7 +56,7 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
         System.out.println("WebSocket 연결 해제: " + session.getId() + ", 총 연결수: " + sessions.size());
         
         // 마지막 접속자가 나가면 스케줄러 중지
-        emergencyApiService.onWebSocketDisconnected();
+        emergencyMockApiService.stopMockScheduler();
     }
 
     @Override
@@ -65,7 +67,7 @@ public class EmergencyApiWebSocketHandler extends TextWebSocketHandler {
         sessions.remove(session);
         
         // 에러로 인한 연결 해제도 스케줄러 중지 확인
-        emergencyApiService.onWebSocketDisconnected();
+        emergencyMockApiService.stopMockScheduler();
     }
 
     /**
