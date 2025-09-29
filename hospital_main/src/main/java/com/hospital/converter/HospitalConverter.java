@@ -51,6 +51,7 @@ public class HospitalConverter {
 				.weekdayLunch(detail != null ? detail.getLunchWeek() : null)
 				.parkingCapacity(detail != null ? detail.getParkQty() : null)
 				.parkingFee(detail != null ? convertYnToBoolean(detail.getParkXpnsYn()) : null)
+			    .noTrmtHoli(detail != null ? detail.getNoTrmtHoli() : null)
 
 				// 운영 시간
 				.todayOpen(formatTime(todayTime.getOpenTime())).todayClose(formatTime(todayTime.getCloseTime()))
@@ -127,5 +128,6 @@ public class HospitalConverter {
 		}
 		return "Y".equalsIgnoreCase(ynValue.trim());
 	}
+
 
 }
