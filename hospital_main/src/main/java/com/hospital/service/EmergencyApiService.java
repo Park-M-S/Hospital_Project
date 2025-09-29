@@ -2,150 +2,132 @@ package com.hospital.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hospital.caller.EmergencyApiCaller;
-import com.hospital.config.RegionConfig;
+import com.hospital.async.EmergencyAsyncRunner;
 import com.hospital.dto.EmergencyWebResponse;
-import com.hospital.entity.HospitalMain;
-import com.hospital.repository.HospitalMainApiRepository;
 import com.hospital.websocket.EmergencyApiWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.TaskScheduler;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ScheduledFuture;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class EmergencyApiService {
 
-	private final AtomicBoolean schedulerRunning = new AtomicBoolean(false);
-	private final ObjectMapper objectMapper;
-	private final EmergencyApiCaller emergencyApiCaller;
-	private final HospitalMainApiRepository hospitalMainApiRepository;
-	private final RegionConfig regionConfig;
+    private final EmergencyAsyncRunner asyncRunner;
+    private final EmergencyApiWebSocketHandler webSocketHandler;
+    private final ObjectMapper objectMapper;
+    private volatile String latestEmergencyJson = null;
+    private final AtomicBoolean schedulerRunning = new AtomicBoolean(false);
 
-	private final EmergencyApiWebSocketHandler webSocketHandler;
-	private final TaskScheduler taskScheduler;
+    @Autowired
+    @Lazy
+    public EmergencyApiService(EmergencyAsyncRunner asyncRunner, 
+                              EmergencyApiWebSocketHandler webSocketHandler) {
+        this.asyncRunner = asyncRunner;
+        this.webSocketHandler = webSocketHandler;
+        this.objectMapper = new ObjectMapper();
+    }
 
-	private ScheduledFuture<?> apiUpdateTask;
-	private ScheduledFuture<?> broadcastTask;
+    /**
+     * WebSocket 연결 시 호출 - 첫 번째 연결이면 스케줄러 시작
+     */
+    public void onWebSocketConnected() {
+        if (schedulerRunning.compareAndSet(false, true)) {
+            asyncRunner.runAsyncForAllCities(this::updateCacheFromAsyncResults);
+            System.out.println("✅ 응급실 Async 스케줄러 시작 (첫 번째 연결)");
+        }
+    }
 
-	private volatile String latestEmergencyJson = null;
+    /**
+     * WebSocket 연결 해제 시 호출 - 마지막 연결이면 스케줄러 중지
+     */
+    public void onWebSocketDisconnected() {
+        if (webSocketHandler.getConnectedSessionCount() == 0) {
+            if (schedulerRunning.compareAndSet(true, false)) {
+                asyncRunner.stopAsync();
+                System.out.println("✅ 응급실 Async 스케줄러 종료 (마지막 연결 해제)");
+            }
+        }
+    }
 
-	@Autowired
-	public EmergencyApiService(EmergencyApiCaller apiCaller, HospitalMainApiRepository hospitalMainApiRepository,
-			RegionConfig regionConfig, EmergencyApiWebSocketHandler webSocketHandler, TaskScheduler taskScheduler) {
-		this.emergencyApiCaller = apiCaller;
-		this.objectMapper = new ObjectMapper();
-		this.hospitalMainApiRepository = hospitalMainApiRepository;
-		this.regionConfig = regionConfig;
-		this.webSocketHandler = webSocketHandler;
-		this.taskScheduler = taskScheduler;
-	}
+    /**
+     * Async에서 처리한 DTO 리스트를 캐시에 저장하고 WebSocket으로 브로드캐스트
+     */
+    public void updateCacheFromAsyncResults(List<EmergencyWebResponse> dtoList) {
+        if (!schedulerRunning.get() || dtoList == null || dtoList.isEmpty()) {
+            return;
+        }
+        
+        try {
+            String newJsonData = objectMapper.writeValueAsString(dtoList);
+            
+            // 데이터가 변경된 경우에만 브로드캐스트
+            if (!newJsonData.equals(latestEmergencyJson)) {
+                latestEmergencyJson = newJsonData;
+                webSocketHandler.broadcastEmergencyRoomData(newJsonData);
+                System.out.println("✅ 응급실 데이터 업데이트 및 브로드캐스트 완료");
+            }
+        } catch (Exception e) {
+            System.err.println("응급실 데이터 처리 중 오류 발생");
+            e.printStackTrace();
+        }
+    }
 
-	public void startScheduler() {
-		if (schedulerRunning.get())
-			return;
+    /**
+     * WebSocket 초기 연결 시 캐시 반환
+     */
+    public JsonNode getEmergencyRoomData() {
+        if (latestEmergencyJson == null) {
+            return objectMapper.createObjectNode();
+        }
+        
+        try {
+            return objectMapper.readTree(latestEmergencyJson);
+        } catch (Exception e) {
+            System.err.println("응급실 데이터 파싱 중 오류 발생");
+            e.printStackTrace();
+            return objectMapper.createObjectNode();
+        }
+    }
+    
+    /**
+     * 스케줄러 강제 중지
+     */
+    public void stopScheduler() {
+        if (schedulerRunning.compareAndSet(true, false)) {
+            asyncRunner.stopAsync();
+            System.out.println("✅ 응급실 스케줄러 강제 중지 완료");
+        } else {
+            System.out.println("⚠️ 스케줄러가 이미 중지되어 있습니다.");
+        }
+    }
 
-		try {
-			schedulerRunning.set(true);
+    /**
+     * 서비스 상태 정보 반환
+     */
+    public Map<String, Object> getStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("schedulerRunning", schedulerRunning.get());
+        stats.put("hasLatestData", latestEmergencyJson != null);
+        stats.put("lastDataSize", getEmergencyRoomData().size());
+        stats.put("connectedSessions", webSocketHandler.getConnectedSessionCount());
+        
+        // AsyncRunner에서 통계 가져오기 (있다면)
+        stats.put("completedCount", asyncRunner.getCompletedCount());
+        stats.put("failedCount", asyncRunner.getFailedCount());
+        stats.put("processedCount", asyncRunner.getProcessedCount());
+        
+        return stats;
+    }
 
-			List<EmergencyWebResponse> list = getEmergencyRoomDataAsDto();
-			if (!list.isEmpty()) {
-				latestEmergencyJson = objectMapper.writeValueAsString(list);
-				System.out.println("응급실 초기 데이터 업데이트 성공");
-			}
-
-			// ✅ 1. API 호출은 30초마다
-			apiUpdateTask = taskScheduler.scheduleAtFixedRate(() -> {
-				try {
-					List<EmergencyWebResponse> updateList = getEmergencyRoomDataAsDto();
-					if (!updateList.isEmpty()) {
-						latestEmergencyJson = objectMapper.writeValueAsString(updateList);
-						System.out.println("응급실 데이터 업데이트 성공");
-					}
-				} catch (Exception e) {
-					System.err.println("응급실 데이터 업데이트 중 오류:");
-					e.printStackTrace();
-				}
-			}, Duration.ofSeconds(30));
-
-			// ✅ 2. WebSocket 브로드캐스트는 1초마다
-			broadcastTask = taskScheduler.scheduleAtFixedRate(() -> {
-				if (latestEmergencyJson != null) {
-					webSocketHandler.broadcastEmergencyRoomData(latestEmergencyJson);
-				}
-			}, Duration.ofSeconds(1));
-
-			System.out.println("스케줄러 시작: API 30초, 브로드캐스트 1초");
-			
-		} catch (Exception e) {
-			// 실패 시 상태 복구
-			schedulerRunning.set(false);
-			System.err.println("초기 데이터 업데이트 중 오류:");
-			e.printStackTrace();
-			throw new RuntimeException("응급실 스케줄러 시작 실패: " + e.getMessage(), e);
-		}
-	}
-
-	public void stopScheduler() {
-		schedulerRunning.set(false);
-		if (apiUpdateTask != null && !apiUpdateTask.isCancelled()) {
-			apiUpdateTask.cancel(true);
-		}
-		if (broadcastTask != null && !broadcastTask.isCancelled()) {
-			broadcastTask.cancel(true);
-		}
-		System.out.println("스케줄러 정지 완료");
-	}
-
-	public void shutdownCompleteService() {
-		stopScheduler();
-		webSocketHandler.closeAllSessions();
-		System.out.println("응급실 서비스 완전 종료 완료");
-	}
-
-	public List<EmergencyWebResponse> getEmergencyRoomDataAsDto() {
-		JsonNode data = emergencyApiCaller.callEmergencyApiAsJsonNode(regionConfig.getEmergencyCityName(), 1, 10);
-
-		if (data == null || !data.has("body"))
-			return Collections.emptyList();
-
-		JsonNode itemsNode = data.get("body").get("items");
-		if (itemsNode == null || !itemsNode.has("item"))
-			return Collections.emptyList();
-
-		try {
-			JsonNode itemArray = itemsNode.get("item");
-			EmergencyWebResponse[] responses = objectMapper.treeToValue(itemArray, EmergencyWebResponse[].class);
-			List<EmergencyWebResponse> responseList = Arrays.asList(responses);
-
-			for (EmergencyWebResponse response : responseList) {
-				List<HospitalMain> hospitals = hospitalMainApiRepository
-						.findByHospitalNameContaining(response.getDutyName());
-
-				if (!hospitals.isEmpty()) {
-					HospitalMain hospitalData = hospitals.get(0);
-					response.setCoordinates(hospitalData.getCoordinateX(), hospitalData.getCoordinateY());
-					response.setEmergencyAddress(hospitalData.getHospitalAddress());
-				} else {
-					response.setCoordinates(null, null);
-					response.setEmergencyAddress(null);
-				}
-			}
-
-			return responseList;
-		} catch (Exception e) {
-			System.err.println("JSON 변환 중 오류:");
-			e.printStackTrace();
-			return Collections.emptyList();
-		}
-	}
-
-	// 초기 연결 시 데이터 제공용 (1회)
-	public JsonNode getEmergencyRoomData() {
-		return emergencyApiCaller.callEmergencyApiAsJsonNode(regionConfig.getEmergencyCityName(), 1, 10);
-	}
+    /**
+     * 스케줄러 상태 확인
+     */
+    public boolean isSchedulerRunning() {
+        return schedulerRunning.get();
+    }
 }

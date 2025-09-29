@@ -57,7 +57,7 @@ public class WebConfig implements WebMvcConfigurer {
     	
     	   //요청 타임아웃 설정 (RequestConfig 사용)
         RequestConfig requestConfig = RequestConfig.custom()
-                .setResponseTimeout(Timeout.ofSeconds(30))   // 응답 타임아웃 
+                .setResponseTimeout(Timeout.ofSeconds(60))   // 응답 타임아웃 
                 .build();
     	
     	   

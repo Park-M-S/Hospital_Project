@@ -27,8 +27,8 @@ public class RegionConfig {
     private String sigunguNamesString;
     
     
-    @Value("${hospital.region.emergency.city.name}")
-    private String emergencyCityName;
+    @Value("#{'${hospital.region.emergency.city.names}'.split(',')}")
+    private List<String> emergencyCityNames;
     
     @Value("${hospital.region.nationwide.sido.codes}")
     private String nationwideSidoCodesString;

@@ -240,13 +240,13 @@ public class HospitalApiController {
 
 		log.info("약국 데이터 저장 시작... (인증된 요청)");
 		
-		int totalSaved = pharmacyApiService.fetchAndSaveSeongnamPharmacies();
+		int totalSaved = pharmacyApiService.savePharmacy();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);
 		response.put("message", "약국 데이터 저장 완료");
 		response.put("savedCount", totalSaved);
-		response.put("area", "성남시 전체");
+		response.put("area", "전국");
 		response.put("timestamp", LocalDateTime.now());
 		
 		log.info("약국 데이터 저장 완료! 총 {}건 저장됨", totalSaved);

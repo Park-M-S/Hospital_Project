@@ -25,8 +25,8 @@ public class HospitalDetailApiCaller {
 	private final ObjectMapper objectMapper;
 
 	// 생성자 주입: ObjectMapper는 스프링이 자동 주입
-	public HospitalDetailApiCaller(ObjectMapper objectMapper) {
-		this.restTemplate = new RestTemplate(); // HTTP 호출용
+	public HospitalDetailApiCaller(ObjectMapper objectMapper, RestTemplate restTemplate) {
+		this.restTemplate = restTemplate; // HTTP 호출용
 		this.objectMapper = objectMapper; // JSON → 객체 변환용
 	}
 
