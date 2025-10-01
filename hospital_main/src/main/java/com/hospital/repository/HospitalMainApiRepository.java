@@ -26,9 +26,6 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@EntityGraph("hospital-with-all")
 	Optional<HospitalMain> findByHospitalCode(String hospitalCode);
 
-	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	@Query("SELECT h FROM HospitalMain h WHERE REPLACE(h.hospitalName, ' ', '') LIKE CONCAT('%', REPLACE(:hospitalName, ' ', ''), '%')")
-	List<HospitalMain> findByHospitalNameContaining(@Param("hospitalName") String hospitalName);
 
 	/*
 	 * @QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
@@ -44,7 +41,9 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	@EntityGraph("hospital-with-detail")
-	@Query("SELECT DISTINCT h FROM HospitalMain h WHERE REPLACE(h.hospitalName, ' ', '') = REPLACE(:hospitalName, ' ', '')")
+	@Query("SELECT DISTINCT h FROM HospitalMain h " +
+	       "WHERE LENGTH(REPLACE(:hospitalName, ' ', '')) >= 3 " +
+	       "AND REPLACE(h.hospitalName, ' ', '') LIKE %:hospitalName%")
 	List<HospitalMain> findHospitalsByName(@Param("hospitalName") String hospitalName);
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })

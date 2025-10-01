@@ -46,8 +46,8 @@ public class HospitalDetail {
     @Column(name = "saturday_reception", length = 50)
     private String rcvSat;
 
-    //@Column(name = "no_trmt_holi")
-    //private String noTrmtHoli;
+    @Column(name = "noTrmtHoli")
+    private String noTrmtHoli;
 
     //@Column(name = "no_trmt_sun")
     //private String noTrmtSun;

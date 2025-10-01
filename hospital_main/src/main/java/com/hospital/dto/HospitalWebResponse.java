@@ -42,6 +42,8 @@ public class HospitalWebResponse {
     private String todayOpen;
     private String todayClose;
     
+    private String noTrmtHoli;
+    
     private List<String> medicalSubjects;
     
   

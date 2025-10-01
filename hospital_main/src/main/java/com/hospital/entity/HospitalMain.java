@@ -73,6 +73,7 @@ public class HospitalMain {
 
 	@Column(name = "coordinate_y")
 	private Double coordinateY;
+	
 
 	@OneToOne(mappedBy = "hospital",
 
