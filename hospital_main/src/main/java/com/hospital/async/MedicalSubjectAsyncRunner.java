@@ -25,7 +25,6 @@ import com.hospital.config.SubjectMappingConfig;
 @Service
 @Slf4j
 public class MedicalSubjectAsyncRunner {
-
     private final RateLimiter rateLimiter = RateLimiter.create(5.0);
     private final AtomicInteger completedCount = new AtomicInteger(0);
     private final AtomicInteger failedCount = new AtomicInteger(0);

@@ -63,23 +63,58 @@ if [ -z "$GITHUB_ACTIONS" ]; then
 fi
 
 echo "⏹️ 기존 컨테이너 중지..."
-docker-compose -f docker-compose.prod.yml down || true
+docker-compose down || true
 
-# 필요한 디렉토리 생성
-sudo mkdir -p /opt/hospital/data/mariadb
-sudo mkdir -p /opt/hospital/logs/backend
-sudo chown -R ec2-user:ec2-user /opt/hospital/
+# 필요한 디렉토리 생성 및 권한 설정
+echo "📁 디렉토리 생성 및 권한 설정..."
+sudo mkdir -p /opt/hospital/{data,config,logs}/{mariadb,grafana,prometheus,backend,duckdns}
+
+# 각 서비스별 적절한 권한 설정
+sudo chown -R 999:999 /opt/hospital/data/mariadb      # MariaDB
+sudo chown -R 472:0 /opt/hospital/data/grafana        # Grafana
+sudo chown -R 65534:65534 /opt/hospital/data/prometheus # Prometheus
+sudo chown -R ec2-user:ec2-user /opt/hospital/logs/backend # Backend logs
+sudo chown -R ec2-user:ec2-user /opt/hospital/config   # 설정 파일들
+sudo chmod -R 755 /opt/hospital
+
+# Docker 네트워크 생성 (이미 존재하면 무시)
+echo "🌐 Docker 네트워크 확인..."
+docker network ls | grep hospital-network || docker network create hospital-network
 
 echo "▶️ 새 컨테이너 시작..."
-docker-compose -f docker-compose.prod.yml up -d
+docker-compose up -d
 
 # 컨테이너 시작 대기
 echo "⏳ 컨테이너 시작 대기..."
-sleep 15
+sleep 30
 
 # 서비스 상태 확인
 echo "📊 서비스 상태 확인:"
-docker-compose -f docker-compose.prod.yml ps
+docker-compose ps
+
+# 각 서비스별 상태 확인
+echo ""
+echo "🔍 서비스 개별 상태 확인:"
+
+# MariaDB 상태 확인
+if docker ps | grep hospital-mariadb > /dev/null; then
+    echo "  ✅ MariaDB: 실행 중"
+    # 헬스체크 결과 확인
+    HEALTH_STATUS=$(docker inspect hospital-mariadb --format='{{.State.Health.Status}}' 2>/dev/null || echo "unknown")
+    echo "    - 헬스체크: ${HEALTH_STATUS}"
+else
+    echo "  ❌ MariaDB: 실행되지 않음"
+    docker-compose logs mariadb --tail=5
+fi
+
+# Backend 상태 확인
+if docker ps | grep hospital-backend > /dev/null; then
+    echo "  ✅ Backend: 실행 중"
+else
+    echo "  ❌ Backend: 실행되지 않음"
+    echo "  📝 Backend 로그:"
+    docker-compose logs backend --tail=10
+fi
 
 # DuckDNS 서비스 상태 확인
 if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
@@ -103,6 +138,32 @@ if [ -n "$DUCKDNS_DOMAIN" ] && [ -n "$DUCKDNS_TOKEN" ]; then
     fi
 fi
 
+# API 연결 테스트
+echo ""
+echo "🔍 API 연결 테스트:"
+if docker ps | grep hospital-backend > /dev/null; then
+    echo "  Backend 컨테이너 발견, API 테스트 시작..."
+    sleep 10  # Backend 초기화 대기
+    
+    # 로컬 테스트 먼저
+    if curl -f -s --connect-timeout 10 "http://localhost:8888/api/proDoc/status" > /dev/null 2>&1; then
+        echo "  ✅ 로컬 API: 응답 정상"
+    else
+        echo "  ⚠️ 로컬 API: 응답 없음 (아직 시작 중일 수 있음)"
+    fi
+    
+    # DuckDNS 도메인 테스트 (설정된 경우)
+    if [ -n "$DUCKDNS_DOMAIN" ]; then
+        if curl -f -s --connect-timeout 10 "${DOMAIN_URL}:8888/api/proDoc/status" > /dev/null 2>&1; then
+            echo "  ✅ DuckDNS API: 응답 정상"
+        else
+            echo "  ⚠️ DuckDNS API: 응답 없음 (DNS 전파 대기 중일 수 있음)"
+        fi
+    fi
+else
+    echo "  ❌ Backend 컨테이너가 실행되지 않음"
+fi
+
 echo "🧹 이미지 정리..."
 docker system prune -f
 
@@ -116,6 +177,21 @@ if [ -n "$DUCKDNS_DOMAIN" ]; then
 else
     echo "  🔗 백엔드 API: ${DOMAIN_URL}:8888"
 fi
+
+# 모니터링 서비스 정보
+echo "  📊 모니터링 서비스:"
+if [ -n "$DUCKDNS_DOMAIN" ]; then
+    echo "    - Grafana: ${DOMAIN_URL}:3000"
+    echo "    - Prometheus: ${DOMAIN_URL}:9090"
+    echo "    - cAdvisor: ${DOMAIN_URL}:8080"
+    echo "    - Node Exporter: ${DOMAIN_URL}:9100"
+else
+    echo "    - Grafana: http://localhost:3000"
+    echo "    - Prometheus: http://localhost:9090"
+    echo "    - cAdvisor: http://localhost:8080"
+    echo "    - Node Exporter: http://localhost:9100"
+fi
+
 echo ""
 echo "🔧 API 테스트:"
 if [ -n "$DUCKDNS_DOMAIN" ]; then
