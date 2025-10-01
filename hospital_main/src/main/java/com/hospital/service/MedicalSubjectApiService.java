@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.hospital.async.MedicalSubjectAsyncRunner;
+import com.hospital.config.SubjectMappingConfig;
 import com.hospital.repository.HospitalMainApiRepository;
 import com.hospital.repository.MedicalSubjectApiRepository;
 
@@ -24,29 +25,38 @@ public class MedicalSubjectApiService {
 	private final HospitalMainApiRepository hospitalMainApiRepository;
 	private final MedicalSubjectAsyncRunner medicalSubjectAsyncRunner;
 	private final MedicalSubjectApiRepository medicalSubjectApiRepository;
+	private final SubjectMappingConfig subjectMappingConfig;
 
 	@Autowired
 	public MedicalSubjectApiService(HospitalMainApiRepository hospitalMainApiRepository,
 			MedicalSubjectAsyncRunner medicalSubjectAsyncRunner,
-			MedicalSubjectApiRepository medicalSubjectApiRepository) {
+			MedicalSubjectApiRepository medicalSubjectApiRepository,
+			SubjectMappingConfig subjectMappingConfig) {
 		this.medicalSubjectApiRepository = medicalSubjectApiRepository;
 		this.hospitalMainApiRepository = hospitalMainApiRepository;
 		this.medicalSubjectAsyncRunner = medicalSubjectAsyncRunner;
+		this.subjectMappingConfig = subjectMappingConfig;
 	}
 
 	public int updateSubjects() {
 		try {
+			log.info("병원 데이터 수집 시작 - 진료과목: {}", subjectMappingConfig.getSubjectNames());
 			
+			log.info("기존 과목 데이터 전체 삭제 시작...");
+	        medicalSubjectApiRepository.deleteAllInBatch();
+	        log.info("기존 과목 데이터 전체 삭제 완료");
+			
+			List<String> subCodes = subjectMappingConfig.getSubjectCodes();
+			medicalSubjectAsyncRunner.resetCounter();
+			medicalSubjectAsyncRunner.setTotalCount(subCodes.size());
 
-			List<String> hospitalCodes = hospitalMainApiRepository.findAllHospitalCodes();
-			if (hospitalCodes.isEmpty()) {
-				throw new IllegalStateException("병원 기본정보가 없어 진료과목을 수집할 수 없습니다");
+			for (String subCd : subCodes) {
+				medicalSubjectAsyncRunner.runAsync(subCd);
 			}
+			log.info("{}개 과목 병렬 처리 시작", subCodes.size());
+			return subCodes.size(); // 총 지역 수만 반환
 
-
-			medicalSubjectAsyncRunner.runBatchAsync(hospitalCodes);
-
-			return hospitalCodes.size();
+			
 			
 		} catch (Exception e) {
 			log.error("진료과목 수집 실패", e);

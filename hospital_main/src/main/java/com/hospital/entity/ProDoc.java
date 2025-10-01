@@ -37,10 +37,12 @@ public class ProDoc {
     @Column(name = "hospital_code", nullable = false)
     private String hospitalCode; //실제 DB에 저장될 병원 코드 (외래키)
     
-   
+    @Column(name = "subject_name")
+    private String subjectName;
     
-    @Column(name = "proDoc_List")
-    private String proDocList;
+    
+    @Column(name = "pro_doc_count")
+    private Integer proDocCount;
     
     
 
@@ -56,10 +58,9 @@ public class ProDoc {
     
     
 
-    //전문의 존재 여부 체크
     public boolean hasSpecialist() {
-        return this.proDocList != null && !this.proDocList.trim().isEmpty();
-   }
+        return this.proDocCount != null && this.proDocCount > 0;  // Integer 비교
+    }
     
  
 }

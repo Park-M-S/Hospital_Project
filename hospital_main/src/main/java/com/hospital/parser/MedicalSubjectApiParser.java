@@ -1,61 +1,76 @@
+
 package com.hospital.parser;
 
 
+
+import com.hospital.dto.HospitalMainApiItem;
+import com.hospital.dto.HospitalMainApiResponse;
+import com.hospital.dto.MedicalSubjectApiItem;
 import com.hospital.dto.MedicalSubjectApiResponse;
+import com.hospital.entity.HospitalMain;
 import com.hospital.entity.MedicalSubject;
+
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Component;
 
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Objects;
+import java.util.Optional; // Optional 임포트
 import java.util.stream.Collectors;
 
-
-@Slf4j
 @Component
+@Slf4j
 public class MedicalSubjectApiParser {
 
+	public List<MedicalSubject> parseSubjects(MedicalSubjectApiResponse apiResponseDto, String subjectName) {
+	    log.debug("과목 {} 병원 데이터 파싱 시작", subjectName);
+
+	    validateApiResponse(apiResponseDto);
+
+	    List<MedicalSubject> subjects = extractAndConvertItems(apiResponseDto, subjectName);
+
+	    log.debug("과목 {} 병원 데이터 파싱 완료: {}건", subjectName, subjects.size());
+	    return subjects;
+	}
+
+	private List<MedicalSubject> extractAndConvertItems(MedicalSubjectApiResponse response, String subjectName) {
+	    return Optional.ofNullable(response)
+	            .map(MedicalSubjectApiResponse::getResponse)
+	            .map(MedicalSubjectApiResponse.Response::getBody)
+	            .map(MedicalSubjectApiResponse.Body::getItems)
+	            .map(MedicalSubjectApiResponse.ApiItemsWrapper::getItem)
+	            .orElseGet(ArrayList::new)
+	            .stream()
+	            .map(itemDto -> convertToSubject(itemDto, subjectName))
+	            .filter(Objects::nonNull)
+	            .collect(Collectors.toList());
+	}
+
+	private MedicalSubject convertToSubject(MedicalSubjectApiItem itemDto, String subjectName) {
+	    if (itemDto == null || itemDto.getHospitalCode() == null || itemDto.getHospitalCode().trim().isEmpty()) {
+	        log.warn("유효하지 않은 병원 데이터: {}", itemDto);
+	        return null;
+	    }
+
+	    return MedicalSubject.builder()
+	            .hospitalCode(itemDto.getHospitalCode())
+	            .subjects(subjectName) // 여기서 과목명을 넣음
+	            .build();
+	}
+
     
-
-    @Autowired
-    public MedicalSubjectApiParser() {
+    private void validateApiResponse(MedicalSubjectApiResponse response) {
+        if (response == null || response.getResponse() == null || response.getResponse().getHeader() == null) {
+            throw new RuntimeException("API 응답이 올바르지 않습니다");
+        }
         
-    }
-
-   
-    public List<MedicalSubject> parse(MedicalSubjectApiResponse response, String hospitalCode) {
-        try {
-            if (response == null ||
-                response.getResponse() == null ||
-                response.getResponse().getBody() == null ||
-                response.getResponse().getBody().getItems() == null ||
-                response.getResponse().getBody().getItems().getItem() == null) {
-                
-                log.warn("진료과목 API 응답 구조가 예상과 다름 - 빈 리스트 반환: {}", hospitalCode);
-                return List.of();
-            }
-
-            // 중복 제거용 Set
-            Set<String> seenSubjects = new HashSet<>();
-
-            String subjectStr = response.getResponse().getBody().getItems().getItem().stream()
-                    .map(item -> item.getDgsbjtCdNm())
-                    .distinct()
-                    .sorted()
-                    .collect(Collectors.joining(",")); // 쉼표로 연결
-
-            MedicalSubject record = MedicalSubject.builder()
-                    .hospitalCode(hospitalCode)
-                    .subjects(subjectStr) // String 필드에 저장
-                    .build();// subjects -> subjectName
-
-            return List.of(record);
-
-        } catch (Exception e) {
-            log.error("진료과목 파싱 오류 - 빈 리스트 반환: {}", hospitalCode, e);
-            return List.of();
+        String resultCode = response.getResponse().getHeader().getResultCode();
+        String resultMsg = response.getResponse().getHeader().getResultMsg();
+        
+        if (!"00".equals(resultCode)) {
+            throw new RuntimeException("API 응답 오류: " + resultCode + " - " + resultMsg);
         }
     }
 }

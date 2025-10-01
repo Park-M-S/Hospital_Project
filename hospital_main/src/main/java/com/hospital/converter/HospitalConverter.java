@@ -7,6 +7,8 @@ import com.hospital.entity.HospitalDetail;
 import com.hospital.entity.ProDoc;
 import com.hospital.util.TodayOperatingTimeCalculator;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -17,7 +19,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+
 @Component
+@Slf4j
 public class HospitalConverter {
 
 	// Hospital 엔티티를 HospitalResponseDto로 변환
@@ -36,7 +40,7 @@ public class HospitalConverter {
 				.hospitalName(hospitalMain.getHospitalName()).hospitalAddress(hospitalMain.getHospitalAddress())
 				.provinceName(hospitalMain.getProvinceName()).districtName(hospitalMain.getDistrictName())
 				.hospitalTel(hospitalMain.getHospitalTel()).hospitalHomepage(hospitalMain.getHospitalHomepage())
-				.doctorNum(hospitalMain.getDoctorNum())
+				.totalDoctors(convertStringToInteger(hospitalMain.getTotalDoctors()))
 
 				// 좌표 정보
 				.coordinateX(hospitalMain.getCoordinateX()).coordinateY(hospitalMain.getCoordinateY())
@@ -47,6 +51,7 @@ public class HospitalConverter {
 				.weekdayLunch(detail != null ? detail.getLunchWeek() : null)
 				.parkingCapacity(detail != null ? detail.getParkQty() : null)
 				.parkingFee(detail != null ? convertYnToBoolean(detail.getParkXpnsYn()) : null)
+			    .noTrmtHoli(detail != null ? detail.getNoTrmtHoli() : null)
 
 				// 운영 시간
 				.todayOpen(formatTime(todayTime.getOpenTime())).todayClose(formatTime(todayTime.getCloseTime()))
@@ -54,37 +59,32 @@ public class HospitalConverter {
 				.medicalSubjects(convertMedicalSubjectsToList(hospitalMain.getMedicalSubjects()))
 
 				// 전문의 정보를 문자열로 변환
-				.professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs())).build();
+				.professionalDoctors(convertProDocsToMap(hospitalMain.getProDocs()))
+				.build();
 	}
 	
-	 private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> subjects) {
-	        if (subjects == null || subjects.isEmpty()) {
-	            return List.of();
-	        }
-
-	        return subjects.stream()
-	                .map(MedicalSubject::getSubjects)        // 엔티티의 subjects(String) 가져오기
-	                .filter(s -> s != null && !s.isBlank())  // null/빈 문자열 제거
-	                .flatMap(s -> Arrays.stream(s.split(","))) // 쉼표로 나누어 각 과목 분리
-	                .map(String::trim)
-	                .filter(s -> !s.isEmpty())
-	                .distinct()
-	                .sorted()
-	                .collect(Collectors.toList());
+	private Integer convertStringToInteger(String value) {
+	    if (value == null || value.trim().isEmpty()) {
+	        return null;
 	    }
-	
-	 /* private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> set) {
-	        if (set == null || set.isEmpty()) {
-	            return List.of();
-	        }
-	        return set.stream()
-	                .map(MedicalSubject::getSubjectName)
-	                .filter(name -> name != null && !name.trim().isEmpty())
-	                .distinct()
-	                .sorted()
-	                .collect(Collectors.toList());
-	    }*/
-	
+	    try {
+	        return Integer.parseInt(value.trim());
+	    } catch (NumberFormatException e) {
+	        return null;  // 또는 0
+	    }
+	}
+
+
+	private List<String> convertMedicalSubjectsToList(Set<MedicalSubject> subjects) {
+		if (subjects == null || subjects.isEmpty()) {
+			return List.of();
+		}
+
+		return subjects.stream().map(MedicalSubject::getSubjects) // 엔티티의 subjects(String) 가져오기
+				.filter(s -> s != null && !s.isBlank()) // null/빈 문자열 제거
+				.flatMap(s -> Arrays.stream(s.split(","))) // 쉼표로 나누어 각 과목 분리
+				.map(String::trim).filter(s -> !s.isEmpty()).distinct().sorted().collect(Collectors.toList());
+	}
 
 
 	private String formatTime(String timeStr) {
@@ -96,8 +96,7 @@ public class HospitalConverter {
 		// HHMM을 HH:MM으로 변환
 		return timeStr.substring(0, 2) + ":" + timeStr.substring(2, 4);
 	}
-	
-	
+
 	// Hospital 엔티티 리스트를 DTO 리스트로 변환
 	public List<HospitalWebResponse> convertToDtos(List<HospitalMain> hospitals) {
 		if (hospitals == null) {
@@ -106,67 +105,29 @@ public class HospitalConverter {
 
 		return hospitals.stream().map(this::convertToDTO).collect(Collectors.toList());
 	}
+
 	
-	 /*private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-	        if (set == null || set.isEmpty()) {
-	            return new HashMap<>();
-	        }
-	        return set.stream()
-	                .collect(Collectors.toMap(
-	                    ProDoc::getSubjectName,
-	                    ProDoc::getProDocCount,
-	                    Integer::sum  // 중복 시 합산
-	                ));
-	    }*/
-	
-	//ProDoc의 subjectDetails 문자열을 Map으로 변환
+	// ProDoc의 개별 필드를 Map으로 변환
 	private Map<String, Integer> convertProDocsToMap(Set<ProDoc> set) {
-		if (set == null || set.isEmpty()) {
-			return new HashMap<>();
-		}
+	    if (set == null || set.isEmpty()) {
+	        return new HashMap<>();
+	    }
 
-		return set.stream()
-				.filter(proDoc -> proDoc.getProDocList() != null)
-				.flatMap(proDoc ->  convertStringToSubjectMap(proDoc.getProDocList()).entrySet().stream())
-				.collect(Collectors.toMap(
-					Map.Entry::getKey,
-					Map.Entry::getValue,
-					Integer::sum // 중복 시 합산
-				));
+	    return set.stream()
+	            .filter(proDoc -> proDoc.getSubjectName() != null && proDoc.getProDocCount() != null)
+	            .collect(Collectors.toMap(
+	                    ProDoc::getSubjectName,     // 과목명을 키로
+	                    ProDoc::getProDocCount,     // 이미 Integer이므로 바로 사용
+	                    Integer::sum               // 중복 시 합산
+	            ));
 	}
 
-	//문자열 파싱 메서드: "내과(5명), 외과(3명)" → Map<String, Integer>
-	private Map<String, Integer> convertStringToSubjectMap(String subjectDetails) {
-		Map<String, Integer> result = new HashMap<>();
-		if (subjectDetails == null || subjectDetails.trim().isEmpty()) {
-			return result;
-		}
-		
-		// "내과(5명), 외과(3명)" → Map으로 변환
-		String[] subjects = subjectDetails.split(", ");
-		for (String subject : subjects) {
-			// "내과(5명)" → "내과"=5
-			if (subject.contains("(") && subject.contains("명)")) {
-				String name = subject.substring(0, subject.indexOf("(")).trim();
-				String countStr = subject.substring(subject.indexOf("(") + 1, subject.indexOf("명)")).trim();
-				try {
-					result.put(name, Integer.parseInt(countStr));
-				} catch (NumberFormatException e) {
-					// 파싱 실패 시 무시
-				}
-			}
-		}
-		return result;
-	}
-	
 	private Boolean convertYnToBoolean(String ynValue) {
-        if (ynValue == null) {
-            return null;
-        }
-        return "Y".equalsIgnoreCase(ynValue.trim());
-    }
-	
-	
+		if (ynValue == null) {
+			return null;
+		}
+		return "Y".equalsIgnoreCase(ynValue.trim());
+	}
 
 
 }

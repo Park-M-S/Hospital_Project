@@ -9,19 +9,19 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.google.common.util.concurrent.RateLimiter;
-import com.hospital.caller.HospitalMainApiCaller;
+import com.hospital.caller.PharmacyApiCaller;
 import com.hospital.config.RegionConfig;
-import com.hospital.dto.HospitalMainApiItem;
-import com.hospital.dto.HospitalMainApiResponse;
-import com.hospital.entity.HospitalMain;
-import com.hospital.parser.HospitalMainApiParser;
-import com.hospital.repository.HospitalMainApiRepository;
+import com.hospital.dto.PharmacyApiResponse;
+import com.hospital.dto.PharmacyApiItem;
+import com.hospital.entity.Pharmacy;
+import com.hospital.parser.PharmacyApiParser;
+import com.hospital.repository.PharmacyApiRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class HospitalMainAsyncRunner {
+public class PharmacyAsyncRunner {
 
     private final RateLimiter rateLimiter = RateLimiter.create(5.0);
     private final AtomicInteger completedCount = new AtomicInteger(0);
@@ -29,21 +29,21 @@ public class HospitalMainAsyncRunner {
     private final AtomicInteger insertedCount = new AtomicInteger(0);
     private int totalCount = 0;
 
-    private final HospitalMainApiCaller apiCaller;
-    private final HospitalMainApiParser parser;
-    private final HospitalMainApiRepository hospitalMainApiRepository;
+    private final PharmacyApiCaller apiCaller;
+    private final PharmacyApiParser parser;
+    private final PharmacyApiRepository pharmacyApiRepository;
     private final RegionConfig regionConfig;
 
     private static final int BATCH_SIZE = 100;
 
     @Autowired
-    public HospitalMainAsyncRunner(HospitalMainApiCaller apiCaller,
-                                   HospitalMainApiParser parser,
-                                   HospitalMainApiRepository hospitalMainApiRepository,
-                                   RegionConfig regionConfig) {
+    public PharmacyAsyncRunner(PharmacyApiCaller apiCaller,
+                               PharmacyApiParser parser,
+                               PharmacyApiRepository pharmacyApiRepository,
+                               RegionConfig regionConfig) {
         this.apiCaller = apiCaller;
         this.parser = parser;
-        this.hospitalMainApiRepository = hospitalMainApiRepository;
+        this.pharmacyApiRepository = pharmacyApiRepository;
         this.regionConfig = regionConfig;
     }
 
@@ -54,36 +54,36 @@ public class HospitalMainAsyncRunner {
             String sidoName = regionConfig.getSidoName(sidoCd);
             log.info("지역코드 {} 처리 시작", sidoName);
 
-
-            List<HospitalMain> allHospitals = new ArrayList<>();
+            List<Pharmacy> allPharmacies = new ArrayList<>();
             int pageNo = 1;
-            int numOfRows = 1000;
+            int numOfRows = 100;
             boolean hasMorePages = true;
 
             while (hasMorePages) {
                 String queryParams = String.format("sidoCd=%s&pageNo=%s&numOfRows=%s", sidoCd, pageNo, numOfRows);
-                HospitalMainApiResponse response = apiCaller.callApi(queryParams);
-                List<HospitalMain> hospitals = parser.parseHospitals(response);
+                PharmacyApiResponse response = apiCaller.callApi(queryParams);
+                List<Pharmacy> pharmacies = parser.parsePharmacies(response);
 
-                if (hospitals.isEmpty()) {
+                
+                if (pharmacies.isEmpty()) {
                     log.info("지역 {} 페이지 {}: 더 이상 데이터 없음", sidoName, pageNo);
                     break;
                 }
 
-                allHospitals.addAll(hospitals);
+                allPharmacies.addAll(pharmacies);
 
                 // 페이지 단위 대기
                 Thread.sleep(1000);
                 pageNo++;
-                hasMorePages = hospitals.size() >= numOfRows;
+                hasMorePages = pharmacies.size() >= numOfRows;
             }
 
             // 배치 저장
             int insertedTotal = 0;
-            for (int i = 0; i < allHospitals.size(); i += BATCH_SIZE) {
-                int end = Math.min(i + BATCH_SIZE, allHospitals.size());
-                List<HospitalMain> batch = allHospitals.subList(i, end);
-                hospitalMainApiRepository.saveAll(batch);
+            for (int i = 0; i < allPharmacies.size(); i += BATCH_SIZE) {
+                int end = Math.min(i + BATCH_SIZE, allPharmacies.size());
+                List<Pharmacy> batch = allPharmacies.subList(i, end);
+                pharmacyApiRepository.saveAll(batch);
                 insertedTotal += batch.size();
                 log.info("지역 {} 배치 저장: {}건 완료", sidoName, insertedTotal);
             }
@@ -98,7 +98,6 @@ public class HospitalMainAsyncRunner {
             log.error("지역 코드 {} 처리 실패: {}", regionConfig.getSidoName(sidoCd), e.getMessage());
         }
     }
-
 
     // ✅ 상태 관리 메서드
     public int getCompletedCount() {
