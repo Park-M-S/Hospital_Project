@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
 
 //병원,약국 조회
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 public class HospitalController {
 
 	private static final Logger log = LoggerFactory.getLogger(HospitalController.class);
@@ -64,8 +63,4 @@ public class HospitalController {
 		return hospitalService.searchHospitalsByName(hospitalName);
 	}
 
-	@GetMapping(value = "/hospitals/all", produces = MediaType.APPLICATION_JSON_VALUE)
-	public List<HospitalWebResponse> getAllHospitals() {
-		return hospitalService.getAllHospitals();
-	}
 }

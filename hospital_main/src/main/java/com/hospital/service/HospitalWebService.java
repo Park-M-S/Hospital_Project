@@ -56,28 +56,4 @@ public class HospitalWebService {
 		return hospitalEntities.stream().map(hospitalConverter::convertToDTO).collect(Collectors.toList());
 	}
 
-	// ✅ 공통 로직: 필터링 + 정렬 (거리 계산 중복 제거)
-	private List<HospitalWebResponse> applyFiltersAndSort(List<HospitalMain> hospitalEntities, List<String> tags) {
-
-		return hospitalEntities.stream().filter(hospital -> HospitalTagFilter.matchesAllTags(hospital, tags))
-				.map(hospitalConverter::convertToDTO).collect(Collectors.toList());
-	}
-
-	// 전체병원 조회
-	@Cacheable(value = "allHospitals")
-	public List<HospitalWebResponse> getAllHospitals() {
-		// 모든 병원 조회
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findAll();
-		// DTO로 변환해서 리턴
-		return hospitalEntities.stream().map(hospitalConverter::convertToDTO).collect(Collectors.toList());
-	}
-
-	// 거리와 함께 임시로 저장하는 내부 클래스
-	/*
-	 * private static class HospitalWithDistance { final HospitalWebResponse
-	 * hospital; final double distance;
-	 * 
-	 * HospitalWithDistance(HospitalWebResponse hospital, double distance) {
-	 * this.hospital = hospital; this.distance = distance; } }
-	 */
 }

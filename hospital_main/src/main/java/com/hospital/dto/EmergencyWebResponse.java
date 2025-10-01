@@ -1,5 +1,9 @@
 package com.hospital.dto;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,21 +57,42 @@ public class EmergencyWebResponse {
 	public Map<String, Integer> availableBeds;
 	
 	public static EmergencyWebResponse from(EmergencyApiResponse api) {
-	   List<String> availableEquipment = availableEquipment(api);
-	   Map<String, Integer> availableBeds = availableBeds(api);
+	   List<String> equipmentData = availableEquipment(api);
+	   Map<String, Integer> BedsData = availableBeds(api);
 	    
 	    return EmergencyWebResponse.builder()
 	        .dutyName(api.getDutyName())
 	        .dutyTel3(api.getDutyTel3())
 	        .hpid(api.getHpid())
-	        .lastUpdatedDate(api.getLastUpdatedDate())
-	        .availableBeds(availableBeds)
-	        .availableEquipment(availableEquipment)
+	        .lastUpdatedDate(convertToIsoUtc(api.getLastUpdatedDate()))
+	        .availableBeds(BedsData)
+	        .availableEquipment(equipmentData)
 	        .ambulanceAvailability(api.getAmbulanceAvailability())
 	        .coordinateX(api.getCoordinateX())
 	        .coordinateY(api.getCoordinateY())
 	        .emergencyAddress(api.getEmergencyAddress())
 	        .build();
+	}
+	
+	private static String convertToIsoUtc(String dateString) {
+		if (dateString == null || dateString.length() != 14) {
+			return null;
+		}
+		
+		try {
+			// "yyyyMMddHHmmss" 파싱
+			DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+			LocalDateTime localDateTime = LocalDateTime.parse(dateString, inputFormatter);
+			
+			// 한국 시간(KST)으로 간주하고 UTC로 변환
+			ZonedDateTime kstTime = localDateTime.atZone(ZoneId.of("Asia/Seoul"));
+			ZonedDateTime utcTime = kstTime.withZoneSameInstant(ZoneId.of("UTC"));
+			
+			// ISO 8601 형식으로 반환
+			return utcTime.format(DateTimeFormatter.ISO_INSTANT);
+		} catch (Exception e) {
+			return dateString; // 변환 실패 시 원본 반환
+		}
 	}
 
 	// 장비 추출 로직 분리
@@ -85,12 +110,12 @@ public class EmergencyWebResponse {
 	}
 	
 	private static Map<String, Integer> availableBeds(EmergencyApiResponse api){
-		Map <String, Integer> BedsMap = new LinkedHashMap<>();
-		BedsMap.put("응급실 일반 병상", api.getEmergencyBeds());
-		BedsMap.put("수술실 병상", api.getOperatingBeds());
-		BedsMap.put("일반 입원실 병상", api.getGeneralWardBeds());
+		Map <String, Integer> bedsMap = new LinkedHashMap<>();
+		bedsMap.put("응급실 일반 병상", api.getEmergencyBeds());
+		bedsMap.put("수술실 병상", api.getOperatingBeds());
+		bedsMap.put("일반 입원실 병상", api.getGeneralWardBeds());
 		
-		return BedsMap;
+		return bedsMap;
 	}
 	
 }

@@ -37,7 +37,7 @@ public class PharmacyWebService {
 
 		return allPharmacies.stream()
 				.filter(pharmacy -> pharmacy.getLatitude() != null && pharmacy.getLongitude() != null).map(pharmacy -> {
-					PharmacyWebResponse response = pharmacyConverter.toResponse(pharmacy);
+					PharmacyWebResponse response = pharmacyConverter.convertToDTO(pharmacy);
 					double distance = distanceCalculator.calculateDistance(userLat, userLng, response.getCoordinateY(),
 							response.getCoordinateX());
 					// 거리를 임시로 저장할 수 있는 방법이 필요하거나, 아래처럼 한번에 처리

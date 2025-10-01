@@ -40,11 +40,13 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	 */
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	@EntityGraph("hospital-with-detail")
+	@EntityGraph("hospital-with-all")
 	@Query("SELECT DISTINCT h FROM HospitalMain h " +
 	       "WHERE LENGTH(REPLACE(:hospitalName, ' ', '')) >= 3 " +
-	       "AND REPLACE(h.hospitalName, ' ', '') LIKE %:hospitalName%")
+		   "AND REPLACE(h.hospitalName, ' ', '')" +
+	       "LIKE CONCAT('%', replace(:hospitalName, ' ', ''), '%')")
 	List<HospitalMain> findHospitalsByName(@Param("hospitalName") String hospitalName);
+	
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	@EntityGraph("hospital-with-all")

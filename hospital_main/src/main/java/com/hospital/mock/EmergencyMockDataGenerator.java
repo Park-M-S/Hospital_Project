@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 public class EmergencyMockDataGenerator {
 
 	private List<EmergencyApiResponse> cachedData = new ArrayList<>();
-	private List<EmergencyApiResponse> staticHospitalData = new ArrayList<>(); // 고정 병원 정보
+	private List<EmergencyApiResponse> staticHospitalData = new ArrayList<>();
 	private final Random random = new Random();
 	private boolean schedulerEnabled = false;
 
@@ -48,8 +48,6 @@ public class EmergencyMockDataGenerator {
 		REGIONAL_DISTRIBUTION = Collections.unmodifiableMap(distribution);
 	}
 
-	// 시도별 좌표 범위
-	// 시도별 좌표 범위 (한국 영토 내로 더 정확하게 제한)
 	private static final Map<String, CoordinateRange> REGIONAL_BOUNDS;
 	static {
 		Map<String, CoordinateRange> bounds = new HashMap<>();
@@ -60,7 +58,7 @@ public class EmergencyMockDataGenerator {
 		bounds.put("광주", new CoordinateRange(35.1000, 35.2200, 126.8000, 127.0000));
 		bounds.put("대전", new CoordinateRange(36.2500, 36.4000, 127.3000, 127.5000));
 		bounds.put("울산", new CoordinateRange(35.4500, 35.6000, 129.1000, 129.4000));
-		bounds.put("경기", new CoordinateRange(37.0000, 37.9000, 126.6000, 127.8000)); // 경기도 축소
+		bounds.put("경기", new CoordinateRange(37.0000, 37.9000, 126.6000, 127.8000));
 		bounds.put("강원", new CoordinateRange(37.3000, 38.3000, 127.8000, 128.9000));
 		bounds.put("충북", new CoordinateRange(36.2000, 37.0000, 127.5000, 128.5000));
 		bounds.put("충남", new CoordinateRange(36.0000, 36.9000, 126.3000, 127.5000));
@@ -73,7 +71,6 @@ public class EmergencyMockDataGenerator {
 		REGIONAL_BOUNDS = Collections.unmodifiableMap(bounds);
 	}
 
-	// 병원명 구성 요소
 	private static final String[] HOSPITAL_PREFIXES = { "서울", "부산", "대구", "인천", "광주", "대전", "울산", "경기", "강원", "삼성",
 			"한양", "고려", "연세", "가톨릭", "아주", "인하", "순천향", "중앙", "성모", "세브란스", "신촌", "강남", "분당", "일산" };
 
@@ -90,7 +87,6 @@ public class EmergencyMockDataGenerator {
 		List<EmergencyApiResponse> staticData = new ArrayList<>();
 		int hospitalId = 1;
 
-		// 지역별로 배정된 수만큼 기본 정보 생성
 		for (Map.Entry<String, Integer> entry : REGIONAL_DISTRIBUTION.entrySet()) {
 			String region = entry.getKey();
 			int count = entry.getValue();
@@ -110,28 +106,33 @@ public class EmergencyMockDataGenerator {
 	private EmergencyApiResponse generateStaticHospitalInfo(String region, int hospitalId) {
 		CoordinateRange bounds = REGIONAL_BOUNDS.get(region);
 
-		EmergencyApiResponse response = EmergencyApiResponse.builder().hpid("H" + String.format("%03d", hospitalId))
-				.dutyName(generateRegionalHospitalName(region)).dutyTel3(generateRandomPhoneNumber(region))
-				.lastUpdatedDate(getCurrentDateTime()).build();
+		EmergencyApiResponse response = EmergencyApiResponse.builder()
+				.hpid("H" + String.format("%03d", hospitalId))
+				.dutyName(generateRegionalHospitalName(region))
+				.dutyTel3(generateRandomPhoneNumber(region))
+				.lastUpdatedDate(getCurrentDateTime())
+				.build();
 
-		// 좌표 설정 (고정)
-		response.setCoordinates(generateRandomLongitude(bounds), // 경도를 첫 번째로
-				generateRandomLatitude(bounds) // 위도를 두 번째로
-		);
-
-		// 주소 설정 (고정)
+		response.setCoordinates(generateRandomLongitude(bounds), generateRandomLatitude(bounds));
 		response.setEmergencyAddress(generateRegionalAddress(region));
 
 		return response;
 	}
 
 	/**
-	 * 30초마다 응급실 동적 데이터만 갱신
+	 * 30초마다 응급실 동적 데이터만 갱신 (스케줄러용)
 	 */
 	@Scheduled(fixedRate = 30000)
 	public void generateRandomEmergencyData() {
-		// 스케줄러가 비활성화되어 있으면 실행하지 않음
-		if (!schedulerEnabled) {
+		generateRandomEmergencyData(true);
+	}
+
+	/**
+	 * 응급실 동적 데이터 생성 (내부 메서드)
+	 * @param checkScheduler true면 스케줄러 활성화 여부 체크, false면 무조건 생성
+	 */
+	private void generateRandomEmergencyData(boolean checkScheduler) {
+		if (checkScheduler && !schedulerEnabled) {
 			return;
 		}
 
@@ -143,19 +144,21 @@ public class EmergencyMockDataGenerator {
 			String region = getRegionFromHospitalName(staticHospital.getDutyName());
 			HospitalCharacteristics chars = getRegionalCharacteristics(region);
 
-			// 기본 정보 복사 + 동적 데이터만 새로 생성
-			EmergencyApiResponse dynamicHospital = EmergencyApiResponse.builder().hpid(staticHospital.getHpid())
-					.dutyName(staticHospital.getDutyName()).dutyTel3(staticHospital.getDutyTel3())
-					// 동적 데이터만 새로 생성
+			EmergencyApiResponse dynamicHospital = EmergencyApiResponse.builder()
+					.hpid(staticHospital.getHpid())
+					.dutyName(staticHospital.getDutyName())
+					.dutyTel3(staticHospital.getDutyTel3())
 					.emergencyBeds(generateRandomBedCount("emergency", chars))
 					.operatingBeds(generateRandomBedCount("operating", chars))
 					.generalWardBeds(generateRandomBedCount("general", chars))
 					.ambulanceAvailability(randomBoolean(chars.ambulanceRate))
 					.ventilatorAvailability(randomBoolean(chars.ventilatorRate))
-					.ctAvailability(randomBoolean(chars.ctRate)).mriAvailability(randomBoolean(chars.mriRate))
-					.crrtAvailability(randomBoolean(chars.crrtRate)).lastUpdatedDate(getCurrentDateTime()).build();
+					.ctAvailability(randomBoolean(chars.ctRate))
+					.mriAvailability(randomBoolean(chars.mriRate))
+					.crrtAvailability(randomBoolean(chars.crrtRate))
+					.lastUpdatedDate(getCurrentDateTime())
+					.build();
 
-			// 고정 정보 복사
 			dynamicHospital.setCoordinates(staticHospital.getCoordinateX(), staticHospital.getCoordinateY());
 			dynamicHospital.setEmergencyAddress(staticHospital.getEmergencyAddress());
 
@@ -175,7 +178,7 @@ public class EmergencyMockDataGenerator {
 				return region;
 			}
 		}
-		return "서울"; // 기본값
+		return "서울";
 	}
 
 	/**
@@ -183,7 +186,6 @@ public class EmergencyMockDataGenerator {
 	 */
 	public void enableScheduler() {
 		schedulerEnabled = true;
-		// 즉시 한 번 실행
 		generateRandomEmergencyData();
 		log.info("Mock 데이터 스케줄러 활성화됨");
 	}
@@ -204,11 +206,13 @@ public class EmergencyMockDataGenerator {
 	}
 
 	/**
-	 * 캐시된 응급실 데이터 조회
+	 * 캐시된 응급실 데이터 조회 (검색용)
 	 */
 	public List<EmergencyWebResponse> getCachedEmergencyData() {
 		if (cachedData.isEmpty()) {
-			generateRandomEmergencyData(); // 최초 1회 생성
+			generateRandomEmergencyData(false);
+			schedulerEnabled = true;
+			log.info("검색으로 인해 Mock 데이터 스케줄러 자동 활성화됨");
 		}
 		return cachedData.stream().map(EmergencyWebResponse::from).collect(Collectors.toList());
 	}
@@ -218,10 +222,10 @@ public class EmergencyMockDataGenerator {
 	 */
 	private HospitalCharacteristics getRegionalCharacteristics(String region) {
 		return switch (region) {
-		case "서울" -> new HospitalCharacteristics(0.85, 0.90, 0.95, 0.80, 0.70); // 서울 - 높은 장비 보유율
+		case "서울" -> new HospitalCharacteristics(0.85, 0.90, 0.95, 0.80, 0.70);
 		case "부산", "대구", "광주", "대전", "인천" -> new HospitalCharacteristics(0.80, 0.85, 0.90, 0.70, 0.60);
 		case "경기", "울산" -> new HospitalCharacteristics(0.75, 0.80, 0.85, 0.65, 0.55);
-		default -> new HospitalCharacteristics(0.70, 0.75, 0.80, 0.60, 0.45); // 지방 - 상대적으로 낮은 보유율
+		default -> new HospitalCharacteristics(0.70, 0.75, 0.80, 0.60, 0.45);
 		};
 	}
 
@@ -278,18 +282,15 @@ public class EmergencyMockDataGenerator {
 		default -> 10;
 		};
 
-		// 시간대별 포화도 적용 + 랜덤 변동
 		double loadFactor = getCurrentLoadFactor();
-		double randomVariation = (Math.random() - 0.5) * 0.4; // ±20% 랜덤 변동
+		double randomVariation = (Math.random() - 0.5) * 0.4;
 		double totalLoad = loadFactor * chars.busyFactor + randomVariation;
 
-		// 포화 상황에서는 음수도 가능 (대기 환자 수)
 		int occupiedBeds = (int) (baseBeds * totalLoad);
 		int availableBeds = baseBeds - occupiedBeds;
 
-		// 포화시 음수 범위 제한 (너무 큰 음수는 비현실적)
 		if (availableBeds < 0) {
-			availableBeds = Math.max(availableBeds, -baseBeds / 2); // 기본 병상의 절반까지만 초과
+			availableBeds = Math.max(availableBeds, -baseBeds / 2);
 		}
 
 		return availableBeds;
@@ -301,10 +302,10 @@ public class EmergencyMockDataGenerator {
 	private double getCurrentLoadFactor() {
 		int hour = LocalDateTime.now().getHour();
 		return switch (hour) {
-		case 0, 1, 2, 3, 4, 5 -> 0.4; // 새벽 여유
-		case 6, 7, 8, 9, 10, 11 -> 0.7; // 오전 보통
-		case 12, 13, 14, 15, 16, 17 -> 1.0; // 오후 혼잡
-		case 18, 19, 20, 21, 22, 23 -> 1.3; // 저녁 포화 위험 (1.0 이상)
+		case 0, 1, 2, 3, 4, 5 -> 0.4;
+		case 6, 7, 8, 9, 10, 11 -> 0.7;
+		case 12, 13, 14, 15, 16, 17 -> 1.0;
+		case 18, 19, 20, 21, 22, 23 -> 1.3;
 		default -> 0.8;
 		};
 	}
@@ -374,12 +375,12 @@ public class EmergencyMockDataGenerator {
 	 */
 	@AllArgsConstructor
 	private static class HospitalCharacteristics {
-		double ambulanceRate; // 구급차 보유율
-		double ventilatorRate; // 인공호흡기 보유율
-		double ctRate; // CT 보유율
-		double mriRate; // MRI 보유율
-		double crrtRate; // CRRT 보유율
-		double busyFactor = 0.7; // 혼잡도 (기본값)
+		double ambulanceRate;
+		double ventilatorRate;
+		double ctRate;
+		double mriRate;
+		double crrtRate;
+		double busyFactor = 0.7;
 
 		HospitalCharacteristics(double ambulanceRate, double ventilatorRate, double ctRate, double mriRate,
 				double crrtRate) {

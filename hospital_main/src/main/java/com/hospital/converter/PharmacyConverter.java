@@ -12,7 +12,7 @@ public class PharmacyConverter {
 
 	
 	//Entity -> DTO 변환
-	public PharmacyWebResponse toResponse(Pharmacy pharmacy) {
+	public PharmacyWebResponse convertToDTO(Pharmacy pharmacy) {
 		if (pharmacy == null) {
 			return null;
 		}
@@ -29,6 +29,6 @@ public class PharmacyConverter {
 			return null;
 		}
 
-		return pharmacies.stream().map(this::toResponse).collect(Collectors.toList());
+		return pharmacies.stream().map(this::convertToDTO).collect(Collectors.toList());
 	}
 }
