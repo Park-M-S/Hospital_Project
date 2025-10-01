@@ -35,15 +35,6 @@ public class EmergencyWebResponse {
 	@JsonProperty("hvidate")
 	private String lastUpdatedDate; // 입력일시
 
-	// === 핵심 병상 현황 ===
-	@JsonProperty("hvec")
-	private Integer emergencyBeds; // 응급실 일반 병상 (음수=포화)
-
-	@JsonProperty("hvoc")
-	private Integer operatingBeds; // 수술실 병상
-
-	@JsonProperty("hvgc")
-	private Integer generalWardBeds; // 일반 입원실 병상
 	
 	@JsonProperty("hvamyn")
 	private Boolean ambulanceAvailability; // 구급차 가용 여부
@@ -58,33 +49,48 @@ public class EmergencyWebResponse {
 	public List<String> availableEquipment;
 	
 	
-	//apiResponse -> webResponse
+	// === 핵심 병상 현황 ===
+	public Map<String, Integer> availableBeds;
+	
 	public static EmergencyWebResponse from(EmergencyApiResponse api) {
-		Map<String, Boolean> equipmentMap = new LinkedHashMap<>();
-		equipmentMap.put("인공호흡기", api.getVentilatorAvailability());
-		equipmentMap.put("CT", api.getCtAvailability());
-		equipmentMap.put("MRI", api.getMriAvailability());
-		equipmentMap.put("CRRT", api.getCrrtAvailability());
+	   List<String> availableEquipment = availableEquipment(api);
+	   Map<String, Integer> availableBeds = availableBeds(api);
+	    
+	    return EmergencyWebResponse.builder()
+	        .dutyName(api.getDutyName())
+	        .dutyTel3(api.getDutyTel3())
+	        .hpid(api.getHpid())
+	        .lastUpdatedDate(api.getLastUpdatedDate())
+	        .availableBeds(availableBeds)
+	        .availableEquipment(availableEquipment)
+	        .ambulanceAvailability(api.getAmbulanceAvailability())
+	        .coordinateX(api.getCoordinateX())
+	        .coordinateY(api.getCoordinateY())
+	        .emergencyAddress(api.getEmergencyAddress())
+	        .build();
+	}
+
+	// 장비 추출 로직 분리
+	private static List<String> availableEquipment(EmergencyApiResponse api) {
+	    Map<String, Boolean> equipmentMap = new LinkedHashMap<>();
+	    equipmentMap.put("인공호흡기", api.getVentilatorAvailability());
+	    equipmentMap.put("CT", api.getCtAvailability());
+	    equipmentMap.put("MRI", api.getMriAvailability());
+	    equipmentMap.put("CRRT", api.getCrrtAvailability());
+	    
+	    return equipmentMap.entrySet().stream()
+	        .filter(entry -> Boolean.TRUE.equals(entry.getValue()))
+	        .map(Map.Entry::getKey)
+	        .collect(Collectors.toList());
+	}
+	
+	private static Map<String, Integer> availableBeds(EmergencyApiResponse api){
+		Map <String, Integer> BedsMap = new LinkedHashMap<>();
+		BedsMap.put("응급실 일반 병상", api.getEmergencyBeds());
+		BedsMap.put("수술실 병상", api.getOperatingBeds());
+		BedsMap.put("일반 입원실 병상", api.getGeneralWardBeds());
 		
-		List<String> availableList = equipmentMap.entrySet().stream()
-				.filter(entry -> Boolean.TRUE.equals(entry.getValue()))
-				.map(Map.Entry::getKey)
-				.collect(Collectors.toList());
-		
-		 return EmergencyWebResponse.builder()
-		            .dutyName(api.getDutyName())
-		            .dutyTel3(api.getDutyTel3())
-		            .hpid(api.getHpid())
-		            .lastUpdatedDate(api.getLastUpdatedDate())
-		            .emergencyBeds(api.getEmergencyBeds())
-		            .operatingBeds(api.getOperatingBeds())
-		            .generalWardBeds(api.getGeneralWardBeds())
-		            .availableEquipment(availableList)
-		            .ambulanceAvailability(api.getAmbulanceAvailability())
-		            .coordinateX(api.getCoordinateX())
-		            .coordinateY(api.getCoordinateY())
-		            .emergencyAddress(api.getEmergencyAddress())
-		            .build();
+		return BedsMap;
 	}
 	
 }
