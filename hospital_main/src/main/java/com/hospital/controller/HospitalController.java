@@ -32,15 +32,23 @@ public class HospitalController {
 		this.pharmacyService = pharmacyService;
 	}
 
-	// 병원 검색
+	// 병원 위치기반 데이터
 	  @GetMapping(value = "/hospitalsData", produces = MediaType.APPLICATION_JSON_VALUE)
 	    public List<HospitalWebResponse> getHospitals(
 	            @RequestParam double userLat,         // 사용자 위도
 	            @RequestParam double userLng,         // 사용자 경도
 	            @RequestParam double radius          // 검색 반경 (km)
-	         
+
 	    ) {
-	        return hospitalService.getHospitals(userLat, userLng, radius);
+	        long startTime = System.currentTimeMillis();
+	        log.info("[NEW 방식] 병원 검색 API 호출 - 위도: {}, 경도: {}, 반경: {}km", userLat, userLng, radius);
+
+	        List<HospitalWebResponse> result = hospitalService.getHospitals(userLat, userLng, radius);
+
+	        long endTime = System.currentTimeMillis();
+	        log.info("[NEW 방식] 병원 검색 완료 - 조회된 병원 수: {}개, 응답 시간: {}ms", result.size(), (endTime - startTime));
+
+	        return result;
 	    }
 
 	// 약국 검색 API
@@ -49,18 +57,30 @@ public class HospitalController {
 			@RequestParam("userLng") double userLng, @RequestParam("radius") double radius) {
 		log.info("약국 검색 API 호출 - 위도: {}, 경도: {}, 반경: {}km", userLat, userLng, radius);
 
-		List<PharmacyWebResponse> result = pharmacyService.getPharmaciesByDistance(userLat, userLng, radius);
+		List<PharmacyWebResponse> result = pharmacyService.getPharmacies(userLat, userLng, radius);
 
 		log.info("약국 검색 완료 - 조회된 약국 수: {}개", result.size());
 
 		return result;
 	}
 
-	// 병원명 검색
-	@GetMapping(value = "/hospitalsData/search", produces = MediaType.APPLICATION_JSON_VALUE)
-	public List<HospitalWebResponse> searchHospitalsByName(@RequestParam String hospitalName // 검색할 병원명
+	// 성능 비교용 - ST_Distance_Sphere만 사용 (인덱스 미사용)
+	@GetMapping(value = "/hospitalsData/old", produces = MediaType.APPLICATION_JSON_VALUE)
+	public List<HospitalWebResponse> getHospitalsOld(
+			@RequestParam double userLat,
+			@RequestParam double userLng,
+			@RequestParam double radius
 	) {
-		return hospitalService.searchHospitalsByName(hospitalName);
+		long startTime = System.currentTimeMillis();
+		log.info("[OLD 방식] 병원 검색 API 호출 - 위도: {}, 경도: {}, 반경: {}km", userLat, userLng, radius);
+
+		List<HospitalWebResponse> result = hospitalService.getHospitalsWithDistanceOnly(userLat, userLng, radius);
+
+		long endTime = System.currentTimeMillis();
+		log.info("[OLD 방식] 병원 검색 완료 - 조회된 병원 수: {}개, 응답 시간: {}ms", result.size(), (endTime - startTime));
+
+		return result;
 	}
+
 
 }

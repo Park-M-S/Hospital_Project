@@ -41,4 +41,21 @@ public interface PharmacyApiRepository extends JpaRepository<Pharmacy, Long> {
 	       "AND REPLACE(p.name, ' ', '') " +
 	       "LIKE CONCAT('%', REPLACE(:hospitalName, ' ', ''), '%')")
 	List<Pharmacy> findPharmacyByName(@Param("hospitalName") String hospitalName);
+	
+	 @Query(value = """
+		        SELECT p.*
+		        FROM pharmacy p
+		        WHERE p.longitude BETWEEN :minLon AND :maxLon
+		          AND p.latitude  BETWEEN :minLat AND :maxLat
+		          AND ST_Distance_Sphere(POINT(p.longitude, p.latitude), POINT(:lon, :lat)) <= :radius
+		        """, nativeQuery = true)
+		    List<Pharmacy> findPharmaciesWithinBoundingBox(
+		            @Param("lat") double lat,
+		            @Param("lon") double lon,
+		            @Param("radius") double radius,
+		            @Param("minLat") double minLat,
+		            @Param("maxLat") double maxLat,
+		            @Param("minLon") double minLon,
+		            @Param("maxLon") double maxLon
+		    );
 }

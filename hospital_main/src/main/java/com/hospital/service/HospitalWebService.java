@@ -37,18 +37,35 @@ public class HospitalWebService {
 
 	public List<HospitalWebResponse> getHospitals(double userLat, double userLng, double radius) {
 	    double radiusMeters = radius * 1000;
-	    
+
 	    double latDegree = radiusMeters / 111320.0;
 	    double lonDegree = radiusMeters / (111320.0 * Math.cos(Math.toRadians(userLat)));
 
 	    List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsWithinBoundingBox(
-	        userLat,                    // lat
-	        userLng,                    // lon
-	        radiusMeters,               // radius
 	        userLat - latDegree,        // minLat
 	        userLat + latDegree,        // maxLat
 	        userLng - lonDegree,        // minLon
 	        userLng + lonDegree         // maxLon
+	    );
+
+	    return hospitalEntities.stream()
+	        .filter(hospital -> {
+	            double distance = distanceCalculator.calculateDistance(
+	                userLat, userLng,
+	                hospital.getCoordinateY(), hospital.getCoordinateX()
+	            );
+	            return distance <= radiusMeters;
+	        })
+	        .map(hospitalConverter::convertToDTO)
+	        .collect(Collectors.toList());
+	}
+
+	// 성능 비교용 - ST_Distance_Sphere만 사용 (인덱스 미사용)
+	public List<HospitalWebResponse> getHospitalsWithDistanceOnly(double userLat, double userLng, double radius) {
+	    List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsWithinRadius(
+	        userLat,
+	        userLng,
+	        radius
 	    );
 
 	    return hospitalEntities.stream()

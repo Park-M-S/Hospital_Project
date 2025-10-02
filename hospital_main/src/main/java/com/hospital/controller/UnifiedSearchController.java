@@ -1,5 +1,7 @@
 package com.hospital.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,14 +17,14 @@ import com.hospital.service.UnifiedSearchService;
 public class UnifiedSearchController {
 
 	private final UnifiedSearchService unifiedSearchService;
-	
+
 	@Autowired
 	public UnifiedSearchController(UnifiedSearchService unifiedSearchService) {
 		this.unifiedSearchService = unifiedSearchService;
 	}
 
 	@GetMapping(value = "/unifiedData", produces = MediaType.APPLICATION_JSON_VALUE)
-	public UnifiedSearchResponse searchData(@RequestParam("hospitalName") String hospitalName) {
+	public List<UnifiedSearchResponse> searchData(@RequestParam("hospitalName") String hospitalName) {
 
 		return unifiedSearchService.search(hospitalName);
 

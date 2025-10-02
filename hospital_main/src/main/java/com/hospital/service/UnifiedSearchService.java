@@ -41,30 +41,40 @@ public class UnifiedSearchService {
 	}
 
 	@Transactional(readOnly = true)
-	public UnifiedSearchResponse search(String hospitalName) {
+	public List<UnifiedSearchResponse> search(String hospitalName) {
 
 		String input = hospitalName.replace(" ", "");
 
 		if (input.length() < 3) {
-			return UnifiedSearchResponse.builder().emergencies(Collections.emptyList())
-					.hospitals(Collections.emptyList()).pharmacies(Collections.emptyList()).build();
+			return Collections.emptyList();
 		}
 
 		List<HospitalMain> hospitals = hospitalMainApiRepository.findHospitalsByName(hospitalName);
-		List<HospitalWebResponse> hospitalsResult = hospitals.stream().map(hospitalConverter::convertToDTO)
+		List<UnifiedSearchResponse> hospitalsResult = hospitals.stream()
+				.map(hospitalConverter::convertToDTO)
+				.map(UnifiedSearchResponse::fromHospital)
 				.collect(Collectors.toList());
 
 		List<Pharmacy> pharmacies = pharmacyApiRepository.findPharmacyByName(hospitalName);
-		List<PharmacyWebResponse> pharmaciesResult = pharmacies.stream().map(pharmacyConverter::convertToDTO)
+		List<UnifiedSearchResponse> pharmaciesResult = pharmacies.stream()
+				.map(pharmacyConverter::convertToDTO)
+				.map(UnifiedSearchResponse::fromPharmacy)
 				.collect(Collectors.toList());
 
-		List<EmergencyWebResponse> emergencies = emergencyMockService.getMockDataDirect().stream().filter(e -> {
-			String dutyNameClean = e.getDutyName().replace(" ", "");
-			return dutyNameClean.contains(input);
-		}).collect(Collectors.toList());
+		List<UnifiedSearchResponse> emergencies = emergencyMockService.getMockDataDirect().stream()
+				.filter(e -> {
+					String dutyNameClean = e.getDutyName().replace(" ", "");
+					return dutyNameClean.contains(input);
+				})
+				.map(UnifiedSearchResponse::fromEmergency)
+				.collect(Collectors.toList());
 
-		return UnifiedSearchResponse.builder().hospitals(hospitalsResult).pharmacies(pharmaciesResult)
-				.emergencies(emergencies).build();
+		List<UnifiedSearchResponse> result = new java.util.ArrayList<>();
+		result.addAll(hospitalsResult);
+		result.addAll(pharmaciesResult);
+		result.addAll(emergencies);
+
+		return result;
 
 	}
 }

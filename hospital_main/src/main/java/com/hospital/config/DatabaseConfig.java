@@ -94,7 +94,7 @@ public class DatabaseConfig {
         jpaProperties.setProperty("hibernate.hbm2ddl.auto", "update");
         jpaProperties.setProperty("hibernate.dialect", "org.hibernate.dialect.MariaDBDialect");
         jpaProperties.setProperty("hibernate.show_sql", "false");
-        jpaProperties.setProperty("hibernate.format_sql", "false");
+        jpaProperties.setProperty("hibernate.format_sql", "true");
         
         // 🔹 대량 데이터 처리 최적화 설정
         jpaProperties.setProperty("hibernate.jdbc.batch_size", "100");        // 배치 크기 100개
