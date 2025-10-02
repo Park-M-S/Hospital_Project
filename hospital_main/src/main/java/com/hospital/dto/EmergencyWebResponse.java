@@ -37,11 +37,11 @@ public class EmergencyWebResponse {
 	private String hpid; // 기관 코드
 
 	@JsonProperty("hvidate")
-	private String lastUpdatedDate; // 입력일시
+	private String hvidate; // 입력일시
 
 	
 	@JsonProperty("hvamyn")
-	private Boolean ambulanceAvailability; // 구급차 가용 여부
+	private Boolean hvamyn; // 구급차 가용 여부
 
 	// === 좌표 정보 (DB에서 추가) ===
 	private Double coordinateX; // x 좌표 (위도)
@@ -64,10 +64,10 @@ public class EmergencyWebResponse {
 	        .dutyName(api.getDutyName())
 	        .dutyTel3(api.getDutyTel3())
 	        .hpid(api.getHpid())
-	        .lastUpdatedDate(convertToIsoUtc(api.getLastUpdatedDate()))
+	        .hvidate(convertToIsoUtc(api.getLastUpdatedDate()))
 	        .availableBeds(BedsData)
 	        .availableEquipment(equipmentData)
-	        .ambulanceAvailability(api.getAmbulanceAvailability())
+	        .hvamyn(api.getAmbulanceAvailability())
 	        .coordinateX(api.getCoordinateX())
 	        .coordinateY(api.getCoordinateY())
 	        .emergencyAddress(api.getEmergencyAddress())
