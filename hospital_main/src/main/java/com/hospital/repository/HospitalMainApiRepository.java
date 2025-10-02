@@ -67,19 +67,20 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@Transactional
 	List<HospitalMain> deleteByHospitalCodeIn(List<String> hospitalcodes);
 
-	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	@Query(value = """
-	        SELECT h.*
-	        FROM hospital_main h
-	        WHERE ST_Distance_Sphere(
-	                  point(h.coordinate_x, h.coordinate_y),
-	                  point(:lon, :lat)
-	              ) <= :radius * 1000
-	        AND h.coordinate_x IS NOT NULL 
-	        AND h.coordinate_y IS NOT NULL
-	        """, nativeQuery = true)
-	List<HospitalMain> findHospitalsWithinRadius(
-	        @Param("lat") double lat,
-	        @Param("lon") double lon,
-	        @Param("radius") double radius);
+	 @Query(value = """
+		        SELECT h.*
+		        FROM hospital_main h
+		        WHERE h.coordinate_x BETWEEN :minLon AND :maxLon
+		          AND h.coordinate_y BETWEEN :minLat AND :maxLat
+		          AND ST_Distance_Sphere(POINT(h.coordinate_x, h.coordinate_y), POINT(:lon, :lat)) <= :radius
+		        """, nativeQuery = true)
+		    List<HospitalMain> findHospitalsWithinBoundingBox(
+		    	    @Param("lat") double lat,           // 추가 필요
+		    	    @Param("lon") double lon,           // 추가 필요
+		    	    @Param("radius") double radius,
+		            @Param("minLat") double minLat,
+		            @Param("maxLat") double maxLat,
+		            @Param("minLon") double minLon,
+		            @Param("maxLon") double maxLon
+		    );
 }

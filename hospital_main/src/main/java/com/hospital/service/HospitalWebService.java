@@ -36,24 +36,24 @@ public class HospitalWebService {
 	}
 
 	public List<HospitalWebResponse> getHospitals(double userLat, double userLng, double radius) {
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsWithinRadius(userLat, userLng,
-				radius);
+	    double radiusMeters = radius * 1000;
+	    
+	    double latDegree = radiusMeters / 111320.0;
+	    double lonDegree = radiusMeters / (111320.0 * Math.cos(Math.toRadians(userLat)));
 
-		return hospitalEntities.stream() // stream() → parallelStream()
-				.map(hospitalConverter::convertToDTO).collect(Collectors.toList());
-	}
+	    List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsWithinBoundingBox(
+	        userLat,                    // lat
+	        userLng,                    // lon
+	        radiusMeters,               // radius
+	        userLat - latDegree,        // minLat
+	        userLat + latDegree,        // maxLat
+	        userLng - lonDegree,        // minLon
+	        userLng + lonDegree         // maxLon
+	    );
 
-	// ✅ 병원명 검색
-	@Cacheable(value = "hospitalsByName", key = "#hospitalName")
-	public List<HospitalWebResponse> searchHospitalsByName(String hospitalName) {
-		// 입력값 전처리
-		String cleanInput = hospitalName.replace(" ", "");
-
-		// Repository에서 검색 (hospitalDetail + medicalSubjects EAGER FETCH)
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsByName(cleanInput);
-
-		// 단순히 DTO로 변환해서 리턴
-		return hospitalEntities.stream().map(hospitalConverter::convertToDTO).collect(Collectors.toList());
+	    return hospitalEntities.stream()
+	        .map(hospitalConverter::convertToDTO)
+	        .collect(Collectors.toList());
 	}
 
 }

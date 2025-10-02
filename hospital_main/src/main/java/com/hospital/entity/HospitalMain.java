@@ -65,7 +65,7 @@ public class HospitalMain {
 	@Column(name = "hospital_homepage", length = 255)
 	private String hospitalHomepage;
 
-	@Column(name = "total_doctors")
+	@Column(name = "doctor_num")
 	private String totalDoctors;
 
 	@Column(name = "coordinate_x")
@@ -73,8 +73,8 @@ public class HospitalMain {
 
 	@Column(name = "coordinate_y")
 	private Double coordinateY;
-	
 
+	
 	@OneToOne(mappedBy = "hospital",
 
 			fetch = FetchType.LAZY)
