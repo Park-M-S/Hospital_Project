@@ -24,6 +24,7 @@ public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearch
 
         if ("HOSPITAL".equals(type)) {
             // 병원 필드만 직렬화
+            writeIfNotNull(gen, "medicalType", value.getMedicalType());
             writeIfNotNull(gen, "hospitalName", value.getName());
             writeIfNotNull(gen, "hospitalAddress", value.getAddress());
             writeIfNotNull(gen, "hospitalTel", value.getTel());
@@ -46,6 +47,7 @@ public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearch
 
         } else if ("PHARMACY".equals(type)) {
             // 약국 필드만 직렬화
+            writeIfNotNull(gen, "medicalType", value.getMedicalType());
             writeIfNotNull(gen, "pharmacyName", value.getName());
             writeIfNotNull(gen, "pharmacyAddress", value.getAddress());
             writeIfNotNull(gen, "PharmacyTel", value.getTel());
@@ -54,6 +56,7 @@ public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearch
 
         } else if ("EMERGENCY".equals(type)) {
             // 응급실 필드만 직렬화
+            writeIfNotNull(gen, "medicalType", value.getMedicalType());
             writeIfNotNull(gen, "dutyName", value.getName());
             writeIfNotNull(gen, "emergencyAddress", value.getAddress());
             writeIfNotNull(gen, "dutyTel3", value.getTel());
