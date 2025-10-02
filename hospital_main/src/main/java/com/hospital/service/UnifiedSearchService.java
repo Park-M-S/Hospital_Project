@@ -41,21 +41,21 @@ public class UnifiedSearchService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<UnifiedSearchResponse> search(String hospitalName) {
+	public List<UnifiedSearchResponse> search(String searchName) {
 
-		String input = hospitalName.replace(" ", "");
+		String input = searchName.replace(" ", "");
 
 		if (input.length() < 3) {
 			return Collections.emptyList();
 		}
 
-		List<HospitalMain> hospitals = hospitalMainApiRepository.findHospitalsByName(hospitalName);
+		List<HospitalMain> hospitals = hospitalMainApiRepository.findHospitalsByName(searchName);
 		List<UnifiedSearchResponse> hospitalsResult = hospitals.stream()
 				.map(hospitalConverter::convertToDTO)
 				.map(UnifiedSearchResponse::fromHospital)
 				.collect(Collectors.toList());
 
-		List<Pharmacy> pharmacies = pharmacyApiRepository.findPharmacyByName(hospitalName);
+		List<Pharmacy> pharmacies = pharmacyApiRepository.findPharmacyByName(searchName);
 		List<UnifiedSearchResponse> pharmaciesResult = pharmacies.stream()
 				.map(pharmacyConverter::convertToDTO)
 				.map(UnifiedSearchResponse::fromPharmacy)

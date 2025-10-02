@@ -24,7 +24,7 @@ public class UnifiedSearchController {
 	}
 
 	@GetMapping(value = "/unifiedData", produces = MediaType.APPLICATION_JSON_VALUE)
-	public List<UnifiedSearchResponse> searchData(@RequestParam("hospitalName") String hospitalName) {
+	public List<UnifiedSearchResponse> searchData(@RequestParam("searchName") String hospitalName) {
 
 		return unifiedSearchService.search(hospitalName);
 

@@ -37,10 +37,10 @@ public interface PharmacyApiRepository extends JpaRepository<Pharmacy, Long> {
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	@Query("SELECT DISTINCT p FROM Pharmacy p " +
-	       "WHERE LENGTH(REPLACE(:hospitalName, ' ', '')) >= 3 " +
+	       "WHERE LENGTH(REPLACE(:searchName, ' ', '')) >= 3 " +
 	       "AND REPLACE(p.name, ' ', '') " +
-	       "LIKE CONCAT('%', REPLACE(:hospitalName, ' ', ''), '%')")
-	List<Pharmacy> findPharmacyByName(@Param("hospitalName") String hospitalName);
+	       "LIKE CONCAT('%', REPLACE(:searchName, ' ', ''), '%')")
+	List<Pharmacy> findPharmacyByName(@Param("searchName") String searchName);
 	
 	 @Query(value = """
 		        SELECT p.*

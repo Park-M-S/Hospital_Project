@@ -3,6 +3,8 @@ package com.hospital.dto;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,6 +17,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@JsonSerialize(using = UnifiedSearchResponseSerializer.class)
 public class UnifiedSearchResponse {
 	// 공통 필드
 	private String medicalType; // "HOSPITAL", "PHARMACY", "EMERGENCY"
