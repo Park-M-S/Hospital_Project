@@ -60,8 +60,8 @@ public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearch
             writeIfNotNull(gen, "coordinateX", value.getCoordinateX());
             writeIfNotNull(gen, "coordinateY", value.getCoordinateY());
             writeIfNotNull(gen, "hpid", value.getHpid());
-            writeIfNotNull(gen, "lastUpdatedDate", value.getLastUpdatedDate());
-            writeIfNotNull(gen, "ambulanceAvailability", value.getAmbulanceAvailability());
+            writeIfNotNull(gen, "hvidate", value.getHvidate());
+            writeIfNotNull(gen, "hvamyn", value.getHvamyn());
             writeIfNotNull(gen, "availableEquipment", value.getAvailableEquipment());
             writeIfNotNull(gen, "availableBeds", value.getAvailableBeds());
         }
