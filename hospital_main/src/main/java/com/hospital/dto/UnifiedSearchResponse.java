@@ -45,8 +45,8 @@ public class UnifiedSearchResponse {
 
 	// 응급실 전용 필드
 	private String hpid;
-	private String lastUpdatedDate;
-	private Boolean ambulanceAvailability;
+	private String hvidate;
+	private Boolean hvamyn;
 	private List<String> availableEquipment;
 	private Map<String, Integer> availableBeds;
 
@@ -96,8 +96,8 @@ public class UnifiedSearchResponse {
 				.coordinateX(emergency.getCoordinateX())
 				.coordinateY(emergency.getCoordinateY())
 				.hpid(emergency.getHpid())
-				.lastUpdatedDate(emergency.getLastUpdatedDate())
-				.ambulanceAvailability(emergency.getAmbulanceAvailability())
+				.hvidate(emergency.getHvidate())
+				.hvamyn(emergency.getHvamyn())
 				.availableEquipment(emergency.getAvailableEquipment())
 				.availableBeds(emergency.getAvailableBeds())
 				.build();
