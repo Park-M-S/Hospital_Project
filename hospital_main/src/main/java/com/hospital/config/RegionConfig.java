@@ -27,8 +27,14 @@ public class RegionConfig {
     private String sigunguNamesString;
     
     
-    @Value("${hospital.region.emergency.city.name}")
-    private String emergencyCityName;
+    @Value("#{'${hospital.region.emergency.city.names}'.split(',')}")
+    private List<String> emergencyCityNames;
+    
+    @Value("${hospital.region.nationwide.sido.codes}")
+    private String nationwideSidoCodesString;
+    
+    @Value("${hospital.region.nationwide.sido.names}")
+    private String nationwideSidoNamesString;
     
     // 편의 메서드들
     public List<String> getSigunguCodes() {
@@ -37,6 +43,12 @@ public class RegionConfig {
     
     public List<String> getSigunguNames() {
         return Arrays.asList(sigunguNamesString.split(","));
+    }
+    public List<String> getNationwideSidoCodes() {
+        return Arrays.asList(nationwideSidoCodesString.split(","));
+    }
+    public List<String> getAllNationwideSidoNames() {
+        return Arrays.asList(nationwideSidoNamesString.split(","));
     }
     
     
@@ -49,5 +61,15 @@ public class RegionConfig {
             return names.get(index);
         }
         return sigunguCode; // 매핑되지 않으면 코드 그대로 반환
+    }
+    public String getSidoName(String sidoCode) {
+        List<String> codes = getNationwideSidoCodes();
+        List<String> names = getAllNationwideSidoNames();
+        
+        int index = codes.indexOf(sidoCode);
+        if (index >= 0 && index < names.size()) {
+            return names.get(index);
+        }
+        return sidoCode; // 매핑 없으면 그대로 반환
     }
 }

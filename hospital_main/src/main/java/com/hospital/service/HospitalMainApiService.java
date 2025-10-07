@@ -31,19 +31,21 @@ public class HospitalMainApiService {
 
 	}
 
-	public int fetchParseAndSaveHospitals() {
+	public int updateHospitalMain() {
 		log.info("병원 데이터 수집 시작 - 대상 지역: {}", regionConfig.getCityName());
+		
+		hospitalMainApiRepository.deleteAllInBatch();
 
 		// regionConfig에서 시군구 코드 가져오기
-		List<String> sigunguCodes = regionConfig.getSigunguCodes();
+		List<String> sidoCodes = regionConfig.getNationwideSidoCodes();
 		hospitalMainAsyncRunner.resetCounter();
-		hospitalMainAsyncRunner.setTotalCount(sigunguCodes.size());
+		hospitalMainAsyncRunner.setTotalCount(sidoCodes.size());
 
-		for (String sgguCd : sigunguCodes) {
-			hospitalMainAsyncRunner.runAsync(sgguCd);
+		for (String sidoCd : sidoCodes) {
+			hospitalMainAsyncRunner.runAsync(sidoCd);
 		}
-		log.info("{}개 지역 병렬 처리 시작", sigunguCodes.size());
-		return sigunguCodes.size(); // 총 지역 수만 반환
+		log.info("{}개 지역 병렬 처리 시작", sidoCodes.size());
+		return sidoCodes.size(); // 총 지역 수만 반환
 
 	}
 

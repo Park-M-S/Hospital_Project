@@ -1,6 +1,8 @@
 package com.hospital.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,7 +10,10 @@ import lombok.Setter;
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MedicalSubjectApiItem {
-    private String dgsbjtCd;     // 진료과목 코드
-    private String dgsbjtCdNm;   // 진료과목 이름
-    private String ykiho;        // 병원 코드
+	
+	@JsonProperty("ykiho") // 병원 고유 코드
+    private String hospitalCode;
+	
+	
+	
 }

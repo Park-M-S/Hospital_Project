@@ -2,19 +2,22 @@ package com.hospital.entity;
 
 import java.util.Set;
 
-import jakarta.persistence.CascadeType;
+import org.hibernate.annotations.DynamicUpdate;
+import org.locationtech.jts.geom.Point;
+
 // JPA 관련 임포트 추가
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+
 import jakarta.persistence.Id;
+
 import jakarta.persistence.NamedAttributeNode;
 import jakarta.persistence.NamedEntityGraph;
 import jakarta.persistence.NamedEntityGraphs;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -29,6 +32,7 @@ import lombok.ToString;
 @Builder
 @ToString(exclude = { "hospitalDetail", "medicalSubjects", "proDocs" })
 @Entity
+@DynamicUpdate
 @Table(name = "hospital_main")
 @NamedEntityGraphs({
 		@NamedEntityGraph(name = "hospital-with-detail", attributeNodes = @NamedAttributeNode("hospitalDetail")),
@@ -41,16 +45,16 @@ public class HospitalMain {
 
 	@Id
 	@Column(name = "hospital_code", nullable = false, length = 255) // 컬럼 이름과 속성 지정
-	private String hospitalCode; // PK
+	private String hospitalCode;
 
 	@Column(name = "hospital_name", nullable = false, length = 255)
 	private String hospitalName;
 
 	@Column(name = "province_name", length = 100)
-	private String provinceName;
+	private String provinceName;//필요없음
 
 	@Column(name = "district_name", length = 100)
-	private String districtName;
+	private String districtName;//필요없음
 
 	@Column(name = "hospital_address", length = 500)
 	private String hospitalAddress;
@@ -59,16 +63,19 @@ public class HospitalMain {
 	private String hospitalTel;
 
 	@Column(name = "hospital_homepage", length = 255)
-	private String hospitalHomepage;
+	private String hospitalHomepage; //필요없음
 
 	@Column(name = "doctor_num")
-	private Integer doctorNum;
+	private String totalDoctors;
 
 	@Column(name = "coordinate_x")
 	private Double coordinateX;
 
 	@Column(name = "coordinate_y")
 	private Double coordinateY;
+
+	@Column(name = "location", columnDefinition = "POINT")
+	private Point location;
 
 	@OneToOne(mappedBy = "hospital",
 

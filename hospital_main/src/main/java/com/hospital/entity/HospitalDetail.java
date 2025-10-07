@@ -1,5 +1,7 @@
 package com.hospital.entity;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +17,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString
+@DynamicUpdate
+@ToString(exclude = "hospital")
 public class HospitalDetail {
 
     @Id
@@ -23,10 +26,10 @@ public class HospitalDetail {
     private String hospitalCode;
 
     @Column(name = "em_day_yn", length = 1)
-    private String emyDayYn;
+    private String emyDayYn;//필요없음
 
     @Column(name = "em_night_yn", length = 1)
-    private String emyNightYn;
+    private String emyNightYn;//필요없음
 
     @Column(name = "parking_capacity")
     private Integer parkQty;
@@ -38,15 +41,15 @@ public class HospitalDetail {
     private String lunchWeek;
 
     @Column(name = "weekday_reception", length = 50)
-    private String rcvWeek;
+    private String rcvWeek;//필요없음
 
     @Column(name = "saturday_reception", length = 50)
-    private String rcvSat;
+    private String rcvSat;//필요없음
 
-    @Column(name = "no_trmt_holi")
+    @Column(name = "noTrmtHoli")
     private String noTrmtHoli;
 
-    @Column(name = "no_trmt_sun")
+    @Column(name = "noTrmtSun")
     private String noTrmtSun;
 
     // 요일별 진료 시작/종료 시간
@@ -115,7 +118,10 @@ public class HospitalDetail {
     
     //유효한 시간 값인지 체크
     public static boolean isValidTime(String timeStr) {
-        if (timeStr == null || 
+        if (timeStr == null) {
+        	return false;
+        }
+        if(
             timeStr.trim().isEmpty() || 
             "(NULL)".equals(timeStr) || 
             !timeStr.matches("\\d{4}")) {

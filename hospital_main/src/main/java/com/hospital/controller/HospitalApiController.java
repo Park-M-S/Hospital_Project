@@ -71,7 +71,7 @@ public class HospitalApiController {
 
 	//병원 기본 정보를 DB에 저장 - JSON 응답으로 변경
 	@PostMapping(value = "/main/save", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Object>> saveHospitalsToDb(
+	public ResponseEntity<Map<String, Object>> updateHospitalMain(
 			@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
 		
 		// API 키 검증
@@ -81,7 +81,7 @@ public class HospitalApiController {
 
 		log.info("병원 기본 정보 저장 시작... (인증된 요청)");
 		
-		int savedCount = hospitalMainService.fetchParseAndSaveHospitals();
+		int savedCount = hospitalMainService.updateHospitalMain();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);
@@ -120,7 +120,7 @@ public class HospitalApiController {
 
 		log.info("병원 상세정보 저장 시작... (인증된 요청)");
 		
-		int total = hospitalDetailApiService.updateAllHospitalDetails();
+		int total = hospitalDetailApiService.updateHospitalDetails();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);
@@ -135,7 +135,7 @@ public class HospitalApiController {
 
 	//병원 상세 정보 수집 진행 상황 조회 - JSON 응답으로 변경
 	@GetMapping(value = "/details/status", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Object>> getUpdateStatus() {
+	public ResponseEntity<Map<String, Object>> getDetailsStatus() {
 		int done = hospitalDetailApiService.getCompletedCount();
 		int fail = hospitalDetailApiService.getFailedCount();
 		
@@ -151,7 +151,7 @@ public class HospitalApiController {
 
 	//진료과목 저장 - JSON 응답으로 변경
 	@PostMapping(value = "/subject/save", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Object>> saveSubjects(
+	public ResponseEntity<Map<String, Object>> updateSubjects(
 			@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
 		
 		// API 키 검증
@@ -161,7 +161,7 @@ public class HospitalApiController {
 
 		log.info("진료과목 저장 시작... (인증된 요청)");
 		
-		int total = medicalSubjectApiService.fetchParseAndSaveMedicalSubjects();
+		int total = medicalSubjectApiService.updateSubjects();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);
@@ -175,7 +175,7 @@ public class HospitalApiController {
 	}
 
 	@GetMapping(value = "/subject/status", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Object>> getMedicalStatus() {
+	public ResponseEntity<Map<String, Object>> getSubjectStatus() {
 		int done = medicalSubjectApiService.getCompletedCount();
 		int fail = medicalSubjectApiService.getFailedCount();
 		
@@ -191,7 +191,7 @@ public class HospitalApiController {
 
 	//전문의 정보 저장 - JSON 응답으로 변경
 	@PostMapping(value = "/proDoc/save", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Object>> syncProDocData(
+	public ResponseEntity<Map<String, Object>> updateProDocs(
 			@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
 		
 		// API 키 검증
@@ -201,7 +201,7 @@ public class HospitalApiController {
 
 		log.info("전문의 정보 저장 시작... (인증된 요청)");
 		
-		int total = proDocApiService.fetchParseAndSaveProDocs();
+		int total = proDocApiService.updateProDocs();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);
@@ -230,7 +230,7 @@ public class HospitalApiController {
 
 	//약국 데이터 저장 - JSON 응답으로 변경
 	@PostMapping(value = "/pharmacy/save", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<Map<String, Object>> savePharmacyData(
+	public ResponseEntity<Map<String, Object>> updatePharmacy(
 			@RequestHeader(value = "X-API-Key", required = false) String apiKey) {
 		
 		// API 키 검증
@@ -240,13 +240,13 @@ public class HospitalApiController {
 
 		log.info("약국 데이터 저장 시작... (인증된 요청)");
 		
-		int totalSaved = pharmacyApiService.fetchAndSaveSeongnamPharmacies();
+		int totalSaved = pharmacyApiService.savePharmacy();
 		
 		Map<String, Object> response = new HashMap<>();
 		response.put("success", true);
 		response.put("message", "약국 데이터 저장 완료");
 		response.put("savedCount", totalSaved);
-		response.put("area", "성남시 전체");
+		response.put("area", "전국");
 		response.put("timestamp", LocalDateTime.now());
 		
 		log.info("약국 데이터 저장 완료! 총 {}건 저장됨", totalSaved);

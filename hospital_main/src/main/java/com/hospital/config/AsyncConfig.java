@@ -65,4 +65,15 @@ public class AsyncConfig {
         System.out.println("Task Scheduler 설정 완료 (풀 크기: 3)");
         return scheduler;
     }
+    
+    @Bean(name = "hospitalTaskExecutor")
+    public Executor hospitalTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);   // 기본 스레드 수
+        executor.setMaxPoolSize(50);    // 최대 스레드 수
+        executor.setQueueCapacity(100); // 대기 큐 크기
+        executor.setThreadNamePrefix("HospitalAsync-");
+        executor.initialize();
+        return executor;
+    }
 }

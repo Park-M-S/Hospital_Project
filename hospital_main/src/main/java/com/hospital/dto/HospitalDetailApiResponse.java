@@ -35,7 +35,7 @@ public class HospitalDetailApiResponse {
     @Data
     public static class Body {
         @JsonProperty("items")
-        private JsonNode items;
+        private Items items;
 
         @JsonProperty("numOfRows")
         private int numOfRows;

@@ -2,9 +2,11 @@ package com.hospital.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.cfg.CoercionAction;
 import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.type.LogicalType;
@@ -24,6 +26,7 @@ public class JacksonConfig {
      * JSON 처리용 ObjectMapper
      */
     @Bean
+    @Primary
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         
@@ -59,13 +62,15 @@ public class JacksonConfig {
         // LocalDateTime 지원을 위한 JavaTimeModule 등록
         mapper.registerModule(new JavaTimeModule());
         
-        // 알려지지 않은 속성 무시
+     // 2. 날짜를 ISO-8601 문자열로 직렬화
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        
+        // 3. 역직렬화 설정
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        
-        // 빈 문자열을 null로 처리
         mapper.configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true);
+        mapper.configure(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_AS_NULL, true);
         
-        // 빈 문자열 강제 변환 설정
+        // 4. 빈 문자열 강제 변환 설정
         mapper.coercionConfigFor(LogicalType.POJO)
               .setCoercion(CoercionInputShape.EmptyString, CoercionAction.AsNull);
     }

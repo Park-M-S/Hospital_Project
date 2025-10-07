@@ -1,5 +1,9 @@
 package com.hospital.entity;
 
+import java.util.List;
+
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,6 +18,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @Entity
 @Getter
@@ -21,6 +26,8 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@DynamicUpdate
+@ToString(exclude = "hospital")
 @Table(name = "medical_subject")
 public class MedicalSubject {
 
@@ -33,12 +40,15 @@ public class MedicalSubject {
     @Column(name = "hospital_code", nullable = false)
     private String hospitalCode;
 
-    // 진료과목명 (ex. 내과, 치과, 한의과 등)
-    @Column(name = "subject_name")
-    private String subjectName;
+   
+    
+    @Column(name = "subjects", length = 1000)
+    private String subjects;
+    
+    
 
    
-    @ManyToOne(fetch = FetchType.LAZY)
+   @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
         name = "hospital_code",                 // 이 테이블의 외래키 컬럼
         referencedColumnName = "hospital_code", // 병원 테이블의 PK 컬럼

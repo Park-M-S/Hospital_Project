@@ -13,11 +13,12 @@ import lombok.Setter;
 @Builder
 public class PharmacyWebResponse {
 	
+	private String pharmacyCode;
 	private String pharmacyName;
 	private String pharmacyAddress;
 	private double coordinateX;
 	private double coordinateY;
-	private String PharmacyTel;
+	private String pharmacyTel;
 	
 
 }

@@ -1,5 +1,14 @@
 package com.hospital.dto;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -7,8 +16,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -26,47 +37,85 @@ public class EmergencyWebResponse {
 	private String hpid; // 기관 코드
 
 	@JsonProperty("hvidate")
-	private String lastUpdatedDate; // 입력일시
+	private String hvidate; // 입력일시
 
-	// === 핵심 병상 현황 ===
-	@JsonProperty("hvec")
-	private String emergencyBeds; // 응급실 일반 병상 (음수=포화)
-
-	@JsonProperty("hvoc")
-	private String operatingBeds; // 수술실 병상
-
-	@JsonProperty("hvgc")
-	private String generalWardBeds; // 일반 입원실 병상
-
-	// === 장비/서비스 가용성 ===
+	
 	@JsonProperty("hvamyn")
-	private String ambulanceAvailability; // 구급차 가용 여부
-
-	@JsonProperty("hvventiayn")
-	private String ventilatorAvailability; // 인공호흡기 가용
-
-	@JsonProperty("hvctayn")
-	private String ctAvailability; // CT 가용
-
-	@JsonProperty("hvmriayn")
-	private String mriAvailability; // MRI 가용
-
-	@JsonProperty("hvcrrtayn")
-	private String crrtAvailability; // CRRT(투석) 가용
+	private Boolean hvamyn; // 구급차 가용 여부
 
 	// === 좌표 정보 (DB에서 추가) ===
 	private Double coordinateX; // x 좌표 (위도)
 	private Double coordinateY; // y 좌표 (경도)
 
 	private String emergencyAddress;
-
-	// 좌표 설정 메서드
-	public void setCoordinates(Double coordinateX, Double coordinateY) {
-		this.coordinateX = coordinateX;
-		this.coordinateY = coordinateY;
+	
+	// === 장비 가용 정보 리스트 ===
+	public List<String> availableEquipment;
+	
+	
+	// === 핵심 병상 현황 ===
+	public Map<String, Integer> availableBeds;
+	
+	public static EmergencyWebResponse from(EmergencyApiResponse api) {
+	   List<String> equipmentData = availableEquipment(api);
+	   Map<String, Integer> BedsData = availableBeds(api);
+	    
+	    return EmergencyWebResponse.builder()
+	        .dutyName(api.getDutyName())
+	        .dutyTel3(api.getDutyTel3())
+	        .hpid(api.getHpid())
+	        .hvidate(convertToIsoUtc(api.getLastUpdatedDate()))
+	        .availableBeds(BedsData)
+	        .availableEquipment(equipmentData)
+	        .hvamyn(api.getAmbulanceAvailability())
+	        .coordinateX(api.getCoordinateX())
+	        .coordinateY(api.getCoordinateY())
+	        .emergencyAddress(api.getEmergencyAddress())
+	        .build();
+	}
+	
+	private static String convertToIsoUtc(String dateString) {
+		if (dateString == null || dateString.length() != 14) {
+			return null;
+		}
+		
+		try {
+			// "yyyyMMddHHmmss" 파싱
+			DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+			LocalDateTime localDateTime = LocalDateTime.parse(dateString, inputFormatter);
+			
+			// 한국 시간(KST)으로 간주하고 UTC로 변환
+			ZonedDateTime kstTime = localDateTime.atZone(ZoneId.of("Asia/Seoul"));
+			ZonedDateTime utcTime = kstTime.withZoneSameInstant(ZoneId.of("UTC"));
+			
+			// ISO 8601 형식으로 반환
+			return utcTime.format(DateTimeFormatter.ISO_INSTANT);
+		} catch (Exception e) {
+			return dateString; // 변환 실패 시 원본 반환
+		}
 	}
 
-	public void setEmergencyAddress(String emergencyAddress) {
-		this.emergencyAddress = emergencyAddress;
+	// 장비 추출 로직 분리
+	private static List<String> availableEquipment(EmergencyApiResponse api) {
+	    Map<String, Boolean> equipmentMap = new LinkedHashMap<>();
+	    equipmentMap.put("인공호흡기", api.getVentilatorAvailability());
+	    equipmentMap.put("CT", api.getCtAvailability());
+	    equipmentMap.put("MRI", api.getMriAvailability());
+	    equipmentMap.put("CRRT", api.getCrrtAvailability());
+	    
+	    return equipmentMap.entrySet().stream()
+	        .filter(entry -> Boolean.TRUE.equals(entry.getValue()))
+	        .map(Map.Entry::getKey)
+	        .collect(Collectors.toList());
 	}
+	
+	private static Map<String, Integer> availableBeds(EmergencyApiResponse api){
+		Map <String, Integer> bedsMap = new LinkedHashMap<>();
+		bedsMap.put("응급실 일반 병상", api.getEmergencyBeds());
+		bedsMap.put("수술실 병상", api.getOperatingBeds());
+		bedsMap.put("일반 입원실 병상", api.getGeneralWardBeds());
+		
+		return bedsMap;
+	}
+	
 }

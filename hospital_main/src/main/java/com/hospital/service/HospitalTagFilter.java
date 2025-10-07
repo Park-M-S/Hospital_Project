@@ -26,12 +26,12 @@ public class HospitalTagFilter {
                     return false;
                 }
                 break;
-            case "전문의":
+            /*case "전문의":
                 if (Objects.isNull(hospital.getProDocs()) || hospital.getProDocs().isEmpty()
                         || hospital.getProDocs().stream().noneMatch(ProDoc::hasSpecialist)) {
                     return false;
                 }
-                break;
+                break;*/
             case "현재운영중":
                 if (Objects.isNull(hospital.getHospitalDetail()) || !isCurrentlyOpen(hospital.getHospitalDetail())) {
                     return false;
@@ -55,11 +55,13 @@ public class HospitalTagFilter {
                 }
                 break;
             default:
-                if (Objects.isNull(hospital.getMedicalSubjects()) || hospital.getMedicalSubjects().isEmpty()
-                        || hospital.getMedicalSubjects().stream().noneMatch(ms -> ms.getSubjectName().equals(tag))) {
-                    return false;
-                }
-                break;
+            	if (Objects.isNull(hospital.getMedicalSubjects()) || 
+                        hospital.getMedicalSubjects().isEmpty() ||
+                        hospital.getMedicalSubjects().stream()
+                            .noneMatch(ms -> ms.getSubjects().equals(tag))) {
+                        return false;
+                    }
+                    break;
             }
         }
         return true;

@@ -1,98 +1,142 @@
-// 📁 ProDocAsyncRunner.java
 package com.hospital.async;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 import com.google.common.util.concurrent.RateLimiter;
 import com.hospital.caller.ProDocApiCaller;
 import com.hospital.dto.ProDocApiResponse;
 import com.hospital.entity.ProDoc;
 import com.hospital.parser.ProDocApiParser;
+import com.hospital.repository.CommonBatchRepository;
 import com.hospital.repository.ProDocApiRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
-@Service // Spring 서비스 컴포넌트로 등록 (비즈니스 로직 실행 담당)
+@Service
 public class ProDocAsyncRunner {
-	private final RateLimiter rateLimiter = RateLimiter.create(8.0); // 초당 5건 제한
+	private final RateLimiter rateLimiter = RateLimiter.create(10.0);
+	private final Executor executor;
+	private final ProDocApiCaller apiCaller;
+	private final ProDocApiParser parser;
+	private final ProDocApiRepository repository;
+	private final AtomicInteger completedCount = new AtomicInteger(0);
+	private final AtomicInteger failedCount = new AtomicInteger(0);
+	private final AtomicInteger insertedCount = new AtomicInteger(0);
+	private static final int CHUNK_SIZE = 100;
+	private static final int BATCH_SIZE = 100;
+	private final CommonBatchRepository commonBatchRepository;
 
-    // 의존성 주입: API 호출, 파싱, 저장을 담당하는 객체들
-    private final ProDocApiCaller apiCaller;
-    private final ProDocApiParser parser;
-    private final ProDocApiRepository repository;
+	@Autowired
+	public ProDocAsyncRunner(ProDocApiCaller apiCaller, ProDocApiParser parser, ProDocApiRepository repository,
+			@Qualifier("apiExecutor") Executor executor, CommonBatchRepository commonBatchRepository) {
+		this.apiCaller = apiCaller;
+		this.parser = parser;
+		this.repository = repository;
+		this.executor = executor;
+		this.commonBatchRepository = commonBatchRepository;
+	}
 
-    // 처리 상태 추적용 카운터
-    private final AtomicInteger completedCount = new AtomicInteger(0); // 성공
-    private final AtomicInteger failedCount = new AtomicInteger(0);    // 실패
-    private int totalCount = 0; // 전체 병원 수
+	@Async("apiExecutor")
+	public void runBatchAsync(List<String> hospitalCodes) {
+		
+		log.info("전문의 정보 배치(전체 삭제 후 삽입) 시작: 총 {}건", hospitalCodes.size());
+		try {
+			// 1. 청크 분할
+			List<List<String>> chunks = partitionList(hospitalCodes, CHUNK_SIZE);
 
-    @Autowired
-    public ProDocAsyncRunner(ProDocApiCaller apiCaller,
-                              ProDocApiParser parser,
-                              ProDocApiRepository repository) {
-        this.apiCaller = apiCaller;
-        this.parser = parser;
-        this.repository = repository;
-    }
+			// 2. 청크별 비동기 처리
+			List<CompletableFuture<Void>> futures = new ArrayList<>();
+			for (List<String> chunk : chunks) {
+				futures.add(CompletableFuture.runAsync(() -> processAndSaveChunk(chunk), executor));
+			}
+			CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+			log.info("전문의 정보 배치 완료: 완료 {}, 실패 {}, 신규 {}", completedCount.get(), failedCount.get(), insertedCount.get());
+		} catch (Exception e) {
+			failedCount.addAndGet(hospitalCodes.size());
+			log.error("전체 배치 실패", e);
+		}
+	}
 
-    //  진행 상태 초기화
-    public void resetCounter() {
-        completedCount.set(0);
-        failedCount.set(0);
-    }
+	private void processAndSaveChunk(List<String> chunk) {
 
-    //  총 작업 수 설정 및 카운터 초기화
-    public void setTotalCount(int totalCount) {
-        this.totalCount = totalCount;
-        completedCount.set(0);
-        failedCount.set(0);
-    }
+		String threadName = Thread.currentThread().getName();
 
-    //  현재까지 완료된 작업 수
-    public int getCompletedCount() {
-        return completedCount.get();
-    }
+		log.debug("[{}] 청크 처리 시작: {}건", threadName, chunk.size());
 
-    //  현재까지 실패한 작업 수
-    public int getFailedCount() {
-        return failedCount.get();
-    }
+		List<ProDoc> batch = new ArrayList<>();
 
-    //  병원코드 단위 비동기 처리
-    @Async("apiExecutor") // 동일한 ThreadPoolTaskExecutor 사용
-    public void runAsync(String hospitalCode) {
-    	rateLimiter.acquire(); //  이 한 줄로 초당 호출 제한 적용됨
-    	
-        try {
-            // 1. 병원코드를 쿼리 파라미터로 설정
-            String queryParams = String.format("ykiho=%s", hospitalCode);
-            
-            log.info("API 파라미터: {}", hospitalCode); // ← 여기 추가
+		for (String hospitalCode : chunk) {
+			try {
+				rateLimiter.acquire();
+				String queryParams = "ykiho=" + hospitalCode;
+				ProDocApiResponse response = apiCaller.callApi(queryParams);
+				List<ProDoc> parsedList = parser.parse(response, hospitalCode);
+				batch.addAll(parsedList);
+				completedCount.incrementAndGet();
+				// 배치 단위로 저장
+				if (!batch.isEmpty() && batch.size() >= BATCH_SIZE) {
+				    int currentBatchSize = batch.size(); // 저장 전 사이즈 저장
 
-            // 2. 공공 API 호출 → JSON 파싱 → DTO 매핑
-            ProDocApiResponse response = apiCaller.callApi(queryParams);
+				    commonBatchRepository.saveBatchWithFallback(
+				        batch,
+				        "INSERT INTO pro_doc (hospital_code, subject_name, pro_doc_count) VALUES (?, ?, ?)", // JDBC SQL
+				        doc -> new Object[]{doc.getHospitalCode(), doc.getSubjectName(), doc.getProDocCount()}
+				    );
 
-            // 3. DTO → Entity 리스트 변환
-            List<ProDoc> parsed = parser.parse(response, hospitalCode);
+				    insertedCount.addAndGet(currentBatchSize); // 저장된 개수 업데이트
+				    batch.clear(); // batch 초기화
+				}
+			} catch (Exception e) {
+				failedCount.incrementAndGet();
+				log.error("[{}] API 호출 실패: {}", threadName, hospitalCode, e);
+			}
+		}
+		// 남은 배치 저장
+		if (!batch.isEmpty()) {
+		    int lastBatchSize = batch.size();
+		    commonBatchRepository.saveBatchWithFallback(
+		        batch,
+		        "INSERT INTO pro_doc (hospital_code, subject_name, pro_doc_count) VALUES (?, ?, ?)", // JDBC SQL
+		        doc -> new Object[]{doc.getHospitalCode(), doc.getSubjectName(), doc.getProDocCount()}
+		    );
+		    insertedCount.addAndGet(lastBatchSize);
+		}
+		log.debug("[{}] 청크 처리 완료: {}건 저장", threadName, batch.size());
+	}
 
-            // 4. 변환된 데이터가 있을 경우에만 저장
-            if (!parsed.isEmpty()) {
-            	
-                repository.saveAll(parsed);
-            }
+	private List<List<String>> partitionList(List<String> list, int size) {
+		List<List<String>> chunks = new ArrayList<>();
+		for (int i = 0; i < list.size(); i += size) {
+			chunks.add(list.subList(i, Math.min(i + size, list.size())));
+		}
+		return chunks;
+	}
 
-            // 5. 완료 카운터 증가 + 로그 출력
-            int done = completedCount.incrementAndGet();
-            log.info("처리됨: {} / {} ({}%)", done, totalCount, (done * 100) / totalCount);
+	// 상태 관리
+	public void resetCounter() {
+		completedCount.set(0);
+		failedCount.set(0);
+		insertedCount.set(0);
+	}
 
-        } catch (Exception e) {
-            // 예외 발생 시 실패 카운터 증가 + 로그 출력
-            failedCount.incrementAndGet();
-            log.error("병원코드 {} 처리 중 오류: {}", hospitalCode, e.getMessage());
-        }
-    }
+	public int getCompletedCount() {
+		return completedCount.get();
+	}
+
+	public int getFailedCount() {
+		return failedCount.get();
+	}
+
+	public int getInsertedCount() {
+		return insertedCount.get();
+	}
 }

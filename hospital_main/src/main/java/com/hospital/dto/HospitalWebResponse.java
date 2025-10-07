@@ -20,18 +20,19 @@ import lombok.Setter;
 public class HospitalWebResponse {
     // 기본 정보
     
+	private String hospitalCode;
     private String hospitalName;
     private String hospitalAddress;
     private String provinceName;
     private String districtName;
     private String hospitalTel;
     private String hospitalHomepage;
-    private Integer doctorNum;
+    private Integer totalDoctors;
     
     // 좌표 정보
     private Double coordinateX;
     private Double coordinateY;
-    
+   
     // 운영 정보
     private Boolean emergencyDayAvailable;    // Y/N
     private Boolean emergencyNightAvailable;  // Y/N
@@ -42,9 +43,18 @@ public class HospitalWebResponse {
     private String todayOpen;
     private String todayClose;
     
-    private List<String> medicalSubject;
+    private String noTrmtHoli;
+    private String noTrmtSun;
+    
+    private Map<String, Map<String, String>> weeklySchedule;
+    
+    private List<String> medicalSubjects;
     
   
     private Map<String, Integer> professionalDoctors; 
+    
+    
+    
 }
+
 

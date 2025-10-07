@@ -36,13 +36,14 @@ public class HospitalMainApiItem {
     private String hospUrl; // 홈페이지 (API 필드명)
 
     @JsonProperty("drTotCnt")
-    private int drTotCnt; // 의사총수 (API 필드명)
+    private String drTotCnt; // 의사총수 (API 필드명)
 
     @JsonProperty("XPos")
     private double xPos; // X좌표 (API 필드명)
 
     @JsonProperty("YPos")
     private double yPos; // Y좌표 (API 필드명)
-
+    
+    
     
 }

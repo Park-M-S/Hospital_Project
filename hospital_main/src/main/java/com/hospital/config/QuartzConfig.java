@@ -9,19 +9,26 @@ import org.springframework.scheduling.quartz.SpringBeanJobFactory;
 @Configuration
 public class QuartzConfig {
 
-    @Bean
+    @Bean(destroyMethod = "destroy")
     public SchedulerFactoryBean schedulerFactoryBean() {
         SchedulerFactoryBean factory = new SchedulerFactoryBean();
         factory.setJobFactory(new SpringBeanJobFactory());
         factory.setOverwriteExistingJobs(true);
-        factory.setStartupDelay(10); // 10초 후 시작
+        factory.setAutoStartup(false);
+        factory.setWaitForJobsToCompleteOnShutdown(true);
+
+        // Quartz 쓰레드 풀 설정 - 최소화
+        java.util.Properties quartzProperties = new java.util.Properties();
+        quartzProperties.setProperty("org.quartz.threadPool.threadCount", "1"); // 쓰레드 1개로 최소화
+        quartzProperties.setProperty("org.quartz.scheduler.skipUpdateCheck", "true");
+        factory.setQuartzProperties(quartzProperties);
+
         return factory;
     }
 
     @Bean
     public Scheduler scheduler(SchedulerFactoryBean factory) throws SchedulerException {
         Scheduler scheduler = factory.getScheduler();
-        scheduler.start();
         return scheduler;
     }
 }

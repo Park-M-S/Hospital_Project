@@ -1,57 +1,123 @@
 package com.hospital.async;
 
-import com.google.common.util.concurrent.RateLimiter;
-import com.hospital.caller.MedicalSubjectApiCaller;
-import com.hospital.dto.MedicalSubjectApiResponse;
-import com.hospital.entity.MedicalSubject;
-import com.hospital.parser.MedicalSubjectApiParser;
-import com.hospital.repository.MedicalSubjectApiRepository;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.util.concurrent.RateLimiter;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.hospital.caller.MedicalSubjectApiCaller;
+
+import com.hospital.parser.MedicalSubjectApiParser;
+
+import com.hospital.repository.MedicalSubjectApiRepository;
+
+import com.hospital.dto.MedicalSubjectApiResponse;
+
+import com.hospital.entity.MedicalSubject;
+import com.hospital.config.SubjectMappingConfig;
+
+@Service
 @Slf4j
-@Service // 서비스 컴포넌트로 등록 (비즈니스 로직)
 public class MedicalSubjectAsyncRunner {
-	private final RateLimiter rateLimiter = RateLimiter.create(8.0);
 
-
-    // 의존성 주입: API 호출, 파싱, DB 저장을 담당하는 클래스들
-    private final MedicalSubjectApiCaller apiCaller;
-    private final MedicalSubjectApiParser parser;
-    private final MedicalSubjectApiRepository repository;
-
-    // 병원 처리 결과를 추적하기 위한 카운터 (쓰레드 안전)
+    private final RateLimiter rateLimiter = RateLimiter.create(5.0);
     private final AtomicInteger completedCount = new AtomicInteger(0);
     private final AtomicInteger failedCount = new AtomicInteger(0);
-    private int totalCount = 0; // 전체 병원 수
+    private final AtomicInteger insertedCount = new AtomicInteger(0);
+    private int totalCount = 0;
+
+    private final MedicalSubjectApiCaller apiCaller;
+    private final MedicalSubjectApiParser parser;
+    private final MedicalSubjectApiRepository medicalSubjectApiRepository;
+    private final SubjectMappingConfig subjectMappingConfig;
+
+    private static final int BATCH_SIZE = 100;
 
     @Autowired
-    public MedicalSubjectAsyncRunner(
-            MedicalSubjectApiCaller apiCaller,
-            MedicalSubjectApiParser parser,
-            MedicalSubjectApiRepository repository) {
+    public MedicalSubjectAsyncRunner(MedicalSubjectApiCaller apiCaller,
+    		MedicalSubjectApiParser parser,
+    		MedicalSubjectApiRepository medicalSubjectApiRepository,
+                                   SubjectMappingConfig subjectMappingConfig) {
         this.apiCaller = apiCaller;
         this.parser = parser;
-        this.repository = repository;
+        this.medicalSubjectApiRepository = medicalSubjectApiRepository;
+        this.subjectMappingConfig = subjectMappingConfig;
     }
 
-    // 병원 총 수를 설정하고 카운터 초기화
-    public void setTotalCount(int count) {
-        this.totalCount = count;
-        resetCounter();
+    @Async("apiExecutor")
+    public void runAsync(String subjectCode) {
+        rateLimiter.acquire();
+        try {
+            String subjectName = subjectMappingConfig.getDepartmentName(subjectCode);
+            log.info("과목코드 {} 처리 시작", subjectName);
+
+            if (subjectCode == null || subjectCode.trim().isEmpty()) {
+                throw new IllegalArgumentException("과목코드가 비어있습니다");
+            }
+
+           
+
+            int pageNo = 1;
+            int numOfRows = 1000;
+            boolean hasMorePages = true;
+
+            List<MedicalSubject> batchList = new ArrayList<>();
+            int insertedTotal = 0;
+
+            // ✅ 2. API 전체 조회 & 저장
+            while (hasMorePages) {
+                String queryParams = String.format("dgsbjtCd=%s&pageNo=%s&numOfRows=%s",
+                        subjectCode, pageNo, numOfRows);
+                MedicalSubjectApiResponse response = apiCaller.callApi(queryParams);
+
+                List<MedicalSubject> subjects = parser.parseSubjects(response, subjectName);
+
+                if (subjects.isEmpty()) {
+                    log.info("과목 {} 페이지 {}: 더 이상 데이터 없음", subjectName, pageNo);
+                    break;
+                }
+
+                batchList.addAll(subjects);
+
+                if (batchList.size() >= BATCH_SIZE) {
+                    medicalSubjectApiRepository.saveAll(batchList);
+                    insertedTotal += batchList.size();
+                    batchList.clear();
+                    log.info("과목 {} 배치 저장: 현재까지 {}건 저장", subjectName, insertedTotal);
+                }
+
+                hasMorePages = subjects.size() >= numOfRows;
+                pageNo++;
+                Thread.sleep(1000); // API 호출 간 대기
+            }
+
+            // ✅ 3. 마지막 남은 데이터 저장
+            if (!batchList.isEmpty()) {
+            	medicalSubjectApiRepository.saveAll(batchList);
+                insertedTotal += batchList.size();
+                log.info("과목 {} 최종 저장: {}건 추가", subjectName, batchList.size());
+                batchList.clear();
+            }
+
+            // ✅ 4. 카운터 업데이트
+            completedCount.incrementAndGet();
+            insertedCount.addAndGet(insertedTotal);
+
+            log.info("과목 {} 처리 완료: 총 {}건 저장", subjectName, insertedTotal);
+
+        } catch (Exception e) {
+            failedCount.incrementAndGet();
+            log.error("과목 코드 {} 처리 실패: {}", subjectMappingConfig.getDepartmentName(subjectCode), e.getMessage(), e);
+        }
     }
 
-    // 완료/실패 카운터 초기화
-    public void resetCounter() {
-        completedCount.set(0);
-        failedCount.set(0);
-    }
-
+    // ✅ 상태 관리 메서드
     public int getCompletedCount() {
         return completedCount.get();
     }
@@ -60,34 +126,18 @@ public class MedicalSubjectAsyncRunner {
         return failedCount.get();
     }
 
-    @Async("apiExecutor") // ✅ 병렬 실행을 위한 스레드 풀 사용
-    public void runAsync(String hospitalCode) {
-    	rateLimiter.acquire();;
-        try {
-            // API 파라미터 구성
-            String queryParams = "ykiho=" + hospitalCode;
-
-            // API 호출 및 JSON → DTO 매핑
-            MedicalSubjectApiResponse response = apiCaller.callApi(queryParams);
-
-            // 응답 파싱 → 진료과목 리스트 변환
-            List<MedicalSubject> subjects = parser.parse(response, hospitalCode);
-
-
-            // 파싱한 진료과목 데이터 저장
-            repository.saveAll(subjects);
-
-            // 완료 카운터 증가 및 로그 출력
-            int done = completedCount.incrementAndGet();
-            log.info("진료과목 저장 완료: {} / {} ({}%)", done, totalCount, (done * 100) / totalCount);
-
-        } catch (Exception e) {
-            // 실패 카운터 증가 및 오류 로그
-            failedCount.incrementAndGet();
-            log.error("병원코드 {} 처리 실패: {}", hospitalCode, e.getMessage());
-        }
+    public int getInsertedCount() {
+        return insertedCount.get();
     }
-    public void UpdateSubject() {
-    	
+
+    public void resetCounter() {
+        completedCount.set(0);
+        failedCount.set(0);
+        insertedCount.set(0);
+    }
+
+    public void setTotalCount(int totalCount) {
+        this.totalCount = totalCount;
+        resetCounter();
     }
 }

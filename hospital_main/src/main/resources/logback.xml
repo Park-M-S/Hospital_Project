@@ -1,23 +1,27 @@
 <configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{HH:mm:ss} %-5level %logger{20} - %msg%n</pattern>
-        </encoder>
-    </appender>
+	<appender name="CONSOLE"
+		class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{HH:mm:ss} %-5level %logger{20} - %msg%n</pattern>
+		</encoder>
+	</appender>
 
-    <logger name="org.hibernate" level="WARN"/> <logger name="org.springframework.data" level="WARN"/>
-    <logger name="org.springframework.orm" level="WARN"/>
-    <logger name="org.springframework.transaction" level="WARN"/>
-    <logger name="org.apache.catalina" level="WARN"/>
-    <logger name="org.apache.jasper" level="WARN"/>
-    <logger name="org.apache.tomcat" level="WARN"/>
-    <logger name="org.quartz" level="WARN"/>
-    <logger name="org.mariadb" level="WARN"/>
+	<logger name="org.hibernate.SQL" level="WARN" />
+	<logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" />
+	<logger name="org.hibernate" level="WARN" />
+	<logger name="org.springframework.data" level="WARN" />
+	<logger name="org.springframework.orm" level="WARN" />
+	<logger name="org.springframework.transaction" level="WARN" />
+	<logger name="org.apache.catalina" level="INFO" />
+	<logger name="org.apache.jasper" level="INFO" />
+	<logger name="org.apache.tomcat" level="INFO" />
+	<logger name="org.quartz" level="WARN" />
+	<logger name="org.mariadb" level="WARN" />
 
+	<logger name="org.springframework" level="INFO" />
+	<logger name="com.hospital" level="INFO" />
 
-    <logger name="org.springframework" level="INFO"/> <logger name="com.hospital" level="INFO"/>
-
-    <root level="INFO">
-        <appender-ref ref="CONSOLE" />
-    </root>
+	<root level="INFO">
+		<appender-ref ref="CONSOLE" />
+	</root>
 </configuration>

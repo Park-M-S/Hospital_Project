@@ -1,20 +1,22 @@
 package com.hospital.service;
 
-import com.hospital.entity.HospitalMain;
-import com.hospital.repository.HospitalMainApiRepository;
-import com.hospital.util.DistanceCalculator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hospital.config.RegionConfig;
 import com.hospital.converter.HospitalConverter;
 import com.hospital.dto.HospitalWebResponse;
+import com.hospital.entity.HospitalMain;
+import com.hospital.repository.HospitalMainApiRepository;
+import com.hospital.util.DistanceCalculator;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 public class HospitalWebService {
@@ -23,71 +25,101 @@ public class HospitalWebService {
 	private final HospitalConverter hospitalConverter;
 	private final DistanceCalculator distanceCalculator;
 
+	private static final double KM_PER_DEGREE_LAT = 110.0;
+
 	@Autowired
 	public HospitalWebService(HospitalMainApiRepository hospitalMainApiRepository, HospitalConverter hospitalConverter,
 			DistanceCalculator distanceCalculator, RegionConfig regionConfig) {
-
 		this.hospitalMainApiRepository = hospitalMainApiRepository;
 		this.hospitalConverter = hospitalConverter;
 		this.distanceCalculator = distanceCalculator;
-
 	}
 
-	// 기존 메서드: 진료과목으로 병원 검색
-	@Cacheable(value = "hospitals", key = "#subs.toString() + '_' + #userLat + '_' + #userLng + '_' + #radius + '_' + (#tags != null ? #tags.toString() : 'null')")
-	public List<HospitalWebResponse> getHospitals(List<String> subs, double userLat, double userLng, double radius,
-			List<String> tags) {
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsBySubjects(subs);
-		return applyFiltersAndSort(hospitalEntities, userLat, userLng, radius, tags);
-	}
+	/**
+	 * ✅ 공간 인덱스 + 정확 거리 필터 (2단계 쿼리 구조)
+	 */
+	public List<HospitalWebResponse> getOptimizedHospitals(double userLat, double userLng, double radius) {
+		long startTime = System.currentTimeMillis();
+		log.info("=== Optimized Spatial Query Mode (MBR Manual) ===");
+		log.info("User Location: lat={}, lng={}", userLat, userLng);
+		log.info("Radius: {}km", radius);
 
-	// ✅ 병원명 검색
-	@Cacheable(value = "hospitalsByName", key = "#hospitalName")
-	public List<HospitalWebResponse> searchHospitalsByName(String hospitalName) {
-		// 입력값 전처리
-		String cleanInput = hospitalName.replace(" ", "");
+		
+		double deltaDegreeY = radius / KM_PER_DEGREE_LAT;
 
-		// Repository에서 검색 (hospitalDetail + medicalSubjects EAGER FETCH)
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findHospitalsByName(cleanInput);
+		double kmPerDegreeLon = 111.32 * Math.cos(Math.toRadians(userLat));
+		double deltaDegreeX = radius / kmPerDegreeLon;
 
-		// 단순히 DTO로 변환해서 리턴
-		return hospitalEntities.stream().map(hospitalConverter::convertToDTO).collect(Collectors.toList());
-	}
+		log.debug("Calculated MBR Deltas: deltaX={}, deltaY={}", deltaDegreeX, deltaDegreeY);
 
-	// ✅ 공통 로직: 필터링 + 정렬 (거리 계산 중복 제거)
-	private List<HospitalWebResponse> applyFiltersAndSort(List<HospitalMain> hospitalEntities, double userLat,
-			double userLng, double radius, List<String> tags) {
+	
+		long step1Start = System.currentTimeMillis();
 
-		return hospitalEntities.stream().filter(hospital -> HospitalTagFilter.matchesAllTags(hospital, tags))
-				.map(hospitalConverter::convertToDTO).map(dto -> {
-					// 거리 계산을 한 번만 수행
-					double distance = distanceCalculator.calculateDistance(userLat, userLng, dto.getCoordinateY(),
-							dto.getCoordinateX());
-					return new HospitalWithDistance(dto, distance);
-				}).filter(hwd -> hwd.distance <= radius) // 반경 필터링
-				.sorted((h1, h2) -> Double.compare(h1.distance, h2.distance)) // 거리순 정렬
-				.map(hwd -> hwd.hospital) // 다시 HospitalResponseDTO만 추출
-				.collect(Collectors.toList());
-	}
-	// 전체병원 조회
-	@Cacheable(value = "allHospitals")
-	public List<HospitalWebResponse> getAllHospitals() {
-		// 모든 병원 조회
-		List<HospitalMain> hospitalEntities = hospitalMainApiRepository.findAll();
-		// DTO로 변환해서 리턴
-		return hospitalEntities.stream()
-			.map(hospitalConverter::convertToDTO)
-			.collect(Collectors.toList());
-	}
 
-	// 거리와 함께 임시로 저장하는 내부 클래스
-	private static class HospitalWithDistance {
-		final HospitalWebResponse hospital;
-		final double distance;
+		List<String> hospitalCodes = hospitalMainApiRepository.findHospitalCodesBySpatialQuery(userLat, userLng,
+				deltaDegreeX, deltaDegreeY, radius);
 
-		HospitalWithDistance(HospitalWebResponse hospital, double distance) {
-			this.hospital = hospital;
-			this.distance = distance;
+		log.info("Step1 (Spatial + Distance Filter): {}ms, filtered: {}", System.currentTimeMillis() - step1Start,
+				hospitalCodes.size());
+
+		if (hospitalCodes.isEmpty()) {
+			log.info("No hospitals found within range.");
+			log.info("Total: {}ms", System.currentTimeMillis() - startTime);
+			return List.of();
 		}
+
+	
+		long step2Start = System.currentTimeMillis();
+		List<HospitalMain> hospitals = hospitalMainApiRepository.findByHospitalCodeIn(hospitalCodes);
+		log.info("Step2 (Main Entity Fetch): {}ms, count: {}", System.currentTimeMillis() - step2Start,
+				hospitals.size());
+
+		long step3Start = System.currentTimeMillis();
+		List<HospitalWebResponse> result = hospitals.stream().map(hospitalConverter::convertToDTO)
+				.collect(Collectors.toList());
+		log.info("Step3 (DTO Convert + Lazy Loading): {}ms", System.currentTimeMillis() - step3Start);
+
+		log.info("Total (Optimized MBR Manual): {}ms", System.currentTimeMillis() - startTime);
+		return result;
+	}
+
+	
+
+	/**
+	 * ✅ 인덱스 미사용 - ST_Distance_Sphere만 사용
+	 */
+	public List<HospitalWebResponse> getHospitalsWithDistanceOnly(double userLat, double userLng, double radius) {
+		long startTime = System.currentTimeMillis();
+		log.info("=== Distance Only Query Mode ===");
+		log.info("User Location: lat={}, lng={}", userLat, userLng);
+		log.info("Radius: {}km", radius);
+
+		// Step 1: 거리 기반 필터 (PK만 조회)
+		long step1Start = System.currentTimeMillis();
+		List<String> hospitalCodes = hospitalMainApiRepository.findHospitalCodesByDistanceOnly(userLat, userLng,
+				radius);
+		log.info("Step1 (Distance Filter Only): {}ms, filtered: {}", System.currentTimeMillis() - step1Start,
+				hospitalCodes.size());
+
+		if (hospitalCodes.isEmpty()) {
+			log.info("No hospitals found within range.");
+			log.info("Total: {}ms", System.currentTimeMillis() - startTime);
+			return List.of();
+		}
+
+		// Step 2: 코드 기반 엔티티 조회
+		long step2Start = System.currentTimeMillis();
+		List<HospitalMain> hospitals = hospitalMainApiRepository.findByHospitalCodeIn(hospitalCodes);
+		log.info("Step2 (Main Entity Fetch): {}ms, count: {}", System.currentTimeMillis() - step2Start,
+				hospitals.size());
+
+		// Step 3: DTO 변환
+		long step3Start = System.currentTimeMillis();
+		List<HospitalWebResponse> result = hospitals.stream().map(hospitalConverter::convertToDTO)
+				.collect(Collectors.toList());
+		log.info("Step3 (DTO Convert + Lazy Loading): {}ms", System.currentTimeMillis() - step3Start);
+
+		log.info("Total (Distance Only): {}ms", System.currentTimeMillis() - startTime);
+		return result;
 	}
 }

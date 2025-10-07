@@ -19,7 +19,7 @@ public class HospitalMainJob implements Job {
     public void execute(JobExecutionContext context) {
         try {
             log.info("병원 기본정보 수집 시작");
-            int count = hospitalMainApiService.fetchParseAndSaveHospitals();
+            int count = hospitalMainApiService.updateHospitalMain();
             log.info("병원 기본정보 수집 완료: {}건", count);
         } catch (Exception e) {
             log.error("병원 기본정보 수집 실패", e);
