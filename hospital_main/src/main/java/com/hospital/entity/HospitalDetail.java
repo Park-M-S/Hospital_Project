@@ -25,11 +25,6 @@ public class HospitalDetail {
     @Column(name = "hospital_code", length = 255, nullable = false)
     private String hospitalCode;
 
-    @Column(name = "em_day_yn", length = 1)
-    private String emyDayYn;//필요없음
-
-    @Column(name = "em_night_yn", length = 1)
-    private String emyNightYn;//필요없음
 
     @Column(name = "parking_capacity")
     private Integer parkQty;
@@ -39,12 +34,6 @@ public class HospitalDetail {
 
     @Column(name = "weekday_lunch", length = 50)
     private String lunchWeek;
-
-    @Column(name = "weekday_reception", length = 50)
-    private String rcvWeek;//필요없음
-
-    @Column(name = "saturday_reception", length = 50)
-    private String rcvSat;//필요없음
 
     @Column(name = "noTrmtHoli")
     private String noTrmtHoli;

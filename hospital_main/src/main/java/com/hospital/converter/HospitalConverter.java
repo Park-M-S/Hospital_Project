@@ -39,17 +39,15 @@ public class HospitalConverter {
 		return HospitalWebResponse.builder()
 				// 기본 정보
 				.hospitalCode(hospitalMain.getHospitalCode()).hospitalName(hospitalMain.getHospitalName())
-				.hospitalAddress(hospitalMain.getHospitalAddress()).provinceName(hospitalMain.getProvinceName())
-				.districtName(hospitalMain.getDistrictName()).hospitalTel(hospitalMain.getHospitalTel())
-				.hospitalHomepage(hospitalMain.getHospitalHomepage())
+				.hospitalAddress(hospitalMain.getHospitalAddress()).hospitalTel(hospitalMain.getHospitalTel())
+
 				.totalDoctors(convertStringToInteger(hospitalMain.getTotalDoctors()))
 
 				// 좌표 정보
 				.coordinateX(hospitalMain.getCoordinateX()).coordinateY(hospitalMain.getCoordinateY())
 
 				// 운영 정보 (detail이 있을 때만)
-				.emergencyDayAvailable(detail != null ? convertYnToBoolean(detail.getEmyDayYn()) : null)
-				.emergencyNightAvailable(detail != null ? convertYnToBoolean(detail.getEmyNightYn()) : null)
+
 				.weekdayLunch(detail != null ? detail.getLunchWeek() : null)
 				.parkingCapacity(detail != null ? detail.getParkQty() : null)
 				.parkingFee(detail != null ? convertYnToBoolean(detail.getParkXpnsYn()) : null)
@@ -59,7 +57,7 @@ public class HospitalConverter {
 				// 운영 시간
 				.todayOpen(formatTime(todayTime.getOpenTime())).todayClose(formatTime(todayTime.getCloseTime()))
 
-				.weeklySchedule(detail != null ? convertToWeeklySchedule(detail) : null)
+				.weeklySchedule(convertToWeeklySchedule(detail))
 
 				.medicalSubjects(convertMedicalSubjectsToList(hospitalMain.getMedicalSubjects()))
 
@@ -87,16 +85,6 @@ public class HospitalConverter {
 				.filter(s -> s != null && !s.isBlank()) // null/빈 문자열 제거
 				.flatMap(s -> Arrays.stream(s.split(","))) // 쉼표로 나누어 각 과목 분리
 				.map(String::trim).filter(s -> !s.isEmpty()).distinct().sorted().collect(Collectors.toList());
-	}
-
-	private String formatTime(String timeStr) {
-		// null이거나 4자리가 아니면 원본값 그대로 반환
-		if (timeStr == null || timeStr.length() != 4) {
-			return timeStr;
-		}
-
-		// HHMM을 HH:MM으로 변환
-		return timeStr.substring(0, 2) + ":" + timeStr.substring(2, 4);
 	}
 
 	// Hospital 엔티티 리스트를 DTO 리스트로 변환
@@ -128,30 +116,42 @@ public class HospitalConverter {
 		return "Y".equalsIgnoreCase(ynValue.trim());
 	}
 
+	// detail == null,detail != null, 시간 모두 null이여도 같은 구조 반환 (나중에 디테일 구조 바뀌면 꼭!!
+	// 수정할것)
 	private Map<String, Map<String, String>> convertToWeeklySchedule(HospitalDetail detail) {
-		if (detail == null) {
-			return Collections.emptyMap();
-		}
+		Map<String, Map<String, String>> schedule = new LinkedHashMap<>();
 
-			Map<String, Map<String, String>> schedule = new LinkedHashMap<>();
+		schedule.put("월요일", createDaySchedule(detail != null ? detail.getTrmtMonStart() : null,
+				detail != null ? detail.getTrmtMonEnd() : null));
+		schedule.put("화요일", createDaySchedule(detail != null ? detail.getTrmtTueStart() : null,
+				detail != null ? detail.getTrmtTueEnd() : null));
+		schedule.put("수요일", createDaySchedule(detail != null ? detail.getTrmtWedStart() : null,
+				detail != null ? detail.getTrmtWedEnd() : null));
+		schedule.put("목요일", createDaySchedule(detail != null ? detail.getTrmtThurStart() : null,
+				detail != null ? detail.getTrmtThurEnd() : null));
+		schedule.put("금요일", createDaySchedule(detail != null ? detail.getTrmtFriStart() : null,
+				detail != null ? detail.getTrmtFriEnd() : null));
+		schedule.put("토요일", createDaySchedule(detail != null ? detail.getTrmtSatStart() : null,
+				detail != null ? detail.getTrmtSatEnd() : null));
+		schedule.put("일요일", createDaySchedule(detail != null ? detail.getTrmtSunStart() : null,
+				detail != null ? detail.getTrmtSunEnd() : null));
 
-			schedule.put("월요일", createDaySchedule(detail.getTrmtMonStart(), detail.getTrmtMonEnd()));
-			schedule.put("화요일", createDaySchedule(detail.getTrmtTueStart(), detail.getTrmtTueEnd()));
-			schedule.put("수요일", createDaySchedule(detail.getTrmtWedStart(), detail.getTrmtWedEnd()));
-			schedule.put("목요일", createDaySchedule(detail.getTrmtThurStart(), detail.getTrmtThurEnd()));
-			schedule.put("금요일", createDaySchedule(detail.getTrmtFriStart(), detail.getTrmtFriEnd()));
-			schedule.put("토요일", createDaySchedule(detail.getTrmtSatStart(), detail.getTrmtSatEnd()));
-			schedule.put("일요일", createDaySchedule(detail.getTrmtSunStart(), detail.getTrmtSunEnd()));
-
-			return schedule;
-		}
-	
+		return schedule;
+	}
 
 	private Map<String, String> createDaySchedule(String startTime, String endTime) {
-	    Map<String, String> daySchedule = new LinkedHashMap<>();  
-	    daySchedule.put("open", formatTime(startTime));
-	    daySchedule.put("close", formatTime(endTime));
-	    return daySchedule;
+		Map<String, String> daySchedule = new LinkedHashMap<>();
+		daySchedule.put("open", formatTime(startTime));
+		daySchedule.put("close", formatTime(endTime));
+		return daySchedule;
+	}
+
+	private String formatTime(String timeStr) {
+		if (HospitalDetail.isValidTime(timeStr)) {
+			return timeStr.substring(0, 2) + ":" + timeStr.substring(2, 4);
+		}
+		return "";
+
 	}
 
 }

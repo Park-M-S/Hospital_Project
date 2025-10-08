@@ -50,20 +50,11 @@ public class HospitalMain {
 	@Column(name = "hospital_name", nullable = false, length = 255)
 	private String hospitalName;
 
-	@Column(name = "province_name", length = 100)
-	private String provinceName;//필요없음
-
-	@Column(name = "district_name", length = 100)
-	private String districtName;//필요없음
-
 	@Column(name = "hospital_address", length = 500)
 	private String hospitalAddress;
 
 	@Column(name = "hospital_tel", length = 20)
 	private String hospitalTel;
-
-	@Column(name = "hospital_homepage", length = 255)
-	private String hospitalHomepage; //필요없음
 
 	@Column(name = "doctor_num")
 	private String totalDoctors;

@@ -27,17 +27,6 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@EntityGraph("hospital-with-all")
 	Optional<HospitalMain> findByHospitalCode(String hospitalCode);
 
-	/*
-	 * @QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	 * 
-	 * @EntityGraph("hospital-with-all")
-	 * 
-	 * @Query("SELECT DISTINCT h FROM HospitalMain h WHERE " +
-	 * "(SELECT COUNT(DISTINCT ms.subjectName) FROM h.medicalSubjects ms " +
-	 * " WHERE ms.subjectName IN :subjects) = :#{#subjects.size()}")
-	 * List<HospitalMain> findHospitalsBySubjects(@Param("subjects") List<String>
-	 * subjects);
-	 */
 
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	@EntityGraph("hospital-with-all")
@@ -51,54 +40,36 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@Override
 	List<HospitalMain> findAll();
 
-	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	List<HospitalMain> findByDistrictName(String districtName);
-
-	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	List<HospitalMain> findByProvinceName(String provinceName);
-
 	@Modifying
 	@Transactional
 	List<HospitalMain> deleteByHospitalCodeIn(List<String> hospitalcodes);
 
 	@Query(value = """
-						   SELECT h.hospital_code
-			FROM hospital_main h
-			WHERE MBRContains(
-
-			    ST_GeomFromText(
-			        CONCAT(
-			            'POLYGON((',
-			            :lon - :delta_degree_x, ' ', :lat - :delta_degree_y, ',',
-			            :lon + :delta_degree_x, ' ', :lat - :delta_degree_y, ',',
-			            :lon + :delta_degree_x, ' ', :lat + :delta_degree_y, ',',
-			            :lon - :delta_degree_x, ' ', :lat + :delta_degree_y, ',',
-			            :lon - :delta_degree_x, ' ', :lat - :delta_degree_y,
-			            '))'
-			        ),
-			        4326
-			    ),
-			    h.location
-			)
-
-			AND ST_Distance_Sphere(
-			    point(h.coordinate_x, h.coordinate_y),
-			    point(:lon, :lat)
-			) <= :radius * 1000
-						          AND h.coordinate_x IS NOT NULL
-						 AND h.coordinate_y IS NOT NULL
-						 AND h.location IS NOT NULL
-						""", nativeQuery = true)
-	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	List<String> findHospitalCodesBySpatialQuery(
-		    @Param("lat") double lat,
-		    @Param("lon") double lon,
-		    @Param("delta_degree_x") double deltaDegreeX, // 새로 추가
-		    @Param("delta_degree_y") double deltaDegreeY, // 새로 추가
-		    @Param("radius") double radius
+		    SELECT h.*
+		    FROM hospital_main h
+		    WHERE MBRContains(
+		        ST_GeomFromText(
+		            CONCAT('POLYGON((', 
+		                :min_lon, ' ', :min_lat, ',',
+		                :max_lon, ' ', :min_lat, ',',
+		                :max_lon, ' ', :max_lat, ',',
+		                :min_lon, ' ', :max_lat, ',',
+		                :min_lon, ' ', :min_lat, '))'
+		            ),
+		            4326
+		        ),
+		        h.location
+		    )
+		    """, nativeQuery = true)
+		@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
+		List<HospitalMain> findByMBRDirect(
+		    @Param("min_lon") double minLon,
+		    @Param("max_lon") double maxLon,
+		    @Param("min_lat") double minLat,
+		    @Param("max_lat") double maxLat
 		);
 
-	// @EntityGraph("hospital-with-all")
+	//@EntityGraph("hospital-with-all")
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	List<HospitalMain> findByHospitalCodeIn(List<String> hospitalCodes);
 
@@ -106,18 +77,19 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	// Step1: 거리 조건만으로 병원코드(PK) 리스트 조회
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	@Query(value = """
-			SELECT h.hospital_code
-			FROM hospital_main h
-			WHERE ST_Distance_Sphere(
-			          point(h.coordinate_x, h.coordinate_y),
-			          point(:lon, :lat)
-			      ) <= :radius * 1000
-			  AND h.coordinate_x IS NOT NULL
-			  AND h.coordinate_y IS NOT NULL
-			""", nativeQuery = true)
-	List<String> findHospitalCodesByDistanceOnly(@Param("lat") double lat, @Param("lon") double lon,
-			@Param("radius") double radius);
-	
+	    SELECT h.*
+	    FROM hospital_main h
+	    WHERE h.coordinate_x BETWEEN :minLon AND :maxLon
+	      AND h.coordinate_y BETWEEN :minLat AND :maxLat
+	      AND h.coordinate_x IS NOT NULL
+	      AND h.coordinate_y IS NOT NULL
+	    """, nativeQuery = true)
+	List<HospitalMain> findByMBRDirectWithoutIndex(
+	        @Param("minLon") double minLon,
+	        @Param("maxLon") double maxLon,
+	        @Param("minLat") double minLat,
+	        @Param("maxLat") double maxLat
+	);
 	
 
 }

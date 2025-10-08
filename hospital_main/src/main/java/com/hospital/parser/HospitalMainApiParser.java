@@ -1,8 +1,6 @@
 
 package com.hospital.parser;
 
-
-
 import com.hospital.dto.HospitalMainApiItem;
 import com.hospital.dto.HospitalMainApiResponse;
 import com.hospital.entity.HospitalMain;
@@ -21,62 +19,50 @@ import java.util.stream.Collectors;
 @Slf4j
 public class HospitalMainApiParser {
 
-    public List<HospitalMain> parseHospitals(HospitalMainApiResponse apiResponseDto) {
-        log.debug("병원 데이터 파싱 시작");
-        
-        // 1. 응답 검증
-        validateApiResponse(apiResponseDto);
-        
-        // 2. 아이템 추출 및 변환
-        List<HospitalMain> hospitals = extractAndConvertItems(apiResponseDto);
-        
-        log.debug("병원 데이터 파싱 완료: {}건", hospitals.size());
-        return hospitals;
-    }
+	public List<HospitalMain> parseHospitals(HospitalMainApiResponse apiResponseDto) {
+		log.debug("병원 데이터 파싱 시작");
 
-    private void validateApiResponse(HospitalMainApiResponse response) {
-        if (response == null || response.getResponse() == null || response.getResponse().getHeader() == null) {
-            throw new RuntimeException("API 응답이 올바르지 않습니다");
-        }
-        
-        String resultCode = response.getResponse().getHeader().getResultCode();
-        String resultMsg = response.getResponse().getHeader().getResultMsg();
-        
-        if (!"00".equals(resultCode)) {
-            throw new RuntimeException("API 응답 오류: " + resultCode + " - " + resultMsg);
-        }
-    }
+		// 1. 응답 검증
+		validateApiResponse(apiResponseDto);
 
-    private List<HospitalMain> extractAndConvertItems(HospitalMainApiResponse response) {
-        return Optional.ofNullable(response)
-                .map(HospitalMainApiResponse::getResponse)
-                .map(HospitalMainApiResponse.Response::getBody)
-                .map(HospitalMainApiResponse.Body::getItems)
-                .map(HospitalMainApiResponse.ApiItemsWrapper::getItem)
-                .orElseGet(ArrayList::new)
-                .stream()
-                .map(this::convertToHospital)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
+		// 2. 아이템 추출 및 변환
+		List<HospitalMain> hospitals = extractAndConvertItems(apiResponseDto);
 
-    private HospitalMain convertToHospital(HospitalMainApiItem itemDto) {
-        if (itemDto == null || itemDto.getYkiho() == null || itemDto.getYkiho().trim().isEmpty()) {
-            log.warn("유효하지 않은 병원 데이터: {}", itemDto);
-            return null;
-        }
-        
-        return HospitalMain.builder()
-                .hospitalCode(itemDto.getYkiho())
-                .hospitalName(itemDto.getYadmNm())
-                .provinceName(itemDto.getSidoCdNm())
-                .districtName(itemDto.getSgguCdNm())
-                .hospitalAddress(itemDto.getAddr())
-                .hospitalTel(itemDto.getTelno())
-                .hospitalHomepage(itemDto.getHospUrl())
-                .totalDoctors(itemDto.getDrTotCnt())
-                .coordinateX(itemDto.getXPos())
-                .coordinateY(itemDto.getYPos())
-                .build();
-    }
+		log.debug("병원 데이터 파싱 완료: {}건", hospitals.size());
+		return hospitals;
+	}
+
+	private void validateApiResponse(HospitalMainApiResponse response) {
+		if (response == null || response.getResponse() == null || response.getResponse().getHeader() == null) {
+			throw new RuntimeException("API 응답이 올바르지 않습니다");
+		}
+
+		String resultCode = response.getResponse().getHeader().getResultCode();
+		String resultMsg = response.getResponse().getHeader().getResultMsg();
+
+		if (!"00".equals(resultCode)) {
+			throw new RuntimeException("API 응답 오류: " + resultCode + " - " + resultMsg);
+		}
+	}
+
+	private List<HospitalMain> extractAndConvertItems(HospitalMainApiResponse response) {
+		return Optional.ofNullable(response).map(HospitalMainApiResponse::getResponse)
+				.map(HospitalMainApiResponse.Response::getBody).map(HospitalMainApiResponse.Body::getItems)
+				.map(HospitalMainApiResponse.ApiItemsWrapper::getItem).orElseGet(ArrayList::new).stream()
+				.map(this::convertToHospital).filter(Objects::nonNull).collect(Collectors.toList());
+	}
+
+	private HospitalMain convertToHospital(HospitalMainApiItem itemDto) {
+		if (itemDto == null || itemDto.getYkiho() == null || itemDto.getYkiho().trim().isEmpty()) {
+			log.warn("유효하지 않은 병원 데이터: {}", itemDto);
+			return null;
+		}
+
+		return HospitalMain.builder().hospitalCode(itemDto.getYkiho()).hospitalName(itemDto.getYadmNm())
+
+				.hospitalAddress(itemDto.getAddr()).hospitalTel(itemDto.getTelno())
+
+				.totalDoctors(itemDto.getDrTotCnt()).coordinateX(itemDto.getXPos()).coordinateY(itemDto.getYPos())
+				.build();
+	}
 }
