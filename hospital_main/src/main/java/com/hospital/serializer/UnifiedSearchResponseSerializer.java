@@ -1,10 +1,11 @@
-package com.hospital.dto;
+package com.hospital.serializer;
 
 import java.io.IOException;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import com.hospital.dto.UnifiedSearchResponse;
 
 public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearchResponse> {
 
@@ -25,29 +26,29 @@ public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearch
         if ("HOSPITAL".equals(type)) {
             // 병원 필드만 직렬화
             writeIfNotNull(gen, "medicalType", value.getMedicalType());
+            writeIfNotNull(gen, "hospitalCode", value.getHospitalCode());
             writeIfNotNull(gen, "hospitalName", value.getName());
             writeIfNotNull(gen, "hospitalAddress", value.getAddress());
             writeIfNotNull(gen, "hospitalTel", value.getTel());
             writeIfNotNull(gen, "coordinateX", value.getCoordinateX());
             writeIfNotNull(gen, "coordinateY", value.getCoordinateY());
-            writeIfNotNull(gen, "provinceName", value.getProvinceName());
-            writeIfNotNull(gen, "districtName", value.getDistrictName());
-            writeIfNotNull(gen, "hospitalHomepage", value.getHospitalHomepage());
+     
             writeIfNotNull(gen, "totalDoctors", value.getTotalDoctors());
-            writeIfNotNull(gen, "emergencyDayAvailable", value.getEmergencyDayAvailable());
-            writeIfNotNull(gen, "emergencyNightAvailable", value.getEmergencyNightAvailable());
+ 
             writeIfNotNull(gen, "weekdayLunch", value.getWeekdayLunch());
             writeIfNotNull(gen, "parkingCapacity", value.getParkingCapacity());
             writeIfNotNull(gen, "parkingFee", value.getParkingFee());
             writeIfNotNull(gen, "todayOpen", value.getTodayOpen());
             writeIfNotNull(gen, "todayClose", value.getTodayClose());
             writeIfNotNull(gen, "noTrmtHoli", value.getNoTrmtHoli());
+            writeIfNotNull(gen, "noTrmtSun", value.getNoTrmtSun());
             writeIfNotNull(gen, "medicalSubjects", value.getMedicalSubjects());
             writeIfNotNull(gen, "professionalDoctors", value.getProfessionalDoctors());
 
         } else if ("PHARMACY".equals(type)) {
             // 약국 필드만 직렬화
             writeIfNotNull(gen, "medicalType", value.getMedicalType());
+            writeIfNotNull(gen, "pharmacyCode", value.getPharmacyCode());
             writeIfNotNull(gen, "pharmacyName", value.getName());
             writeIfNotNull(gen, "pharmacyAddress", value.getAddress());
             writeIfNotNull(gen, "PharmacyTel", value.getTel());

@@ -23,10 +23,9 @@ public class HospitalWebResponse {
 	private String hospitalCode;
     private String hospitalName;
     private String hospitalAddress;
-    private String provinceName;
-    private String districtName;
+
     private String hospitalTel;
-    private String hospitalHomepage;
+
     private Integer totalDoctors;
     
     // 좌표 정보
@@ -34,8 +33,6 @@ public class HospitalWebResponse {
     private Double coordinateY;
    
     // 운영 정보
-    private Boolean emergencyDayAvailable;    // Y/N
-    private Boolean emergencyNightAvailable;  // Y/N
     private String weekdayLunch;
     private Integer parkingCapacity;
     private Boolean parkingFee;
