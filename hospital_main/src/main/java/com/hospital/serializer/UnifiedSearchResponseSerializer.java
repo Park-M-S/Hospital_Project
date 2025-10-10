@@ -40,6 +40,7 @@ public class UnifiedSearchResponseSerializer extends StdSerializer<UnifiedSearch
             writeIfNotNull(gen, "parkingFee", value.getParkingFee());
             writeIfNotNull(gen, "todayOpen", value.getTodayOpen());
             writeIfNotNull(gen, "todayClose", value.getTodayClose());
+            writeIfNotNull(gen, "weeklySchedule", value.getWeeklySchedule());
             writeIfNotNull(gen, "noTrmtHoli", value.getNoTrmtHoli());
             writeIfNotNull(gen, "noTrmtSun", value.getNoTrmtSun());
             writeIfNotNull(gen, "medicalSubjects", value.getMedicalSubjects());

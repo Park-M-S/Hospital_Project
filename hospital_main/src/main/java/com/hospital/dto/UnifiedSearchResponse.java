@@ -38,6 +38,7 @@ public class UnifiedSearchResponse {
 	private Boolean parkingFee;
 	private String todayOpen;
 	private String todayClose;
+	private Map<String, Map<String, String>> weeklySchedule;
 	private String noTrmtHoli;
 	private String noTrmtSun;
 	private List<String> medicalSubjects;
@@ -63,7 +64,7 @@ public class UnifiedSearchResponse {
 
 				.weekdayLunch(hospital.getWeekdayLunch()).parkingCapacity(hospital.getParkingCapacity())
 				.parkingFee(hospital.getParkingFee()).todayOpen(hospital.getTodayOpen())
-				.todayClose(hospital.getTodayClose()).noTrmtHoli(hospital.getNoTrmtHoli()).noTrmtSun(hospital.getNoTrmtSun())
+				.todayClose(hospital.getTodayClose()).weeklySchedule(hospital.getWeeklySchedule()).noTrmtHoli(hospital.getNoTrmtHoli()).noTrmtSun(hospital.getNoTrmtSun())
 				.medicalSubjects(hospital.getMedicalSubjects()).professionalDoctors(hospital.getProfessionalDoctors())
 				.build();
 	}
