@@ -36,7 +36,7 @@ public class YouTubeDataInitializer {
         log.info("[진료과별] 수집 시작");
         String[] departments = {
             "내과", "외과", "정형외과", "신경외과", "성형외과",
-            "피부과", "비뇨기과", "산부인과", "소아청소년과", "안과"
+            "피부과", "비뇨기과", "산부인과", "소아청소년과", "안과", "한방"
         };
         
         for (String dept : departments) {

@@ -44,52 +44,11 @@ public interface HospitalMainApiRepository extends JpaRepository<HospitalMain, S
 	@Transactional
 	List<HospitalMain> deleteByHospitalCodeIn(List<String> hospitalcodes);
 
-	@Query(value = """
-		    SELECT h.*
-		    FROM hospital_main h
-		    WHERE MBRContains(
-		        ST_GeomFromText(
-		            CONCAT('POLYGON((', 
-		                :min_lon, ' ', :min_lat, ',',
-		                :max_lon, ' ', :min_lat, ',',
-		                :max_lon, ' ', :max_lat, ',',
-		                :min_lon, ' ', :max_lat, ',',
-		                :min_lon, ' ', :min_lat, '))'
-		            ),
-		            4326
-		        ),
-		        h.location
-		    )
-		    """, nativeQuery = true)
-		@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-		List<HospitalMain> findByMBRDirect(
-		    @Param("min_lon") double minLon,
-		    @Param("max_lon") double maxLon,
-		    @Param("min_lat") double minLat,
-		    @Param("max_lat") double maxLat
-		);
 
 	//@EntityGraph("hospital-with-all")
 	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
 	List<HospitalMain> findByHospitalCodeIn(List<String> hospitalCodes);
 
-	// 성능 비교용 - ST_Distance_Sphere만 사용 (인덱스 미사용)
-	// Step1: 거리 조건만으로 병원코드(PK) 리스트 조회
-	@QueryHints({ @QueryHint(name = "org.hibernate.readOnly", value = "true") })
-	@Query(value = """
-	    SELECT h.*
-	    FROM hospital_main h
-	    WHERE h.coordinate_x BETWEEN :minLon AND :maxLon
-	      AND h.coordinate_y BETWEEN :minLat AND :maxLat
-	      AND h.coordinate_x IS NOT NULL
-	      AND h.coordinate_y IS NOT NULL
-	    """, nativeQuery = true)
-	List<HospitalMain> findByMBRDirectWithoutIndex(
-	        @Param("minLon") double minLon,
-	        @Param("maxLon") double maxLon,
-	        @Param("minLat") double minLat,
-	        @Param("maxLat") double maxLat
-	);
 	
 
 }
