@@ -43,7 +43,7 @@ public class HospitalController {
 	        long startTime = System.currentTimeMillis();
 	        log.info("[NEW 방식] 병원 검색 API 호출 - 위도: {}, 경도: {}, 반경: {}km", userLat, userLng, radius);
 
-	        List<HospitalWebResponse> result = hospitalService.getOptimizedHospitals(userLat, userLng, radius);
+	        List<HospitalWebResponse> result = hospitalService.getOptimizedHospitalsV2(userLat, userLng, radius);
 
 	        long endTime = System.currentTimeMillis();
 	        log.info("[NEW 방식] 병원 검색 완료 - 조회된 병원 수: {}개, 응답 시간: {}ms", result.size(), (endTime - startTime));
